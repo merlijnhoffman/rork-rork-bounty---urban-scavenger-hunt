@@ -1,0 +1,201 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import createContextHook from '@nkzw/create-context-hook';
+import { supabase } from '@/lib/supabase';
+import { Alert } from 'react-native';
+
+export interface AuthState {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  signUp: (email: string, password: string, phoneNumber: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithPhone: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  verifyOTP: (phone: string, otp: string) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+}
+
+export const [AuthProvider, useAuth] = createContextHook((): AuthState => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string, phoneNumber: string) => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            phone_number: phoneNumber,
+          },
+        },
+      });
+
+      if (error) {
+        console.error('Sign up error:', error);
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        // Create profile in profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email,
+            phone_number: phoneNumber,
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          return { success: false, error: 'Failed to create user profile' };
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected sign up error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error('Sign in error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected sign in error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const signInWithPhone = useCallback(async (phone: string) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+      });
+
+      if (error) {
+        console.error('Phone sign in error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected phone sign in error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyOTP = useCallback(async (phone: string, otp: string) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase.auth.verifyOtp({
+        phone,
+        token: otp,
+        type: 'sms',
+      });
+
+      if (error) {
+        console.error('OTP verification error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected OTP verification error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const signOut = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        Alert.alert('Error', 'Failed to sign out');
+      }
+    } catch (error) {
+      console.error('Unexpected sign out error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      
+      if (error) {
+        console.error('Password reset error:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected password reset error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
+    }
+  }, []);
+
+  return useMemo(() => ({
+    user,
+    session,
+    loading,
+    signUp,
+    signIn,
+    signInWithPhone,
+    verifyOTP,
+    signOut,
+    resetPassword,
+  }), [user, session, loading, signUp, signIn, signInWithPhone, verifyOTP, signOut, resetPassword]);
+});
