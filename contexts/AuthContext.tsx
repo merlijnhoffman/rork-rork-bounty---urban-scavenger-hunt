@@ -10,8 +10,6 @@ export interface AuthState {
   loading: boolean;
   signUp: (email: string, password: string, phoneNumber: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signInWithPhone: (phone: string) => Promise<{ success: boolean; error?: string }>;
-  verifyOTP: (phone: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
 }
@@ -108,51 +106,7 @@ export const [AuthProvider, useAuth] = createContextHook((): AuthState => {
     }
   }, []);
 
-  const signInWithPhone = useCallback(async (phone: string) => {
-    try {
-      setLoading(true);
-      
-      const { error } = await supabase.auth.signInWithOtp({
-        phone,
-      });
 
-      if (error) {
-        console.error('Phone sign in error:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Unexpected phone sign in error:', error);
-      return { success: false, error: 'An unexpected error occurred' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const verifyOTP = useCallback(async (phone: string, otp: string) => {
-    try {
-      setLoading(true);
-      
-      const { error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otp,
-        type: 'sms',
-      });
-
-      if (error) {
-        console.error('OTP verification error:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Unexpected OTP verification error:', error);
-      return { success: false, error: 'An unexpected error occurred' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   const signOut = useCallback(async () => {
     try {
@@ -193,9 +147,7 @@ export const [AuthProvider, useAuth] = createContextHook((): AuthState => {
     loading,
     signUp,
     signIn,
-    signInWithPhone,
-    verifyOTP,
     signOut,
     resetPassword,
-  }), [user, session, loading, signUp, signIn, signInWithPhone, verifyOTP, signOut, resetPassword]);
+  }), [user, session, loading, signUp, signIn, signOut, resetPassword]);
 });
