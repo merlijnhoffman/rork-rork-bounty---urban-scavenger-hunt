@@ -70,7 +70,7 @@ export const [AuthProvider, useAuth] = createContextHook((): AuthState => {
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          return { success: false, error: 'Failed to create user profile' };
+          return { success: false, error: profileError.message || 'Failed to create user profile' };
         }
       }
 
