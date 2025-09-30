@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
 import { Alert } from 'react-native';
+import { router } from 'expo-router';
 
 export interface AuthState {
   user: User | null;
@@ -116,7 +117,11 @@ export const [AuthProvider, useAuth] = createContextHook((): AuthState => {
       if (error) {
         console.error('Sign out error:', error);
         Alert.alert('Error', 'Failed to sign out');
+        return;
       }
+      
+      // Redirect to login page after successful sign out
+      router.replace('/login');
     } catch (error) {
       console.error('Unexpected sign out error:', error);
       Alert.alert('Error', 'An unexpected error occurred');
