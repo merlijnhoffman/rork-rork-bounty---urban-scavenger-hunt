@@ -4,10 +4,9 @@ import {
   Text,
   View,
   TouchableOpacity,
-  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, Star, Zap } from 'lucide-react-native';
+import { Check, Ticket } from 'lucide-react-native';
 import { TICKET_TIERS } from '@/constants/payment';
 import { TicketTier } from '@/types/payment';
 
@@ -26,143 +25,91 @@ export default function PriceSelection({
   isProcessing,
   disabled = false,
 }: PriceSelectionProps) {
-  const handleTierPress = (tier: TicketTier) => {
+  const ticket = TICKET_TIERS[0]; // Single ticket
+  const isSelected = selectedTier?.id === ticket.id;
+
+  const handleTicketPress = () => {
     if (disabled || isProcessing) return;
-    onSelectTier(tier);
+    onSelectTier(ticket);
   };
 
-  const handlePurchasePress = (tier: TicketTier) => {
+  const handlePurchasePress = () => {
     if (disabled || isProcessing) return;
-    onPurchase(tier);
-  };
-
-  const getTierIcon = (tierId: string) => {
-    switch (tierId) {
-      case 'basic':
-        return <Zap color="#00D4FF" size={24} />;
-      case 'premium':
-        return <Star color="#FFD700" size={24} />;
-      case 'vip':
-        return <Star color="#FF6B6B" size={24} />;
-      default:
-        return <Zap color="#00D4FF" size={24} />;
-    }
-  };
-
-  const getTierGradient = (tierId: string): [string, string] => {
-    switch (tierId) {
-      case 'basic':
-        return ['#1A1A1A', '#2A2A2A'];
-      case 'premium':
-        return ['#FFD700', '#FFA500'];
-      case 'vip':
-        return ['#FF6B6B', '#FF4757'];
-      default:
-        return ['#1A1A1A', '#2A2A2A'];
-    }
-  };
-
-  const getTierTextColor = (tierId: string) => {
-    return tierId === 'basic' ? '#FFF' : '#000';
+    onPurchase(ticket);
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Choose Your Hunt Experience</Text>
+        <Text style={styles.title}>Join the Hunt</Text>
         <Text style={styles.subtitle}>
-          Select the perfect tier for your adventure
+          Get your ticket and start the adventure
         </Text>
       </View>
 
-      <ScrollView 
-        style={styles.tiersContainer}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.tiersContent}
-      >
-        {TICKET_TIERS.map((tier) => {
-          const isSelected = selectedTier?.id === tier.id;
-          const textColor = getTierTextColor(tier.id);
-          
-          return (
+      <View style={styles.ticketContainer}>
+        <TouchableOpacity
+          style={[
+            styles.ticketCard,
+            isSelected && styles.ticketCardSelected,
+            (disabled || isProcessing) && styles.ticketCardDisabled,
+          ]}
+          onPress={handleTicketPress}
+          disabled={disabled || isProcessing}
+        >
+          <LinearGradient
+            colors={['#00D4FF', '#0099CC']}
+            style={styles.ticketGradient}
+          >
+            <View style={styles.ticketHeader}>
+              <View style={styles.ticketIconContainer}>
+                <Ticket color="#FFF" size={32} />
+              </View>
+              <View style={styles.ticketInfo}>
+                <Text style={styles.ticketName}>
+                  {ticket.name}
+                </Text>
+                <Text style={styles.ticketDescription}>
+                  {ticket.description}
+                </Text>
+              </View>
+              <View style={styles.priceContainer}>
+                <Text style={styles.price}>
+                  €{ticket.price}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.featuresContainer}>
+              {ticket.features.map((feature, index) => (
+                <View key={index} style={styles.featureRow}>
+                  <Check color="#FFF" size={16} />
+                  <Text style={styles.featureText}>
+                    {feature}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
             <TouchableOpacity
-              key={tier.id}
               style={[
-                styles.tierCard,
-                isSelected && styles.tierCardSelected,
-                (disabled || isProcessing) && styles.tierCardDisabled,
+                styles.purchaseButton,
+                isSelected && styles.purchaseButtonSelected,
+                (disabled || isProcessing) && styles.purchaseButtonDisabled,
               ]}
-              onPress={() => handleTierPress(tier)}
+              onPress={handlePurchasePress}
               disabled={disabled || isProcessing}
             >
-              <LinearGradient
-                colors={getTierGradient(tier.id)}
-                style={styles.tierGradient}
-              >
-                {tier.popular && (
-                  <View style={styles.popularBadge}>
-                    <Text style={styles.popularText}>MOST POPULAR</Text>
-                  </View>
-                )}
-
-                <View style={styles.tierHeader}>
-                  <View style={styles.tierIconContainer}>
-                    {getTierIcon(tier.id)}
-                  </View>
-                  <View style={styles.tierInfo}>
-                    <Text style={[styles.tierName, { color: textColor }]}>
-                      {tier.name}
-                    </Text>
-                    <Text style={[styles.tierDescription, { color: textColor, opacity: 0.8 }]}>
-                      {tier.description}
-                    </Text>
-                  </View>
-                  <View style={styles.priceContainer}>
-                    <Text style={[styles.price, { color: textColor }]}>
-                      €{tier.price}
-                    </Text>
-                    <Text style={[styles.currency, { color: textColor, opacity: 0.7 }]}>
-                      {tier.currency}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.featuresContainer}>
-                  {tier.features.map((feature, index) => (
-                    <View key={index} style={styles.featureRow}>
-                      <Check color={textColor} size={16} />
-                      <Text style={[styles.featureText, { color: textColor }]}>
-                        {feature}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.purchaseButton,
-                    tier.id === 'basic' && styles.purchaseButtonBasic,
-                    isSelected && styles.purchaseButtonSelected,
-                    (disabled || isProcessing) && styles.purchaseButtonDisabled,
-                  ]}
-                  onPress={() => handlePurchasePress(tier)}
-                  disabled={disabled || isProcessing}
-                >
-                  <Text style={[
-                    styles.purchaseButtonText,
-                    tier.id !== 'basic' && styles.purchaseButtonTextDark,
-                  ]}>
-                    {isProcessing && selectedTier?.id === tier.id
-                      ? 'PROCESSING...'
-                      : `SELECT ${tier.name.toUpperCase()}`
-                    }
-                  </Text>
-                </TouchableOpacity>
-              </LinearGradient>
+              <Text style={styles.purchaseButtonText}>
+                {isProcessing && selectedTier?.id === ticket.id
+                  ? 'PROCESSING...'
+                  : 'BUY TICKET'
+                }
+              </Text>
             </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -177,133 +124,107 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '900',
     color: '#FFF',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#888',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
   },
-  tiersContainer: {
+  ticketContainer: {
     flex: 1,
-  },
-  tiersContent: {
     padding: 20,
-    gap: 20,
+    justifyContent: 'center',
   },
-  tierCard: {
-    borderRadius: 20,
+  ticketCard: {
+    borderRadius: 24,
     overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  tierCardSelected: {
-    transform: [{ scale: 1.02 }],
     elevation: 8,
+    shadowColor: '#00D4FF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+  },
+  ticketCardSelected: {
+    transform: [{ scale: 1.02 }],
+    elevation: 12,
     shadowOpacity: 0.5,
   },
-  tierCardDisabled: {
+  ticketCardDisabled: {
     opacity: 0.6,
   },
-  tierGradient: {
-    padding: 24,
-    position: 'relative',
+  ticketGradient: {
+    padding: 32,
   },
-  popularBadge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FF6B6B',
-    paddingVertical: 8,
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  popularText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  tierHeader: {
+  ticketHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 20,
-    marginTop: 16,
+    marginBottom: 24,
   },
-  tierIconContainer: {
-    marginRight: 16,
+  ticketIconContainer: {
+    marginRight: 20,
     marginTop: 4,
   },
-  tierInfo: {
+  ticketInfo: {
     flex: 1,
   },
-  tierName: {
-    fontSize: 24,
+  ticketName: {
+    fontSize: 28,
     fontWeight: '900',
-    marginBottom: 4,
+    color: '#FFF',
+    marginBottom: 8,
   },
-  tierDescription: {
-    fontSize: 16,
-    lineHeight: 22,
+  ticketDescription: {
+    fontSize: 18,
+    color: '#FFF',
+    opacity: 0.9,
+    lineHeight: 24,
   },
   priceContainer: {
     alignItems: 'flex-end',
   },
   price: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '900',
-  },
-  currency: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: -4,
+    color: '#FFF',
   },
   featuresContainer: {
-    marginBottom: 24,
-    gap: 12,
+    marginBottom: 32,
+    gap: 16,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   featureText: {
-    fontSize: 16,
-    marginLeft: 12,
+    fontSize: 18,
+    marginLeft: 16,
     flex: 1,
-    lineHeight: 22,
+    lineHeight: 24,
+    color: '#FFF',
   },
   purchaseButton: {
-    backgroundColor: '#00D4FF',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    backgroundColor: '#FFF',
+    paddingVertical: 20,
+    paddingHorizontal: 32,
+    borderRadius: 16,
     alignItems: 'center',
   },
-  purchaseButtonBasic: {
-    backgroundColor: '#00D4FF',
-  },
   purchaseButtonSelected: {
-    backgroundColor: '#0099CC',
+    backgroundColor: '#F0F0F0',
   },
   purchaseButtonDisabled: {
-    backgroundColor: '#333',
+    backgroundColor: '#666',
   },
   purchaseButtonText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '700',
+    color: '#00D4FF',
+    fontSize: 18,
+    fontWeight: '900',
     letterSpacing: 1,
-  },
-  purchaseButtonTextDark: {
-    color: '#000',
   },
 });

@@ -2,53 +2,19 @@ import { TicketTier } from '@/types/payment';
 
 export const TICKET_TIERS: TicketTier[] = [
   {
-    id: 'basic',
-    name: 'Basic Hunter',
-    price: 15,
+    id: 'hunt_ticket',
+    name: 'Hunt Ticket',
+    price: 3.99,
     currency: 'EUR',
-    description: 'Standard hunt experience',
+    description: 'Join the treasure hunt adventure',
     features: [
       'Real-time clues',
-      'Basic hints',
-      'Prize eligibility',
-      'Community chat'
-    ],
-    stripePriceId: 'price_basic_hunt'
-  },
-  {
-    id: 'premium',
-    name: 'Premium Hunter',
-    price: 25,
-    currency: 'EUR',
-    description: 'Enhanced hunt experience',
-    features: [
-      'Real-time clues',
-      'Advanced hints',
+      'Interactive hints',
       'Prize eligibility',
       'Community chat',
-      'Priority support',
-      'Exclusive clues'
+      'Full hunt access'
     ],
-    popular: true,
-    stripePriceId: 'price_premium_hunt'
-  },
-  {
-    id: 'vip',
-    name: 'VIP Hunter',
-    price: 50,
-    currency: 'EUR',
-    description: 'Ultimate hunt experience',
-    features: [
-      'Real-time clues',
-      'VIP hints & shortcuts',
-      'Double prize eligibility',
-      'Private VIP chat',
-      'Priority support',
-      'Exclusive clues',
-      'Early access to future hunts',
-      'Personal hunt assistant'
-    ],
-    stripePriceId: 'price_vip_hunt'
+    stripePriceId: 'price_hunt_ticket'
   }
 ];
 
