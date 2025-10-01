@@ -16,7 +16,7 @@ import PaymentSheet from '@/components/PaymentSheet';
 
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
-  const { isLoggedIn } = useUserStore();
+  const { isLoggedIn, user } = useUserStore();
   const { 
     currentEvent, 
     isGameActive, 
@@ -25,9 +25,10 @@ export default function HuntScreen() {
     clues, 
     purchaseTicket,
     isLoading,
-    purchaseError,
-    canPurchaseTicket
+    purchaseError
   } = useGameStore();
+  
+  const canPurchaseTicket = isLoggedIn && !hasTicket;
 
   
   const [showPaymentSheet, setShowPaymentSheet] = useState<boolean>(false);
@@ -52,7 +53,7 @@ export default function HuntScreen() {
         description: 'Access to the hunt',
         features: ['Real-time clues', 'Prize eligibility']
       };
-      await purchaseTicket(mockTier, `pi_mock_${Date.now()}`);
+      await purchaseTicket(mockTier, `pi_mock_${Date.now()}`, isLoggedIn, user);
       console.log('Ticket created successfully');
     } catch (error) {
       console.error('Failed to create ticket after payment:', error);

@@ -1,6 +1,5 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useState, useCallback, useMemo } from 'react';
-import { useUserStore } from './user-store';
 import { TicketTier } from '@/types/payment';
 
 export interface GameEvent {
@@ -29,8 +28,7 @@ export interface Clue {
   order: number;
 }
 
-export const [GameProvider, useGameStore] = createContextHook(() => {
-  const { isLoggedIn, user } = useUserStore();
+const [GameProvider, useGameStoreInternal] = createContextHook(() => {
   
   const [currentEvent] = useState<GameEvent>({
     id: '1',
@@ -49,7 +47,7 @@ export const [GameProvider, useGameStore] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
-  const purchaseTicket = useCallback(async (tier: TicketTier, paymentIntentId: string) => {
+  const purchaseTicket = useCallback(async (tier: TicketTier, paymentIntentId: string, isLoggedIn: boolean, user: any) => {
     if (!currentEvent) return;
     
     // Check if user is logged in
@@ -88,7 +86,7 @@ export const [GameProvider, useGameStore] = createContextHook(() => {
       setPurchaseError('Failed to create ticket. Please contact support.');
       throw error;
     }
-  }, [currentEvent, isLoggedIn, user, userTicket]);
+  }, [currentEvent, userTicket]);
 
   const addClue = useCallback((clue: Clue) => {
     setClues(prev => [...prev, clue].sort((a, b) => a.order - b.order));
@@ -106,9 +104,19 @@ export const [GameProvider, useGameStore] = createContextHook(() => {
     purchaseTicket,
     setGameActive: setIsGameActive,
     addClue,
-    canPurchaseTicket: isLoggedIn && !userTicket,
-  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, purchaseError, purchaseTicket, addClue, isLoggedIn]);
+  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, purchaseError, purchaseTicket, addClue]);
 });
+
+// Safe wrapper hook that ensures the context is available
+export function useGameStore() {
+  const context = useGameStoreInternal();
+  if (!context) {
+    throw new Error('useGameStore must be used within a GameProvider');
+  }
+  return context;
+}
+
+export { GameProvider };
 
 export const mockClues: Clue[] = [
   {

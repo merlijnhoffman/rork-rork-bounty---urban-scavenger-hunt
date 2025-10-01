@@ -10,7 +10,7 @@ export interface User {
   createdAt: string;
 }
 
-export const [UserProvider, useUserStore] = createContextHook(() => {
+const [UserProvider, useUserStoreInternal] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
@@ -159,7 +159,7 @@ export const [UserProvider, useUserStore] = createContextHook(() => {
     setVerificationCode(code);
   }, []);
 
-  return useMemo(() => ({
+  const contextValue = useMemo(() => ({
     user,
     isLoggedIn,
     verificationCode,
@@ -176,4 +176,17 @@ export const [UserProvider, useUserStore] = createContextHook(() => {
     cancelPhoneVerification,
     setPhoneVerificationCode,
   }), [user, isLoggedIn, verificationCode, isLoading, phoneVerificationCode, isVerifyingPhone, pendingUser, login, register, logout, generateVerificationCode, sendPhoneVerification, verifyPhoneAndCompleteRegistration, cancelPhoneVerification]);
+  
+  return contextValue;
 });
+
+// Safe wrapper hook that ensures the context is available
+export function useUserStore() {
+  const context = useUserStoreInternal();
+  if (!context) {
+    throw new Error('useUserStore must be used within a UserProvider');
+  }
+  return context;
+}
+
+export { UserProvider };

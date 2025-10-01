@@ -15,29 +15,38 @@ export interface AuthState {
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-export const [AuthProvider, useAuth] = createContextHook((): AuthState => {
+const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      if (isMounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      if (isMounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, phoneNumber: string) => {
@@ -156,3 +165,14 @@ export const [AuthProvider, useAuth] = createContextHook((): AuthState => {
     resetPassword,
   }), [user, session, loading, signUp, signIn, signOut, resetPassword]);
 });
+
+// Safe wrapper hook that ensures the context is available
+export function useAuth() {
+  const context = useAuthInternal();
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
+export const AuthProvider = AuthProviderInternal;

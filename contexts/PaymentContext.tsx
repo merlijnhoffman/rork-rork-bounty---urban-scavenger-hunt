@@ -1,20 +1,18 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import { PaymentResult, TicketTier } from '@/types/payment';
-import { useUserStore } from '@/store/user-store';
 
 
 interface PaymentContextType {
   selectedTier: TicketTier | null;
   setSelectedTier: (tier: TicketTier | null) => void;
-  processPayment: (tier: TicketTier) => Promise<PaymentResult>;
+  processPayment: (tier: TicketTier, user?: any) => Promise<PaymentResult>;
   isProcessing: boolean;
   paymentError: string | null;
   clearError: () => void;
 }
 
-export const [PaymentProvider, usePayment] = createContextHook((): PaymentContextType => {
-  const { user } = useUserStore();
+const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): PaymentContextType => {
   const [selectedTier, setSelectedTier] = useState<TicketTier | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -23,7 +21,7 @@ export const [PaymentProvider, usePayment] = createContextHook((): PaymentContex
 
 
 
-  const processPayment = useCallback(async (tier: TicketTier): Promise<PaymentResult> => {
+  const processPayment = useCallback(async (tier: TicketTier, user?: any): Promise<PaymentResult> => {
     if (!user) {
       const error = 'User must be logged in to make a payment';
       setPaymentError(error);
@@ -48,7 +46,7 @@ export const [PaymentProvider, usePayment] = createContextHook((): PaymentContex
     } finally {
       setIsProcessing(false);
     }
-  }, [user]);
+  }, []);
 
   return useMemo(() => ({
     selectedTier,
@@ -59,6 +57,17 @@ export const [PaymentProvider, usePayment] = createContextHook((): PaymentContex
     clearError,
   }), [selectedTier, processPayment, isProcessing, paymentError, clearError]);
 });
+
+// Safe wrapper hook that ensures the context is available
+export function usePayment() {
+  const context = usePaymentInternal();
+  if (!context) {
+    throw new Error('usePayment must be used within a PaymentProvider');
+  }
+  return context;
+}
+
+const PaymentProvider = PaymentProviderInternal;
 
 interface PaymentWrapperProps {
   children: React.ReactNode;
@@ -72,3 +81,5 @@ export function PaymentWrapper({ children }: PaymentWrapperProps) {
     </PaymentProvider>
   );
 }
+
+export { PaymentProvider };
