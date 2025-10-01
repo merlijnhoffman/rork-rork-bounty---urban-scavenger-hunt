@@ -54,7 +54,7 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
       setLoading(true);
       
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.toLowerCase(),
         password,
         options: {
           data: {
@@ -97,16 +97,27 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
     try {
       setLoading(true);
       
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
         password,
       });
 
       if (error) {
         console.error('Sign in error:', error);
-        return { success: false, error: error.message };
+        let errorMessage = error.message;
+        
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        }
+        
+        return { success: false, error: errorMessage };
       }
 
+      if (!data.user) {
+        return { success: false, error: 'Login failed. Please try again.' };
+      }
+
+      console.log('Sign in successful for user:', data.user.id);
       return { success: true };
     } catch (error) {
       console.error('Unexpected sign in error:', error);
@@ -141,11 +152,19 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
 
   const resetPassword = useCallback(async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
+        redirectTo: 'https://your-app-url.com/reset-password',
+      });
       
       if (error) {
         console.error('Password reset error:', error);
-        return { success: false, error: error.message };
+        let errorMessage = error.message;
+        
+        if (error.message.includes('invalid format')) {
+          errorMessage = 'Please enter a valid email address.';
+        }
+        
+        return { success: false, error: errorMessage };
       }
 
       return { success: true };

@@ -24,14 +24,24 @@ export default function LoginScreen() {
 
   const { signIn, resetPassword } = useAuth();
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
+    if (!validateEmail(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
     setLoading(true);
-    const result = await signIn(email.trim(), password);
+    const result = await signIn(email.trim().toLowerCase(), password);
     setLoading(false);
 
     if (result.success) {
@@ -47,9 +57,14 @@ export default function LoginScreen() {
       return;
     }
 
-    const result = await resetPassword(email.trim());
+    if (!validateEmail(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    const result = await resetPassword(email.trim().toLowerCase());
     if (result.success) {
-      Alert.alert('Success', 'Password reset email sent');
+      Alert.alert('Success', 'Password reset email sent. Please check your inbox.');
     } else {
       Alert.alert('Error', result.error || 'Failed to send reset email');
     }

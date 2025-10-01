@@ -27,13 +27,18 @@ export default function SignupScreen() {
 
   const { signUp } = useAuth();
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const validateForm = () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email address');
       return false;
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
+    if (!validateEmail(email.trim())) {
       Alert.alert('Error', 'Please enter a valid email address');
       return false;
     }
@@ -72,7 +77,7 @@ export default function SignupScreen() {
     }
 
     setLoading(true);
-    const result = await signUp(email.trim(), password, phoneNumber.trim());
+    const result = await signUp(email.trim().toLowerCase(), password, phoneNumber.trim());
     setLoading(false);
 
     if (result.success) {
