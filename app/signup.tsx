@@ -14,13 +14,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mail, Phone, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { Mail, Phone, Lock, Eye, EyeOff, CheckCircle } from 'lucide-react-native';
+
+type SignupStep = 'phone' | 'verify' | 'account';
 
 export default function SignupScreen() {
+  const [step, setStep] = useState<SignupStep>('phone');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [verificationCode, setVerificationCode] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -94,6 +99,72 @@ export default function SignupScreen() {
     return true;
   };
 
+  const handleSendOTP = async () => {
+    if (!phoneNumber.trim()) {
+      Alert.alert('Error', 'Please enter your phone number');
+      return;
+    }
+
+    if (!validatePhoneNumber(phoneNumber.trim())) {
+      Alert.alert('Error', 'Please enter a valid phone number (10-15 digits)');
+      return;
+    }
+
+    setLoading(true);
+    const formattedPhone = formatPhoneNumber(phoneNumber.trim());
+    
+    console.log('Sending OTP to:', formattedPhone);
+
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: formattedPhone,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      console.error('OTP send error:', error);
+      Alert.alert('Error', error.message || 'Failed to send verification code');
+      return;
+    }
+
+    Alert.alert('Success', 'Verification code sent to your phone!');
+    setStep('verify');
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!verificationCode.trim()) {
+      Alert.alert('Error', 'Please enter the verification code');
+      return;
+    }
+
+    if (verificationCode.trim().length !== 6) {
+      Alert.alert('Error', 'Verification code must be 6 digits');
+      return;
+    }
+
+    setLoading(true);
+    const formattedPhone = formatPhoneNumber(phoneNumber.trim());
+
+    const { error } = await supabase.auth.verifyOtp({
+      phone: formattedPhone,
+      token: verificationCode.trim(),
+      type: 'sms',
+    });
+
+    setLoading(false);
+
+    if (error) {
+      console.error('OTP verification error:', error);
+      Alert.alert('Error', error.message || 'Invalid verification code');
+      return;
+    }
+
+    await supabase.auth.signOut();
+    
+    Alert.alert('Success', 'Phone number verified! Now create your account.');
+    setStep('account');
+  };
+
   const handleSignup = async () => {
     if (!validateForm()) {
       return;
@@ -120,6 +191,199 @@ export default function SignupScreen() {
     }
   };
 
+  const renderPhoneStep = () => (
+    <>
+      <View style={styles.header}>
+        <Text style={styles.title}>Verify Your Phone</Text>
+        <Text style={styles.subtitle}>Step 1 of 2: Enter your phone number</Text>
+      </View>
+
+      <View style={styles.form}>
+        <View style={styles.inputContainer}>
+          <Phone size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Phone number (e.g., +1234567890)"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            testID="phone-input"
+          />
+        </View>
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            We&apos;ll send you a verification code to confirm your phone number.
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.signupButton}
+          onPress={handleSendOTP}
+          disabled={loading}
+          testID="send-otp-button"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.signupButtonText}>Send Verification Code</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  const renderVerifyStep = () => (
+    <>
+      <View style={styles.header}>
+        <Text style={styles.title}>Enter Code</Text>
+        <Text style={styles.subtitle}>We sent a code to {phoneNumber}</Text>
+      </View>
+
+      <View style={styles.form}>
+        <View style={styles.inputContainer}>
+          <Lock size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="6-digit code"
+            value={verificationCode}
+            onChangeText={setVerificationCode}
+            keyboardType="number-pad"
+            maxLength={6}
+            testID="verification-code-input"
+          />
+        </View>
+
+        <TouchableOpacity
+          style={styles.signupButton}
+          onPress={handleVerifyOTP}
+          disabled={loading}
+          testID="verify-button"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.signupButtonText}>Verify Phone</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setStep('phone')}
+          style={styles.backButton}
+        >
+          <Text style={styles.backButtonText}>Change Phone Number</Text>
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
+  const renderAccountStep = () => (
+    <>
+      <View style={styles.header}>
+        <View style={styles.verifiedBadge}>
+          <CheckCircle size={24} color="#34C759" />
+          <Text style={styles.verifiedText}>Phone Verified</Text>
+        </View>
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Step 2 of 2: Set up your credentials</Text>
+      </View>
+
+      <View style={styles.form}>
+        <View style={styles.inputContainer}>
+          <Phone size={20} color="#34C759" style={styles.inputIcon} />
+          <TextInput
+            style={[styles.input, styles.disabledInput]}
+            value={phoneNumber}
+            editable={false}
+            testID="phone-display"
+          />
+          <CheckCircle size={20} color="#34C759" />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Mail size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Email address"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            testID="email-input"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Lock size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoComplete="new-password"
+            testID="password-input"
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.eyeIcon}
+          >
+            {showPassword ? (
+              <EyeOff size={20} color="#666" />
+            ) : (
+              <Eye size={20} color="#666" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Lock size={20} color="#666" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showConfirmPassword}
+            autoComplete="new-password"
+            testID="confirm-password-input"
+          />
+          <TouchableOpacity
+            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+            style={styles.eyeIcon}
+          >
+            {showConfirmPassword ? (
+              <EyeOff size={20} color="#666" />
+            ) : (
+              <Eye size={20} color="#666" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.termsContainer}>
+          <Text style={styles.termsText}>
+            By creating an account, you agree to our Terms of Service and Privacy Policy.
+            Only one account per person is allowed.
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.signupButton}
+          onPress={handleSignup}
+          disabled={loading}
+          testID="signup-button"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.signupButtonText}>Create Account</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -127,105 +391,9 @@ export default function SignupScreen() {
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Join the Hunt</Text>
-            <Text style={styles.subtitle}>Create your account to start hunting</Text>
-          </View>
-
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Mail size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                testID="email-input"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Phone size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Phone number (e.g., +1234567890)"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                testID="phone-input"
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoComplete="new-password"
-                testID="password-input"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-              >
-                {showPassword ? (
-                  <EyeOff size={20} color="#666" />
-                ) : (
-                  <Eye size={20} color="#666" />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Lock size={20} color="#666" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-                autoComplete="new-password"
-                testID="confirm-password-input"
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeIcon}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color="#666" />
-                ) : (
-                  <Eye size={20} color="#666" />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.termsContainer}>
-              <Text style={styles.termsText}>
-                By creating an account, you agree to our Terms of Service and Privacy Policy.
-                Only one account per person is allowed.
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.signupButton}
-              onPress={handleSignup}
-              disabled={loading}
-              testID="signup-button"
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.signupButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          {step === 'phone' && renderPhoneStep()}
+          {step === 'verify' && renderVerifyStep()}
+          {step === 'account' && renderAccountStep()}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -326,5 +494,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  infoBox: {
+    backgroundColor: '#F0F8FF',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  backButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
+    backgroundColor: '#E8F8EC',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  verifiedText: {
+    fontSize: 14,
+    color: '#34C759',
+    fontWeight: '600',
+  },
+  disabledInput: {
+    color: '#999',
   },
 });
