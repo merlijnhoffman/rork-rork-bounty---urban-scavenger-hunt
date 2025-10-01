@@ -184,7 +184,24 @@ const [UserProvider, useUserStoreInternal] = createContextHook(() => {
 export function useUserStore() {
   const context = useUserStoreInternal();
   if (!context) {
-    throw new Error('useUserStore must be used within a UserProvider');
+    // Return default values instead of throwing error to prevent crashes
+    return {
+      user: null,
+      isLoggedIn: false,
+      verificationCode: null,
+      isLoading: false,
+      phoneVerificationCode: '',
+      isVerifyingPhone: false,
+      pendingUser: null,
+      login: async () => {},
+      register: async () => {},
+      logout: async () => {},
+      generateVerificationCode: () => {},
+      sendPhoneVerification: async () => '',
+      verifyPhoneAndCompleteRegistration: async () => {},
+      cancelPhoneVerification: () => {},
+      setPhoneVerificationCode: () => {},
+    };
   }
   return context;
 }

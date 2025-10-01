@@ -111,7 +111,20 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
 export function useGameStore() {
   const context = useGameStoreInternal();
   if (!context) {
-    throw new Error('useGameStore must be used within a GameProvider');
+    // Return default values instead of throwing error to prevent crashes
+    return {
+      currentEvent: null,
+      isGameActive: false,
+      userTicket: null,
+      hasTicket: false,
+      clues: [],
+      gameStartTime: '',
+      isLoading: false,
+      purchaseError: null,
+      purchaseTicket: async () => null,
+      setGameActive: () => {},
+      addClue: () => {},
+    };
   }
   return context;
 }

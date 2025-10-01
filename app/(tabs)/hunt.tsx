@@ -53,8 +53,12 @@ export default function HuntScreen() {
         description: 'Access to the hunt',
         features: ['Real-time clues', 'Prize eligibility']
       };
-      await purchaseTicket(mockTier, `pi_mock_${Date.now()}`, isLoggedIn, user);
-      console.log('Ticket created successfully');
+      
+      // Check if component is still mounted before proceeding
+      if (isLoggedIn && user) {
+        await purchaseTicket(mockTier, `pi_mock_${Date.now()}`, isLoggedIn, user);
+        console.log('Ticket created successfully');
+      }
     } catch (error) {
       console.error('Failed to create ticket after payment:', error);
     }

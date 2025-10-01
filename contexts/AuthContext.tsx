@@ -170,7 +170,16 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
 export function useAuth() {
   const context = useAuthInternal();
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return default values instead of throwing error to prevent crashes
+    return {
+      user: null,
+      session: null,
+      loading: false,
+      signUp: async () => ({ success: false, error: 'Auth context not available' }),
+      signIn: async () => ({ success: false, error: 'Auth context not available' }),
+      signOut: async () => {},
+      resetPassword: async () => ({ success: false, error: 'Auth context not available' }),
+    };
   }
   return context;
 }

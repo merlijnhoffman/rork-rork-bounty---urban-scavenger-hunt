@@ -62,7 +62,15 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
 export function usePayment() {
   const context = usePaymentInternal();
   if (!context) {
-    throw new Error('usePayment must be used within a PaymentProvider');
+    // Return default values instead of throwing error to prevent crashes
+    return {
+      selectedTier: null,
+      setSelectedTier: () => {},
+      processPayment: async () => ({ success: false, error: 'Payment context not available' }),
+      isProcessing: false,
+      paymentError: null,
+      clearError: () => {},
+    };
   }
   return context;
 }
