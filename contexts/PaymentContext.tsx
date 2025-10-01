@@ -63,8 +63,12 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
       let errorMessage = 'Failed to create payment intent';
       
       if (error instanceof Error) {
-        if (error.message.includes('Unable to connect to server')) {
+        if (error.message.includes('Unable to connect to backend server')) {
+          errorMessage = 'Backend server is not running. Please start the server and try again.';
+        } else if (error.message.includes('Unable to connect to server')) {
           errorMessage = 'Unable to connect to payment server. Please check your internet connection and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
         } else if (error.message.includes('HTTP 500')) {
           errorMessage = 'Payment server error. Please try again later.';
         } else if (error.message.includes('HTTP 401')) {
