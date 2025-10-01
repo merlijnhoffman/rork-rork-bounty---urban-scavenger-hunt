@@ -6,19 +6,13 @@ import {
   TouchableOpacity,
   ScrollView,
   ImageBackground,
-  Platform,
-  Alert,
-  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, Target, Zap, AlertCircle, CreditCard, LogIn, CheckCircle } from 'lucide-react-native';
+import { Clock, Users, Target, Zap, AlertCircle, CreditCard, LogIn } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTicketDetection } from '@/hooks/useTicketDetection';
-import { WebView } from 'react-native-webview';
-import * as Linking from 'expo-linking';
-import { STRIPE_CONFIG } from '@/constants/stripe';
+import StripePayment from '@/components/StripePayment';
 import { router } from 'expo-router';
 
 export default function HuntScreen() {
@@ -28,214 +22,33 @@ export default function HuntScreen() {
   const { 
     currentEvent, 
     isGameActive, 
-    clues, 
-    purchaseTicket,
+    clues,
     isLoading,
     purchaseError
   } = useGameStore();
   
-  // Use the new ticket detection system
-  const {
-    hasTicket,
-    activeTicket,
-    isLoading: ticketLoading,
-    isError: ticketError,
-    refreshTicketStatus,
-    isMonitoring
-  } = useTicketDetection();
-  
+  // For now, assume no ticket until we implement proper Stripe integration
+  const hasTicket = false;
   const canPurchaseTicket = isLoggedIn && !hasTicket;
-
-  
-  const [showStripeWebView, setShowStripeWebView] = useState<boolean>(false);
-  const [showSuccess, setShowSuccess] = useState<boolean>(false);
-
-  // Stripe Buy Button HTML
-  const STRIPE_BUY_BUTTON_HTML = `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Purchase Ticket</title>
-    <style>
-      body {
-        margin: 0;
-        padding: 20px;
-        background-color: #0A0A0A;
-        color: white;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-      }
-      .container {
-        text-align: center;
-        max-width: 400px;
-        width: 100%;
-      }
-      .title {
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        color: #FFF;
-      }
-      .price {
-        font-size: 32px;
-        font-weight: 900;
-        color: #00D4FF;
-        margin-bottom: 12px;
-      }
-      .description {
-        font-size: 16px;
-        color: #888;
-        margin-bottom: 32px;
-        line-height: 1.4;
-      }
-      stripe-buy-button {
-        width: 100%;
-      }
-      .footer {
-        margin-top: 24px;
-        font-size: 12px;
-        color: #666;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1 class="title">Hunt Ticket</h1>
-      <div class="price">€3.99</div>
-      <p class="description">Get access to the ultimate treasure hunt experience</p>
-      
-      <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-      <stripe-buy-button
-        buy-button-id="${STRIPE_CONFIG.buyButtonId}"
-        publishable-key="${STRIPE_CONFIG.publishableKey}"
-      ></stripe-buy-button>
-      
-      <div class="footer">
-        Secure payment powered by Stripe
-      </div>
-    </div>
-    
-    <script>
-      // Listen for successful payment
-      window.addEventListener('message', function(event) {
-        if (event.data && event.data.type === 'stripe_checkout_success') {
-          // Notify React Native about successful payment
-          window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'payment_success'
-          }));
-        }
-      });
-      
-      // Alternative: Listen for URL changes that indicate success
-      let lastUrl = window.location.href;
-      setInterval(() => {
-        if (window.location.href !== lastUrl) {
-          lastUrl = window.location.href;
-          if (lastUrl.includes('success') || lastUrl.includes('payment_intent')) {
-            window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'payment_success'
-            }));
-          }
-        }
-      }, 1000);
-    </script>
-  </body>
-  </html>
-  `;
+  const [showPayment, setShowPayment] = useState<boolean>(false);
 
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
-      // Redirect to login page
       router.push('/login');
       return;
     }
     
-    if (Platform.OS === 'web') {
-      // On web, create a popup with the Stripe buy button
-      const popup = window.open('', '_blank', 'width=500,height=600,scrollbars=yes');
-      if (popup) {
-        popup.document.write(STRIPE_BUY_BUTTON_HTML);
-        popup.document.close();
-      }
-    } else {
-      // On mobile, show WebView
-      setShowStripeWebView(true);
-    }
+    setShowPayment(true);
   };
 
-  const handleOpenInBrowser = async () => {
-    try {
-      // Create a data URL with the HTML content
-      const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(STRIPE_BUY_BUTTON_HTML)}`;
-      await Linking.openURL(dataUrl);
-    } catch {
-      Alert.alert('Error', 'Could not open payment link');
-    }
-  };
-  
-  const handleWebViewMessage = (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'payment_success') {
-        setShowStripeWebView(false);
-        handlePaymentSuccess();
-      }
-    } catch (error) {
-      console.log('WebView message parsing error:', error);
-    }
+  const handlePaymentSuccess = (paymentIntentId: string) => {
+    console.log('Payment successful:', paymentIntentId);
+    // TODO: Create ticket in database using the paymentIntentId
+    // For now, just log the success
   };
 
-  const handleWebViewNavigationStateChange = (navState: any) => {
-    const { url } = navState;
-    
-    // Check for Stripe success indicators
-    if (url.includes('success') || url.includes('payment_intent') || url.includes('checkout-success')) {
-      setShowStripeWebView(false);
-      handlePaymentSuccess();
-    } else if (url.includes('canceled') || url.includes('cancel')) {
-      setShowStripeWebView(false);
-    }
-  };
-
-  const handlePaymentSuccess = async () => {
-    try {
-      // Show success animation first
-      setShowSuccess(true);
-      
-      // Create a mock ticket for the €3.99 tier
-      const mockTier = {
-        id: 'standard',
-        name: 'Standard',
-        price: 3.99,
-        currency: 'EUR' as const,
-        description: 'Access to the hunt',
-        features: ['Real-time clues', 'Prize eligibility']
-      };
-      
-      // Check if component is still mounted before proceeding
-      if (isLoggedIn && user) {
-        await purchaseTicket(mockTier, `pi_mock_${Date.now()}`, isLoggedIn, user);
-        console.log('Ticket created successfully');
-      }
-      
-      // Hide success animation after 2 seconds
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 2000);
-    } catch (error) {
-      console.error('Failed to create ticket after payment:', error);
-      setShowSuccess(false);
-    }
-  };
-  
-  const handleCloseWebView = () => {
-    setShowStripeWebView(false);
+  const handlePaymentClose = () => {
+    setShowPayment(false);
   };
 
   if (isGameActive && hasTicket) {
@@ -378,39 +191,7 @@ export default function HuntScreen() {
                   </View>
                 </TouchableOpacity>
                 
-                {hasTicket && activeTicket && (
-                  <View style={styles.ticketInfo}>
-                    <Text style={styles.ticketInfoTitle}>Your Ticket</Text>
-                    <Text style={styles.ticketInfoText}>
-                      Verification Code: {activeTicket.verificationCode}
-                    </Text>
-                    <Text style={styles.ticketInfoDate}>
-                      Purchased: {new Date(activeTicket.purchasedAt).toLocaleDateString()}
-                    </Text>
-                    {activeTicket.event && (
-                      <Text style={styles.ticketInfoEvent}>
-                        Event: {activeTicket.event.city} • €{activeTicket.event.price}
-                      </Text>
-                    )}
-                  </View>
-                )}
-                
-                {/* Ticket detection status for debugging */}
-                {isLoggedIn && (
-                  <View style={styles.debugInfo}>
-                    <Text style={styles.debugText}>
-                      Monitoring: {isMonitoring ? '✅' : '❌'} | 
-                      Loading: {ticketLoading ? '⏳' : '✅'} | 
-                      Error: {ticketError ? '❌' : '✅'}
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.refreshButton}
-                      onPress={refreshTicketStatus}
-                    >
-                      <Text style={styles.refreshButtonText}>Refresh Status</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+
                 </LinearGradient>
               </ImageBackground>
             </View>
@@ -451,62 +232,11 @@ export default function HuntScreen() {
           </View>
         </ScrollView>
         
-        {/* Stripe WebView Modal for Mobile */}
-        {showStripeWebView && Platform.OS !== 'web' && (
-          <Modal
-            visible={showStripeWebView}
-            animationType="slide"
-            presentationStyle="fullScreen"
-            onRequestClose={handleCloseWebView}
-          >
-            <View style={[styles.webViewContainer, { paddingTop: insets.top }]}>
-              <View style={styles.webViewHeader}>
-                <Text style={styles.webViewTitle}>Secure Payment</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={handleCloseWebView}>
-                  <Text style={styles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <WebView
-                source={{ html: STRIPE_BUY_BUTTON_HTML }}
-                onNavigationStateChange={handleWebViewNavigationStateChange}
-                onMessage={handleWebViewMessage}
-                style={styles.webView}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                startInLoadingState={true}
-                mixedContentMode="compatibility"
-                allowsInlineMediaPlayback={true}
-              />
-              <TouchableOpacity
-                style={styles.browserButton}
-                onPress={handleOpenInBrowser}
-              >
-                <Text style={styles.browserButtonText}>Open in Browser</Text>
-              </TouchableOpacity>
-            </View>
-          </Modal>
-        )}
-        
-        {/* Success Modal */}
-        {showSuccess && (
-          <Modal
-            visible={showSuccess}
-            animationType="fade"
-            transparent={true}
-            onRequestClose={() => setShowSuccess(false)}
-          >
-            <View style={styles.successOverlay}>
-              <View style={styles.successContainer}>
-                <CheckCircle color="#00D4FF" size={80} />
-                <Text style={styles.successTitle}>Payment Successful!</Text>
-                <Text style={styles.successMessage}>
-                  Your ticket has been purchased successfully.
-                  Get ready for an amazing hunt experience!
-                </Text>
-              </View>
-            </View>
-          </Modal>
-        )}
+        <StripePayment
+          visible={showPayment}
+          onClose={handlePaymentClose}
+          onSuccess={handlePaymentSuccess}
+        />
       </LinearGradient>
     </View>
   );

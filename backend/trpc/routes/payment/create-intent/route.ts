@@ -9,26 +9,35 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export const createPaymentIntentProcedure = publicProcedure
   .input(
     z.object({
-      eventId: z.string(),
-      userId: z.string(),
-      amount: z.number().min(1), // Amount in cents
-      currency: z.string().default("eur"),
+      priceId: z.string(),
+      userId: z.string().optional(),
+      customerEmail: z.string().email().optional(),
+      metadata: z.record(z.string(), z.string()).optional(),
     })
   )
   .mutation(async ({ input }) => {
     try {
-      console.log("Creating payment intent for:", input);
+      console.log("Creating payment intent for price:", input.priceId);
+
+      // Get the price to determine the amount
+      const price = await stripe.prices.retrieve(input.priceId);
+      
+      if (!price.unit_amount) {
+        throw new Error("Price must have a unit amount");
+      }
 
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: input.amount,
-        currency: input.currency,
+        amount: price.unit_amount,
+        currency: price.currency,
         metadata: {
-          eventId: input.eventId,
-          userId: input.userId,
+          priceId: input.priceId,
+          userId: input.userId || 'anonymous',
+          ...input.metadata,
         },
         automatic_payment_methods: {
           enabled: true,
         },
+        receipt_email: input.customerEmail,
       });
 
       console.log("Payment intent created:", paymentIntent.id);
@@ -38,6 +47,7 @@ export const createPaymentIntentProcedure = publicProcedure
         paymentIntentId: paymentIntent.id,
         amount: paymentIntent.amount,
         currency: paymentIntent.currency,
+        priceId: input.priceId,
       };
     } catch (error) {
       console.error("Error creating payment intent:", error);

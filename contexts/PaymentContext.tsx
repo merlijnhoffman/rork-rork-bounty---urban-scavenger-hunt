@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
-import { PaymentResult, TicketTier } from '@/types/payment';
-
+import { TicketTier } from '@/types/payment';
+import { trpcClient } from '@/lib/trpc';
 
 interface PaymentContextType {
   selectedTier: TicketTier | null;
   setSelectedTier: (tier: TicketTier | null) => void;
-  processPayment: (tier: TicketTier, user?: any) => Promise<PaymentResult>;
+  createPaymentIntent: (priceId: string, userId?: string, customerEmail?: string) => Promise<{ clientSecret: string; paymentIntentId: string }>;
   isProcessing: boolean;
   paymentError: string | null;
   clearError: () => void;
@@ -21,28 +21,38 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
 
 
 
-  const processPayment = useCallback(async (tier: TicketTier, user?: any): Promise<PaymentResult> => {
-    if (!user) {
-      const error = 'User must be logged in to make a payment';
-      setPaymentError(error);
-      return { success: false, error };
-    }
-
+  const createPaymentIntent = useCallback(async (
+    priceId: string, 
+    userId?: string, 
+    customerEmail?: string
+  ): Promise<{ clientSecret: string; paymentIntentId: string }> => {
     setIsProcessing(true);
     setPaymentError(null);
 
     try {
-      // All payments are now handled by the PaymentSheet component
-      // This context just manages state
-      const error = 'Payments should be handled by PaymentSheet component';
-      setPaymentError(error);
-      return { success: false, error };
+      console.log('Creating payment intent for price:', priceId);
+      
+      const result = await trpcClient.payment.createIntent.mutate({
+        priceId,
+        userId,
+        customerEmail,
+        metadata: {
+          source: 'mobile_app',
+          timestamp: new Date().toISOString(),
+        },
+      });
 
+      console.log('Payment intent created:', result.paymentIntentId);
+      
+      return {
+        clientSecret: result.clientSecret!,
+        paymentIntentId: result.paymentIntentId,
+      };
     } catch (error) {
-      console.error('Payment processing error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Payment failed';
+      console.error('Payment intent creation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create payment intent';
       setPaymentError(errorMessage);
-      return { success: false, error: errorMessage };
+      throw new Error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -51,11 +61,11 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
   return useMemo(() => ({
     selectedTier,
     setSelectedTier,
-    processPayment,
+    createPaymentIntent,
     isProcessing,
     paymentError,
     clearError,
-  }), [selectedTier, processPayment, isProcessing, paymentError, clearError]);
+  }), [selectedTier, createPaymentIntent, isProcessing, paymentError, clearError]);
 });
 
 // Safe wrapper hook that ensures the context is available
@@ -66,7 +76,7 @@ export function usePayment() {
     return {
       selectedTier: null,
       setSelectedTier: () => {},
-      processPayment: async () => ({ success: false, error: 'Payment context not available' }),
+      createPaymentIntent: async () => { throw new Error('Payment context not available'); },
       isProcessing: false,
       paymentError: null,
       clearError: () => {},

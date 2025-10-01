@@ -1,7 +1,9 @@
-// Stripe configuration for web-only payments
-// All payments are now handled via Stripe Buy Button in PaymentSheet component
-
+// Stripe configuration
 export const STRIPE_CONFIG = {
-  publishableKey: 'pk_live_51SDNfLATZcBhONrDvT4RuU80vZVQDya0arefGMMI7hjQk0iwMezXuU8yQjn6JkUzKrAfM3dyITDt2h1jQ5vgJo4600JSj9j8Ht',
-  buyButtonId: 'buy_btn_1SDPZ9ATZcBhONrD5OLBgEBU',
+  // You'll need to provide these values:
+  publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_...',
+  priceId: process.env.EXPO_PUBLIC_STRIPE_PRICE_ID || 'price_...',
+  // Default values - you can update these
+  currency: 'eur',
+  amount: 399, // €3.99 in cents
 };
