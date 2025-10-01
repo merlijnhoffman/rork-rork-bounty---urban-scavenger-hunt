@@ -53,6 +53,8 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
     try {
       setLoading(true);
       
+      console.log('Attempting signup with:', { email, phoneNumber });
+      
       const { data, error } = await supabase.auth.signUp({
         email: email.toLowerCase(),
         password,
@@ -65,29 +67,45 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
 
       if (error) {
         console.error('Sign up error:', error);
-        return { success: false, error: error.message };
+        let errorMessage = error.message;
+        
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'An account with this email already exists. Please sign in instead.';
+        } else if (error.message.includes('phone')) {
+          errorMessage = 'Invalid phone number format. Please use format: +1234567890';
+        }
+        
+        return { success: false, error: errorMessage };
       }
 
       if (data.user) {
-        // Create profile in profiles table
+        console.log('User created successfully:', data.user.id);
+        
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
             id: data.user.id,
-            email,
+            email: email.toLowerCase(),
             phone_number: phoneNumber,
           });
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          return { success: false, error: profileError.message || 'Failed to create user profile' };
+          
+          if (profileError.message.includes('duplicate key')) {
+            return { success: true };
+          }
+          
+          return { success: false, error: 'Account created but profile setup failed. Please contact support.' };
         }
+        
+        console.log('Profile created successfully');
       }
 
       return { success: true };
     } catch (error) {
       console.error('Unexpected sign up error:', error);
-      return { success: false, error: 'An unexpected error occurred' };
+      return { success: false, error: 'An unexpected error occurred. Please try again.' };
     } finally {
       setLoading(false);
     }

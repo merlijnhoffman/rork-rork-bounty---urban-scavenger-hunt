@@ -32,6 +32,29 @@ export default function SignupScreen() {
     return emailRegex.test(email);
   };
 
+  const formatPhoneNumber = (phone: string): string => {
+    const cleaned = phone.replace(/\D/g, '');
+    
+    if (cleaned.startsWith('1') && cleaned.length === 11) {
+      return `+${cleaned}`;
+    }
+    
+    if (cleaned.length === 10) {
+      return `+1${cleaned}`;
+    }
+    
+    if (phone.startsWith('+')) {
+      return phone;
+    }
+    
+    return `+${cleaned}`;
+  };
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length >= 10 && cleaned.length <= 15;
+  };
+
   const validateForm = () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email address');
@@ -48,8 +71,8 @@ export default function SignupScreen() {
       return false;
     }
 
-    if (phoneNumber.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+    if (!validatePhoneNumber(phoneNumber.trim())) {
+      Alert.alert('Error', 'Please enter a valid phone number (10-15 digits)');
       return false;
     }
 
@@ -77,7 +100,8 @@ export default function SignupScreen() {
     }
 
     setLoading(true);
-    const result = await signUp(email.trim().toLowerCase(), password, phoneNumber.trim());
+    const formattedPhone = formatPhoneNumber(phoneNumber.trim());
+    const result = await signUp(email.trim().toLowerCase(), password, formattedPhone);
     setLoading(false);
 
     if (result.success) {
@@ -127,7 +151,7 @@ export default function SignupScreen() {
               <Phone size={20} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Phone number (+1234567890)"
+                placeholder="Phone number (e.g., +1234567890)"
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
                 keyboardType="phone-pad"
