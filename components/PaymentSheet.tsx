@@ -6,19 +6,25 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, CreditCard, AlertCircle, CheckCircle } from 'lucide-react-native';
-import PriceSelection from './PriceSelection';
-import { usePayment } from '@/contexts/PaymentContext';
-import { TicketTier } from '@/types/payment';
+import { X, CreditCard, CheckCircle, ExternalLink } from 'lucide-react-native';
+import * as Linking from 'expo-linking';
+
 
 interface PaymentSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: (tier: TicketTier) => void;
+  onSuccess: () => void;
 }
+
+// Replace with your actual Stripe payment link
+const STRIPE_PAYMENT_URL = 'https://buy.stripe.com/test_your_payment_link_here';
+const SUCCESS_URL = 'https://your-domain.com/payment-success';
+const CANCEL_URL = 'https://your-domain.com/payment-cancel';
 
 export default function PaymentSheet({
   visible,
@@ -26,62 +32,51 @@ export default function PaymentSheet({
   onSuccess,
 }: PaymentSheetProps) {
   const insets = useSafeAreaInsets();
-  const {
-    selectedTier,
-    setSelectedTier,
-    processPayment,
-    isProcessing,
-    paymentError,
-    clearError,
-  } = usePayment();
-
+  const [showWebView, setShowWebView] = useState<boolean>(false);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
 
-  const handleTierSelect = (tier: TicketTier) => {
-    setSelectedTier(tier);
-    clearError();
+
+  const handlePurchase = () => {
+    if (Platform.OS === 'web') {
+      // On web, open in new tab
+      window.open(STRIPE_PAYMENT_URL, '_blank');
+      onClose();
+    } else {
+      // On mobile, show WebView
+      setShowWebView(true);
+    }
   };
 
-  const handlePurchase = async (tier: TicketTier) => {
+  const handleOpenInBrowser = async () => {
     try {
-      const result = await processPayment(tier);
-      
-      if (result.success) {
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-          onSuccess(tier);
-          onClose();
-        }, 2000);
-      } else {
-        Alert.alert(
-          'Payment Failed',
-          result.error || 'Something went wrong. Please try again.',
-          [{ text: 'OK', onPress: clearError }]
-        );
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      Alert.alert(
-        'Payment Error',
-        'An unexpected error occurred. Please try again.',
-        [{ text: 'OK', onPress: clearError }]
-      );
+      await Linking.openURL(STRIPE_PAYMENT_URL);
+      onClose();
+    } catch {
+      Alert.alert('Error', 'Could not open payment link');
+    }
+  };
+
+  const handleWebViewNavigationStateChange = (navState: any) => {
+    const { url } = navState;
+    
+    if (url.includes(SUCCESS_URL) || url.includes('payment_intent_client_secret')) {
+      setShowWebView(false);
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        onSuccess();
+        onClose();
+      }, 2000);
+    } else if (url.includes(CANCEL_URL) || url.includes('canceled=true')) {
+      setShowWebView(false);
     }
   };
 
   const handleClose = () => {
-    if (isProcessing) {
-      Alert.alert(
-        'Payment in Progress',
-        'Please wait for the payment to complete.',
-        [{ text: 'OK' }]
-      );
+    if (showWebView) {
+      setShowWebView(false);
       return;
     }
-    
-    clearError();
-    setSelectedTier(null);
     onClose();
   };
 
@@ -101,11 +96,40 @@ export default function PaymentSheet({
             <CheckCircle color="#00D4FF" size={80} />
             <Text style={styles.successTitle}>Payment Successful!</Text>
             <Text style={styles.successMessage}>
-              Your {selectedTier?.name} ticket has been purchased successfully.
+              Your ticket has been purchased successfully.
               Get ready for an amazing hunt experience!
             </Text>
           </View>
         </LinearGradient>
+      </Modal>
+    );
+  }
+
+  if (showWebView && Platform.OS !== 'web') {
+    return (
+      <Modal
+        visible={visible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={handleClose}
+      >
+        <View style={[styles.webViewContainer, { paddingTop: insets.top }]}>
+          <View style={styles.webViewHeader}>
+            <Text style={styles.webViewTitle}>Secure Payment</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+              <X color="#FFF" size={24} />
+            </TouchableOpacity>
+          </View>
+          <WebView
+            source={{ uri: STRIPE_PAYMENT_URL }}
+            onNavigationStateChange={handleWebViewNavigationStateChange}
+
+            style={styles.webView}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+          />
+        </View>
       </Modal>
     );
   }
@@ -129,32 +153,39 @@ export default function PaymentSheet({
           <TouchableOpacity
             style={styles.closeButton}
             onPress={handleClose}
-            disabled={isProcessing}
+
           >
             <X color="#FFF" size={24} />
           </TouchableOpacity>
         </View>
 
-        {paymentError && (
-          <View style={styles.errorContainer}>
-            <AlertCircle color="#FF6B6B" size={20} />
-            <Text style={styles.errorText}>{paymentError}</Text>
+        <View style={styles.content}>
+          <View style={styles.ticketCard}>
+            <Text style={styles.ticketTitle}>Hunt Ticket</Text>
+            <Text style={styles.ticketPrice}>€3.99</Text>
+            <Text style={styles.ticketDescription}>
+              Get access to the ultimate treasure hunt experience
+            </Text>
+            
             <TouchableOpacity
-              style={styles.errorCloseButton}
-              onPress={clearError}
+              style={styles.purchaseButton}
+              onPress={handlePurchase}
             >
-              <X color="#FF6B6B" size={16} />
+              <CreditCard color="#FFF" size={20} />
+              <Text style={styles.purchaseButtonText}>Purchase Ticket</Text>
             </TouchableOpacity>
+            
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity
+                style={styles.browserButton}
+                onPress={handleOpenInBrowser}
+              >
+                <ExternalLink color="#00D4FF" size={16} />
+                <Text style={styles.browserButtonText}>Open in Browser</Text>
+              </TouchableOpacity>
+            )}
           </View>
-        )}
-
-        <PriceSelection
-          selectedTier={selectedTier}
-          onSelectTier={handleTierSelect}
-          onPurchase={handlePurchase}
-          isProcessing={isProcessing}
-          disabled={isProcessing}
-        />
+        </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
@@ -253,5 +284,85 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     textAlign: 'center',
+  },
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  webViewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  webViewTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  webView: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  ticketCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  ticketTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 8,
+  },
+  ticketPrice: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#00D4FF',
+    marginBottom: 12,
+  },
+  ticketDescription: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  purchaseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#00D4FF',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  purchaseButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
+    marginLeft: 8,
+  },
+  browserButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  browserButtonText: {
+    fontSize: 14,
+    color: '#00D4FF',
+    marginLeft: 6,
   },
 });

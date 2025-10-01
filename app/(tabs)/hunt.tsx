@@ -12,9 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, Users, Target, Zap, AlertCircle, User, CreditCard } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useUserStore } from '@/store/user-store';
-import { usePayment } from '@/contexts/PaymentContext';
 import PaymentSheet from '@/components/PaymentSheet';
-import { TicketTier } from '@/types/payment';
 
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
@@ -30,7 +28,7 @@ export default function HuntScreen() {
     purchaseError,
     canPurchaseTicket
   } = useGameStore();
-  const { clearError } = usePayment();
+
   
   const [showPaymentSheet, setShowPaymentSheet] = useState<boolean>(false);
 
@@ -40,15 +38,22 @@ export default function HuntScreen() {
       return;
     }
     
-    clearError();
     setShowPaymentSheet(true);
   };
   
-  const handlePaymentSuccess = async (tier: TicketTier) => {
+  const handlePaymentSuccess = async () => {
     try {
-      // The payment was successful, now create the ticket
-      await purchaseTicket(tier, `pi_mock_${Date.now()}`);
-      console.log('Ticket created successfully for tier:', tier.name);
+      // Create a mock ticket for the €3.99 tier
+      const mockTier = {
+        id: 'standard',
+        name: 'Standard',
+        price: 3.99,
+        currency: 'EUR' as const,
+        description: 'Access to the hunt',
+        features: ['Real-time clues', 'Prize eligibility']
+      };
+      await purchaseTicket(mockTier, `pi_mock_${Date.now()}`);
+      console.log('Ticket created successfully');
     } catch (error) {
       console.error('Failed to create ticket after payment:', error);
     }
