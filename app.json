@@ -15,7 +15,13 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.rork-bounty-urban-scavenger-hunt"
+      "bundleIdentifier": "app.rork.rork-bounty-urban-scavenger-hunt",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleLocalizations": [
+          "fr"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,6 +38,13 @@
         "expo-router",
         {
           "origin": "https://rork.com/"
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "string | string[]",
+          "enableGooglePay": "boolean"
         }
       ]
     ],

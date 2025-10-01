@@ -8,6 +8,7 @@ import { StyleSheet } from "react-native";
 import { GameProvider } from '@/store/game-store';
 import { UserProvider } from '@/store/user-store';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { PaymentWrapper } from '@/contexts/PaymentContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -47,15 +48,17 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <UserProvider>
-          <GameProvider>
-            <GestureHandlerRootView style={styles.container}>
-              <RootLayoutNav />
-            </GestureHandlerRootView>
-          </GameProvider>
-        </UserProvider>
-      </AuthProvider>
+      <PaymentWrapper>
+        <AuthProvider>
+          <UserProvider>
+            <GameProvider>
+              <GestureHandlerRootView style={styles.container}>
+                <RootLayoutNav />
+              </GestureHandlerRootView>
+            </GameProvider>
+          </UserProvider>
+        </AuthProvider>
+      </PaymentWrapper>
     </QueryClientProvider>
   );
 }

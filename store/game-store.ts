@@ -1,6 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useState, useCallback, useMemo } from 'react';
 import { useUserStore } from './user-store';
+import { TicketTier } from '@/types/payment';
 
 export interface GameEvent {
   id: string;
@@ -10,6 +11,14 @@ export interface GameEvent {
   prize: number;
   registeredPlayers: number;
   startTime: string;
+}
+
+export interface UserTicket {
+  id: string;
+  eventId: string;
+  tier: TicketTier;
+  purchaseDate: string;
+  paymentIntentId: string;
 }
 
 export interface Clue {
@@ -34,13 +43,13 @@ export const [GameProvider, useGameStore] = createContextHook(() => {
   });
 
   const [isGameActive, setIsGameActive] = useState<boolean>(false);
-  const [hasTicket, setHasTicket] = useState<boolean>(false);
+  const [userTicket, setUserTicket] = useState<UserTicket | null>(null);
   const [clues, setClues] = useState<Clue[]>([]);
   const [gameStartTime] = useState<string>('Saturday, Dec 28, 2024 • 2:00 PM EST');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
-  const purchaseTicket = useCallback(async () => {
+  const purchaseTicket = useCallback(async (tier: TicketTier, paymentIntentId: string) => {
     if (!currentEvent) return;
     
     // Check if user is logged in
@@ -50,7 +59,7 @@ export const [GameProvider, useGameStore] = createContextHook(() => {
     }
     
     // Check if user already has a ticket
-    if (hasTicket) {
+    if (userTicket) {
       setPurchaseError('You already have a ticket for this event');
       throw new Error('Ticket already purchased');
     }
@@ -59,22 +68,27 @@ export const [GameProvider, useGameStore] = createContextHook(() => {
     setPurchaseError(null);
     
     try {
-      await new Promise(resolve => {
-        if (typeof resolve === 'function') {
-          setTimeout(resolve, 2000);
-        }
-      });
+      // Create ticket record
+      const ticket: UserTicket = {
+        id: `ticket_${Date.now()}`,
+        eventId: currentEvent.id,
+        tier,
+        purchaseDate: new Date().toISOString(),
+        paymentIntentId,
+      };
       
-      console.log('Processing payment with Stripe for user:', user.email);
+      console.log('Ticket purchased successfully:', ticket);
       
-      setHasTicket(true);
+      setUserTicket(ticket);
       setIsLoading(false);
+      
+      return ticket;
     } catch (error) {
       setIsLoading(false);
-      setPurchaseError('Payment failed. Please try again.');
+      setPurchaseError('Failed to create ticket. Please contact support.');
       throw error;
     }
-  }, [currentEvent, isLoggedIn, user, hasTicket]);
+  }, [currentEvent, isLoggedIn, user, userTicket]);
 
   const addClue = useCallback((clue: Clue) => {
     setClues(prev => [...prev, clue].sort((a, b) => a.order - b.order));
@@ -83,7 +97,8 @@ export const [GameProvider, useGameStore] = createContextHook(() => {
   return useMemo(() => ({
     currentEvent,
     isGameActive,
-    hasTicket,
+    userTicket,
+    hasTicket: !!userTicket,
     clues,
     gameStartTime,
     isLoading,
@@ -91,8 +106,8 @@ export const [GameProvider, useGameStore] = createContextHook(() => {
     purchaseTicket,
     setGameActive: setIsGameActive,
     addClue,
-    canPurchaseTicket: isLoggedIn && !hasTicket,
-  }), [currentEvent, isGameActive, hasTicket, clues, gameStartTime, isLoading, purchaseError, purchaseTicket, addClue, isLoggedIn]);
+    canPurchaseTicket: isLoggedIn && !userTicket,
+  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, purchaseError, purchaseTicket, addClue, isLoggedIn]);
 });
 
 export const mockClues: Clue[] = [

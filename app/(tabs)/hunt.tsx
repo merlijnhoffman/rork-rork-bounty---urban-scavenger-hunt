@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,9 +9,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, Target, Zap, AlertCircle, User } from 'lucide-react-native';
+import { Clock, Users, Target, Zap, AlertCircle, User, CreditCard } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useUserStore } from '@/store/user-store';
+import { usePayment } from '@/contexts/PaymentContext';
+import PaymentSheet from '@/components/PaymentSheet';
+import { TicketTier } from '@/types/payment';
 
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
@@ -19,20 +22,40 @@ export default function HuntScreen() {
   const { 
     currentEvent, 
     isGameActive, 
-    hasTicket, 
+    hasTicket,
+    userTicket,
     clues, 
     purchaseTicket,
     isLoading,
     purchaseError,
     canPurchaseTicket
   } = useGameStore();
+  const { clearError } = usePayment();
+  
+  const [showPaymentSheet, setShowPaymentSheet] = useState<boolean>(false);
 
-  const handlePurchaseTicket = async () => {
-    try {
-      await purchaseTicket();
-    } catch (error) {
-      console.log('Failed to purchase ticket:', error);
+  const handleShowPaymentSheet = () => {
+    if (!isLoggedIn) {
+      console.log('User must be logged in to purchase tickets');
+      return;
     }
+    
+    clearError();
+    setShowPaymentSheet(true);
+  };
+  
+  const handlePaymentSuccess = async (tier: TicketTier) => {
+    try {
+      // The payment was successful, now create the ticket
+      await purchaseTicket(tier, `pi_mock_${Date.now()}`);
+      console.log('Ticket created successfully for tier:', tier.name);
+    } catch (error) {
+      console.error('Failed to create ticket after payment:', error);
+    }
+  };
+  
+  const handleClosePaymentSheet = () => {
+    setShowPaymentSheet(false);
   };
 
   if (isGameActive && hasTicket) {
@@ -155,16 +178,34 @@ export default function HuntScreen() {
                     styles.ticketButton,
                     (!canPurchaseTicket || isLoading) && styles.ticketButtonDisabled
                   ]}
-                  onPress={handlePurchaseTicket}
+                  onPress={handleShowPaymentSheet}
                   disabled={!canPurchaseTicket || isLoading}
                 >
-                  <Text style={styles.ticketButtonText}>
-                    {isLoading ? 'PROCESSING...' : 
-                     hasTicket ? 'TICKET PURCHASED' : 
-                     !isLoggedIn ? 'ACCOUNT REQUIRED' :
-                     `BUY TICKET - €${currentEvent.ticketPrice}`}
-                  </Text>
+                  <View style={styles.ticketButtonContent}>
+                    <CreditCard color={hasTicket ? '#888' : '#000'} size={20} />
+                    <Text style={[
+                      styles.ticketButtonText,
+                      hasTicket && styles.ticketButtonTextDisabled
+                    ]}>
+                      {isLoading ? 'PROCESSING...' : 
+                       hasTicket ? `${userTicket?.tier.name.toUpperCase()} TICKET PURCHASED` : 
+                       !isLoggedIn ? 'ACCOUNT REQUIRED' :
+                       'CHOOSE TICKET TIER'}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
+                
+                {hasTicket && userTicket && (
+                  <View style={styles.ticketInfo}>
+                    <Text style={styles.ticketInfoTitle}>Your Ticket</Text>
+                    <Text style={styles.ticketInfoText}>
+                      {userTicket.tier.name} • €{userTicket.tier.price}
+                    </Text>
+                    <Text style={styles.ticketInfoDate}>
+                      Purchased: {new Date(userTicket.purchaseDate).toLocaleDateString()}
+                    </Text>
+                  </View>
+                )}
                 </LinearGradient>
               </ImageBackground>
             </View>
@@ -204,6 +245,12 @@ export default function HuntScreen() {
             </View>
           </View>
         </ScrollView>
+        
+        <PaymentSheet
+          visible={showPaymentSheet}
+          onClose={handleClosePaymentSheet}
+          onSuccess={handlePaymentSuccess}
+        />
       </LinearGradient>
     </View>
   );
@@ -310,11 +357,20 @@ const styles = StyleSheet.create({
   ticketButtonDisabled: {
     backgroundColor: '#333',
   },
+  ticketButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   ticketButtonText: {
     color: '#00D4FF',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1,
+    marginLeft: 8,
+  },
+  ticketButtonTextDisabled: {
+    color: '#888',
   },
   howItWorks: {
     marginTop: 20,
@@ -525,5 +581,30 @@ const styles = StyleSheet.create({
     color: '#000',
     opacity: 0.8,
     marginTop: 2,
+  },
+  ticketInfo: {
+    backgroundColor: '#1A1A1A',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#00D4FF',
+  },
+  ticketInfoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#00D4FF',
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  ticketInfoText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  ticketInfoDate: {
+    fontSize: 12,
+    color: '#888',
   },
 });
