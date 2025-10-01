@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   ScrollView,
   ImageBackground,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, Target, Zap, AlertCircle, CreditCard, LogIn } from 'lucide-react-native';
+import { Clock, Users, Target, Zap, AlertCircle, CreditCard, LogIn, RefreshCw } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClues } from '@/contexts/ClueContext';
+import { trpc } from '@/lib/trpc';
 import StripePayment from '@/components/StripePayment';
 import { router } from 'expo-router';
 
@@ -21,16 +24,49 @@ export default function HuntScreen() {
   const isLoggedIn = !!user;
   const { 
     currentEvent, 
-    isGameActive, 
-    clues,
-    isLoading,
+    isLoading: gameLoading,
     purchaseError
   } = useGameStore();
   
-  // For now, assume no ticket until we implement proper Stripe integration
-  const hasTicket = false;
-  const canPurchaseTicket = isLoggedIn && !hasTicket;
+  const {
+    clues,
+    isLoading: cluesLoading,
+    error: cluesError,
+    eventStatus,
+    refreshClues,
+    checkEventStatus,
+  } = useClues();
+  
   const [showPayment, setShowPayment] = useState<boolean>(false);
+  const [hasTicket, setHasTicket] = useState<boolean>(false);
+  
+  // Check ticket status when user logs in
+  const ticketQuery = trpc.payment.checkTicketStatus.useQuery(
+    {
+      userId: user?.id || '',
+      eventId: currentEvent?.id || '',
+    },
+    {
+      enabled: !!user && !!currentEvent,
+      refetchInterval: 30000, // Refetch every 30 seconds
+    }
+  );
+  
+  useEffect(() => {
+    if (ticketQuery.data) {
+      setHasTicket(ticketQuery.data.hasTicket);
+    }
+  }, [ticketQuery.data]);
+  
+  // Check event status when component mounts
+  useEffect(() => {
+    if (currentEvent) {
+      checkEventStatus(currentEvent.id);
+    }
+  }, [currentEvent, checkEventStatus]);
+  
+  const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading;
+  const isLoading = gameLoading || cluesLoading || ticketQuery.isLoading;
 
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
@@ -51,7 +87,8 @@ export default function HuntScreen() {
     setShowPayment(false);
   };
 
-  if (isGameActive && hasTicket) {
+  // Show live hunt interface if user has ticket and event is active
+  if (hasTicket && eventStatus?.isActive) {
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -66,7 +103,29 @@ export default function HuntScreen() {
             <Text style={styles.cityName}>{currentEvent?.city}</Text>
           </View>
 
-          <ScrollView style={styles.cluesContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.cluesContainer} 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={cluesLoading}
+                onRefresh={refreshClues}
+                tintColor="#00D4FF"
+                colors={['#00D4FF']}
+              />
+            }
+          >
+            {cluesError && (
+              <View style={styles.errorContainer}>
+                <AlertCircle color="#FF6B6B" size={16} />
+                <Text style={styles.errorText}>{cluesError}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={refreshClues}>
+                  <RefreshCw color="#00D4FF" size={16} />
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            
             {clues.map((clue, index) => (
               <View key={clue.id} style={styles.clueCard}>
                 <View style={styles.clueHeader}>
@@ -84,7 +143,7 @@ export default function HuntScreen() {
               </View>
             ))}
             
-            {clues.length === 0 && (
+            {clues.length === 0 && !cluesError && (
               <View style={styles.waitingContainer}>
                 <Zap color="#00D4FF" size={48} />
                 <Text style={styles.waitingTitle}>Hunt Starting Soon</Text>
@@ -125,14 +184,14 @@ export default function HuntScreen() {
                   <View style={styles.eventHeader}>
                     <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
                     <View style={styles.prizeContainer}>
-                      <Text style={styles.prizeAmount}>${currentEvent.prize}</Text>
+                      <Text style={styles.prizeAmount}>${eventStatus?.prize || currentEvent.prize}</Text>
                       <Text style={styles.prizeLabel}>PRIZE</Text>
                     </View>
                   </View>
 
                   <View style={styles.citySection}>
                     <Text style={styles.cityLabel}>LOCATION</Text>
-                    <Text style={styles.cityNameLarge}>AMSTERDAM</Text>
+                    <Text style={styles.cityNameLarge}>{eventStatus?.city?.toUpperCase() || 'AMSTERDAM'}</Text>
                     <Text style={styles.cityCountry}>Netherlands</Text>
                   </View>
 
@@ -162,10 +221,21 @@ export default function HuntScreen() {
                   </TouchableOpacity>
                 )}
                 
-                {purchaseError && (
+                {(purchaseError || cluesError) && (
                   <View style={styles.errorContainer}>
                     <AlertCircle color="#FF6B6B" size={16} />
-                    <Text style={styles.errorText}>{purchaseError}</Text>
+                    <Text style={styles.errorText}>{purchaseError || cluesError}</Text>
+                  </View>
+                )}
+                
+                {hasTicket && (
+                  <View style={styles.ticketInfo}>
+                    <Text style={styles.ticketInfoTitle}>✓ TICKET PURCHASED</Text>
+                    <Text style={styles.ticketInfoText}>
+                      {eventStatus?.isActive ? 'Hunt is live! Check clues above.' : 
+                       eventStatus?.hasStarted ? 'Hunt has ended.' :
+                       'Hunt starts at the scheduled time.'}
+                    </Text>
                   </View>
                 )}
 
@@ -694,5 +764,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#000',
     fontWeight: '600',
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  retryButtonText: {
+    fontSize: 12,
+    color: '#00D4FF',
+    fontWeight: '600',
+    marginLeft: 4,
   },
 });
