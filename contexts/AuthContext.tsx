@@ -129,8 +129,8 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
         return;
       }
       
-      // Redirect to login page after successful sign out
-      router.replace('/login');
+      // Redirect to home screen after successful sign out
+      router.replace('/hunt');
     } catch (error) {
       console.error('Unexpected sign out error:', error);
       Alert.alert('Error', 'An unexpected error occurred');
