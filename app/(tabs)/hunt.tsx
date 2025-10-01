@@ -6,15 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
   ImageBackground,
-  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, Target, Zap, AlertCircle, CreditCard, LogIn, RefreshCw } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, CreditCard, LogIn } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
-import { useClues } from '@/contexts/ClueContext';
-import { trpc } from '@/lib/trpc';
+
+import { trpc, trpcClient } from '@/lib/trpc';
 import StripePayment from '@/components/StripePayment';
 import { router } from 'expo-router';
 
@@ -28,14 +27,7 @@ export default function HuntScreen() {
     purchaseError
   } = useGameStore();
   
-  const {
-    clues,
-    isLoading: cluesLoading,
-    error: cluesError,
-    eventStatus,
-    refreshClues,
-    checkEventStatus,
-  } = useClues();
+
   
   const [showPayment, setShowPayment] = useState<boolean>(false);
   const [hasTicket, setHasTicket] = useState<boolean>(false);
@@ -58,15 +50,10 @@ export default function HuntScreen() {
     }
   }, [ticketQuery.data]);
   
-  // Check event status when component mounts
-  useEffect(() => {
-    if (currentEvent) {
-      checkEventStatus(currentEvent.id);
-    }
-  }, [currentEvent, checkEventStatus]);
+
   
   const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading;
-  const isLoading = gameLoading || cluesLoading || ticketQuery.isLoading;
+  const isLoading = gameLoading || ticketQuery.isLoading;
 
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
@@ -77,86 +64,37 @@ export default function HuntScreen() {
     setShowPayment(true);
   };
 
-  const handlePaymentSuccess = (paymentIntentId: string) => {
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
     console.log('Payment successful:', paymentIntentId);
-    // TODO: Create ticket in database using the paymentIntentId
-    // For now, just log the success
+    
+    if (!user || !currentEvent) {
+      console.error('Missing user or event data');
+      return;
+    }
+
+    try {
+      // Create ticket in database
+      const ticket = await trpcClient.payment.createTicket.mutate({
+        userId: user.id,
+        eventId: currentEvent.id,
+        paymentIntentId,
+      });
+      
+      console.log('Ticket created successfully:', ticket.ticketId);
+      
+      // Refresh ticket status
+      await ticketQuery.refetch();
+      
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+    }
   };
 
   const handlePaymentClose = () => {
     setShowPayment(false);
   };
 
-  // Show live hunt interface if user has ticket and event is active
-  if (hasTicket && eventStatus?.isActive) {
-    return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={['#0A0A0A', '#1A1A1A']}
-          style={styles.gradient}
-        >
-          <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE HUNT</Text>
-            </View>
-            <Text style={styles.cityName}>{currentEvent?.city}</Text>
-          </View>
 
-          <ScrollView 
-            style={styles.cluesContainer} 
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={cluesLoading}
-                onRefresh={refreshClues}
-                tintColor="#00D4FF"
-                colors={['#00D4FF']}
-              />
-            }
-          >
-            {cluesError && (
-              <View style={styles.errorContainer}>
-                <AlertCircle color="#FF6B6B" size={16} />
-                <Text style={styles.errorText}>{cluesError}</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={refreshClues}>
-                  <RefreshCw color="#00D4FF" size={16} />
-                  <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            
-            {clues.map((clue, index) => (
-              <View key={clue.id} style={styles.clueCard}>
-                <View style={styles.clueHeader}>
-                  <Target color="#00D4FF" size={20} />
-                  <Text style={styles.clueNumber}>CLUE #{index + 1}</Text>
-                  <Text style={styles.clueTime}>{clue.timestamp}</Text>
-                </View>
-                <Text style={styles.clueText}>{clue.text}</Text>
-                {clue.hint && (
-                  <View style={styles.hintContainer}>
-                    <Text style={styles.hintLabel}>HINT:</Text>
-                    <Text style={styles.hintText}>{clue.hint}</Text>
-                  </View>
-                )}
-              </View>
-            ))}
-            
-            {clues.length === 0 && !cluesError && (
-              <View style={styles.waitingContainer}>
-                <Zap color="#00D4FF" size={48} />
-                <Text style={styles.waitingTitle}>Hunt Starting Soon</Text>
-                <Text style={styles.waitingText}>
-                  First clue will drop at the scheduled start time
-                </Text>
-              </View>
-            )}
-          </ScrollView>
-        </LinearGradient>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -184,14 +122,14 @@ export default function HuntScreen() {
                   <View style={styles.eventHeader}>
                     <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
                     <View style={styles.prizeContainer}>
-                      <Text style={styles.prizeAmount}>${eventStatus?.prize || currentEvent.prize}</Text>
+                      <Text style={styles.prizeAmount}>${currentEvent.prize}</Text>
                       <Text style={styles.prizeLabel}>PRIZE</Text>
                     </View>
                   </View>
 
                   <View style={styles.citySection}>
                     <Text style={styles.cityLabel}>LOCATION</Text>
-                    <Text style={styles.cityNameLarge}>{eventStatus?.city?.toUpperCase() || 'AMSTERDAM'}</Text>
+                    <Text style={styles.cityNameLarge}>AMSTERDAM</Text>
                     <Text style={styles.cityCountry}>Netherlands</Text>
                   </View>
 
@@ -221,10 +159,10 @@ export default function HuntScreen() {
                   </TouchableOpacity>
                 )}
                 
-                {(purchaseError || cluesError) && (
+                {purchaseError && (
                   <View style={styles.errorContainer}>
                     <AlertCircle color="#FF6B6B" size={16} />
-                    <Text style={styles.errorText}>{purchaseError || cluesError}</Text>
+                    <Text style={styles.errorText}>{purchaseError}</Text>
                   </View>
                 )}
                 
@@ -232,9 +170,7 @@ export default function HuntScreen() {
                   <View style={styles.ticketInfo}>
                     <Text style={styles.ticketInfoTitle}>✓ TICKET PURCHASED</Text>
                     <Text style={styles.ticketInfoText}>
-                      {eventStatus?.isActive ? 'Hunt is live! Check clues above.' : 
-                       eventStatus?.hasStarted ? 'Hunt has ended.' :
-                       'Hunt starts at the scheduled time.'}
+                      Hunt starts at the scheduled time.
                     </Text>
                   </View>
                 )}
@@ -465,109 +401,7 @@ const styles = StyleSheet.create({
     color: '#CCC',
     lineHeight: 22,
   },
-  header: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF0000',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFF',
-    marginRight: 8,
-  },
-  liveText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  cityName: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#00D4FF',
-    letterSpacing: 2,
-  },
-  cluesContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  clueCard: {
-    backgroundColor: '#222',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#00D4FF',
-  },
-  clueHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  clueNumber: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#00D4FF',
-    marginLeft: 8,
-    flex: 1,
-    letterSpacing: 1,
-  },
-  clueTime: {
-    fontSize: 12,
-    color: '#888',
-  },
-  clueText: {
-    fontSize: 16,
-    color: '#FFF',
-    lineHeight: 24,
-    marginBottom: 12,
-  },
-  hintContainer: {
-    backgroundColor: '#333',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  hintLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#00D4FF',
-    marginBottom: 4,
-    letterSpacing: 1,
-  },
-  hintText: {
-    fontSize: 14,
-    color: '#CCC',
-    lineHeight: 20,
-  },
-  waitingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  waitingTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFF',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  waitingText: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+
   authRequiredContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -765,19 +599,5 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '600',
   },
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginTop: 8,
-  },
-  retryButtonText: {
-    fontSize: 12,
-    color: '#00D4FF',
-    fontWeight: '600',
-    marginLeft: 4,
-  },
+
 });

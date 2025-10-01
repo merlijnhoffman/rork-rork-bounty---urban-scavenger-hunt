@@ -15,6 +15,76 @@ if (!supabaseAnonKey) {
 console.log('Supabase URL loaded:', supabaseUrl ? 'Yes' : 'No');
 console.log('Supabase Anon Key loaded:', supabaseAnonKey ? 'Yes' : 'No');
 
+// Helper function to send clues directly through Supabase
+export async function sendClueToSupabase({
+  eventId,
+  text,
+  hint,
+  orderNumber,
+  releaseTime,
+}: {
+  eventId: string;
+  text: string;
+  hint?: string;
+  orderNumber: number;
+  releaseTime?: string;
+}) {
+  const { data, error } = await supabase
+    .from('clues')
+    .insert({
+      event_id: eventId,
+      text,
+      hint,
+      order_number: orderNumber,
+      release_time: releaseTime || new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error sending clue to Supabase:', error);
+    throw error;
+  }
+
+  console.log('Clue sent successfully:', data.id);
+  return data;
+}
+
+// Helper function to get clues for users with tickets
+export async function getCluesForUser(userId: string, eventId: string) {
+  // First check if user has a valid ticket
+  const { data: ticket, error: ticketError } = await supabase
+    .from('tickets')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('event_id', eventId)
+    .eq('is_used', false)
+    .single();
+
+  if (ticketError || !ticket) {
+    return { hasAccess: false, clues: [], message: 'No valid ticket found' };
+  }
+
+  // Get released clues for this event
+  const { data: clues, error: cluesError } = await supabase
+    .from('clues')
+    .select('*')
+    .eq('event_id', eventId)
+    .lte('release_time', new Date().toISOString())
+    .order('order_number', { ascending: true });
+
+  if (cluesError) {
+    console.error('Error fetching clues:', cluesError);
+    throw cluesError;
+  }
+
+  return {
+    hasAccess: true,
+    clues: clues || [],
+    message: 'Clues retrieved successfully'
+  };
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
@@ -23,6 +93,37 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+// SQL to create the clues table in Supabase:
+/*
+CREATE TABLE clues (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  event_id TEXT NOT NULL REFERENCES events(id),
+  text TEXT NOT NULL,
+  hint TEXT,
+  order_number INTEGER NOT NULL,
+  release_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add RLS policies
+ALTER TABLE clues ENABLE ROW LEVEL SECURITY;
+
+-- Policy to allow reading clues for users with valid tickets
+CREATE POLICY "Users can read clues if they have valid tickets" ON clues
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM tickets 
+      WHERE tickets.user_id = auth.uid()::text 
+      AND tickets.event_id = clues.event_id 
+      AND tickets.is_used = false
+    )
+  );
+
+-- Policy to allow service role to insert clues
+CREATE POLICY "Service role can insert clues" ON clues
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+*/
 
 export type Database = {
   public: {
@@ -102,6 +203,35 @@ export type Database = {
           start_time?: string;
           price?: number;
           is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      clues: {
+        Row: {
+          id: string;
+          event_id: string;
+          text: string;
+          hint?: string;
+          order_number: number;
+          release_time: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          text: string;
+          hint?: string;
+          order_number: number;
+          release_time: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          text?: string;
+          hint?: string;
+          order_number?: number;
+          release_time?: string;
           created_at?: string;
         };
       };
