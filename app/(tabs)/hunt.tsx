@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
   ImageBackground,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, CreditCard, LogIn } from 'lucide-react-native';
-import { useGameStore } from '@/store/game-store';
+import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Lightbulb, Play, Pause } from 'lucide-react-native';
+import { useGameStore, Clue } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 import { trpc, trpcClient } from '@/lib/trpc';
 import StripePayment from '@/components/StripePayment';
@@ -27,10 +29,37 @@ export default function HuntScreen() {
     purchaseError
   } = useGameStore();
   
-
-  
   const [showPayment, setShowPayment] = useState<boolean>(false);
   const [hasTicket, setHasTicket] = useState<boolean>(false);
+  const [isHuntActive, setIsHuntActive] = useState<boolean>(false);
+  const [liveClues, setLiveClues] = useState<Clue[]>([]);
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
+  const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  
+  // Mock clues for simulation
+  const mockClues: Clue[] = [
+    {
+      id: '1',
+      text: 'Start your hunt at the heart of Amsterdam! Find the iconic monument where the city\'s history began. Look for the bronze plaque near the base.',
+      hint: 'Dam Square - Royal Palace area',
+      timestamp: new Date().toISOString(),
+      order: 1,
+    },
+    {
+      id: '2', 
+      text: 'Cross the famous canals to where art meets history. The target awaits in the museum district, near the entrance of the house where a famous painter once lived.',
+      hint: 'Van Gogh Museum vicinity',
+      timestamp: new Date(Date.now() + 5 * 60000).toISOString(),
+      order: 2,
+    },
+    {
+      id: '3',
+      text: 'Navigate to the floating flower market. The final clue hides where tulips bloom year-round, near the vendor with the red and white striped awning.',
+      hint: 'Bloemenmarkt - look for the striped stall',
+      timestamp: new Date(Date.now() + 10 * 60000).toISOString(),
+      order: 3,
+    },
+  ];
   
   // Check ticket status when user logs in
   const ticketQuery = trpc.payment.checkTicketStatus.useQuery(
@@ -44,6 +73,94 @@ export default function HuntScreen() {
     }
   );
   
+  // Subscribe to real-time clues from Supabase
+  useEffect(() => {
+    if (!hasTicket || !currentEvent || !user) return;
+    
+    const subscription = supabase
+      .channel('clues')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'clues',
+          filter: `event_id=eq.${currentEvent.id}`,
+        },
+        (payload) => {
+          console.log('New clue received:', payload.new);
+          const newClue: Clue = {
+            id: payload.new.id,
+            text: payload.new.text,
+            hint: payload.new.hint,
+            timestamp: payload.new.release_time,
+            order: payload.new.order_number,
+          };
+          
+          setLiveClues(prev => {
+            const exists = prev.find(c => c.id === newClue.id);
+            if (exists) return prev;
+            return [...prev, newClue].sort((a, b) => a.order - b.order);
+          });
+          
+          // Animate new clue appearance
+          Animated.sequence([
+            Animated.timing(fadeAnim, {
+              toValue: 1,
+              duration: 500,
+              useNativeDriver: true,
+            }),
+            Animated.timing(fadeAnim, {
+              toValue: 0,
+              duration: 500,
+              delay: 2000,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [hasTicket, currentEvent, user, fadeAnim]);
+  
+  // Simulation functions
+  const startSimulation = () => {
+    setIsSimulating(true);
+    setIsHuntActive(true);
+    setLiveClues([]);
+    
+    // Add clues progressively
+    mockClues.forEach((clue, index) => {
+      setTimeout(() => {
+        setLiveClues(prev => [...prev, clue]);
+        
+        // Animate new clue
+        Animated.sequence([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 500,
+            delay: 2000,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }, index * 8000); // 8 seconds between clues
+    });
+  };
+  
+  const stopSimulation = () => {
+    setIsSimulating(false);
+    setIsHuntActive(false);
+    setLiveClues([]);
+  };
+  
   useEffect(() => {
     if (ticketQuery.data) {
       setHasTicket(ticketQuery.data.hasTicket);
@@ -54,6 +171,9 @@ export default function HuntScreen() {
   
   const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading;
   const isLoading = gameLoading || ticketQuery.isLoading;
+  
+  // Check if hunt should be active (for demo, we'll use simulation)
+  const shouldShowHunt = hasTicket && (isHuntActive || isSimulating);
 
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
@@ -96,6 +216,132 @@ export default function HuntScreen() {
 
 
 
+  // Render live hunt interface
+  if (shouldShowHunt) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <View style={[styles.huntHeader, { paddingTop: insets.top + 20 }]}>
+            <View style={styles.huntTitleContainer}>
+              <Target color="#00D4FF" size={24} />
+              <Text style={styles.huntTitle}>LIVE HUNT</Text>
+              <View style={styles.huntStatus}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>ACTIVE</Text>
+              </View>
+            </View>
+            
+            <View style={styles.huntInfo}>
+              <Text style={styles.huntLocation}>AMSTERDAM</Text>
+              <Text style={styles.huntTime}>Started at 3:00 PM CET</Text>
+            </View>
+            
+            {isSimulating && (
+              <TouchableOpacity 
+                style={styles.simulationControls}
+                onPress={stopSimulation}
+              >
+                <Pause color="#FF6B6B" size={16} />
+                <Text style={styles.simulationText}>Stop Simulation</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <ScrollView style={styles.cluesContainer}>
+            {liveClues.length === 0 ? (
+              <View style={styles.waitingContainer}>
+                <Clock color="#00D4FF" size={48} />
+                <Text style={styles.waitingTitle}>Waiting for clues...</Text>
+                <Text style={styles.waitingText}>
+                  The hunt has started! Clues will appear here as they are released.
+                </Text>
+              </View>
+            ) : (
+              liveClues.map((clue, index) => (
+                <Animated.View 
+                  key={clue.id}
+                  style={[
+                    styles.clueCard,
+                    index === liveClues.length - 1 && {
+                      opacity: fadeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1],
+                      })
+                    }
+                  ]}
+                >
+                  <View style={styles.clueHeader}>
+                    <View style={styles.clueNumber}>
+                      <Text style={styles.clueNumberText}>{clue.order}</Text>
+                    </View>
+                    <View style={styles.clueTimestamp}>
+                      <Clock color="#888" size={14} />
+                      <Text style={styles.timestampText}>
+                        {new Date(clue.timestamp).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.clueText}>{clue.text}</Text>
+                  
+                  {clue.hint && (
+                    <View style={styles.hintContainer}>
+                      <Lightbulb color="#FFA500" size={16} />
+                      <Text style={styles.hintText}>{clue.hint}</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.clueActions}>
+                    <TouchableOpacity style={styles.mapButton}>
+                      <MapPin color="#00D4FF" size={16} />
+                      <Text style={styles.mapButtonText}>Open Map</Text>
+                    </TouchableOpacity>
+                  </View>
+                </Animated.View>
+              ))
+            )}
+            
+            {liveClues.length > 0 && (
+              <View style={styles.huntProgress}>
+                <Text style={styles.progressText}>
+                  {liveClues.length} clue{liveClues.length !== 1 ? 's' : ''} received
+                </Text>
+                <Text style={styles.progressSubtext}>
+                  Keep checking back for more clues!
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+          
+          {/* New clue notification overlay */}
+          <Animated.View 
+            style={[
+              styles.newClueNotification,
+              {
+                opacity: fadeAnim,
+                transform: [{
+                  translateY: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-50, 0],
+                  })
+                }]
+              }
+            ]}
+          >
+            <Target color="#00D4FF" size={20} />
+            <Text style={styles.notificationText}>New clue received!</Text>
+          </Animated.View>
+        </LinearGradient>
+      </View>
+    );
+  }
+  
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -172,6 +418,13 @@ export default function HuntScreen() {
                     <Text style={styles.ticketInfoText}>
                       Hunt starts at the scheduled time.
                     </Text>
+                    <TouchableOpacity 
+                      style={styles.simulationButton}
+                      onPress={startSimulation}
+                    >
+                      <Play color="#00D4FF" size={16} />
+                      <Text style={styles.simulationButtonText}>Preview Hunt Experience</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
 
@@ -597,6 +850,229 @@ const styles = StyleSheet.create({
   refreshButtonText: {
     fontSize: 12,
     color: '#000',
+    fontWeight: '600',
+  },
+
+  // Hunt interface styles
+  huntHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  huntTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    gap: 12,
+  },
+  huntTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#00D4FF',
+    letterSpacing: 2,
+  },
+  huntStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00FF88',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#00FF88',
+    letterSpacing: 1,
+  },
+  huntInfo: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  huntLocation: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+    letterSpacing: 1,
+  },
+  huntTime: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 4,
+  },
+  simulationControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A1A1A',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  simulationText: {
+    fontSize: 12,
+    color: '#FF6B6B',
+    fontWeight: '600',
+  },
+  cluesContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  waitingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 16,
+  },
+  waitingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+    textAlign: 'center',
+  },
+  waitingText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 280,
+  },
+  clueCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#00D4FF',
+  },
+  clueHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  clueNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#00D4FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clueNumberText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+  },
+  clueTimestamp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timestampText: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+  },
+  clueText: {
+    fontSize: 16,
+    color: '#FFF',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  hintContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#2A2A1A',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  hintText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#FFA500',
+    fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  clueActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0A1A2A',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  mapButtonText: {
+    fontSize: 12,
+    color: '#00D4FF',
+    fontWeight: '600',
+  },
+  huntProgress: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  progressText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  progressSubtext: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+  },
+  newClueNotification: {
+    position: 'absolute',
+    top: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#00D4FF',
+    shadowColor: '#00D4FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  notificationText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#00D4FF',
+  },
+  simulationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0A1A2A',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 8,
+  },
+  simulationButtonText: {
+    fontSize: 14,
+    color: '#00D4FF',
     fontWeight: '600',
   },
 
