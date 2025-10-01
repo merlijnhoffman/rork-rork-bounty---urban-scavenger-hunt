@@ -21,10 +21,104 @@ interface PaymentSheetProps {
   onSuccess: () => void;
 }
 
-// Replace with your actual Stripe payment link
-const STRIPE_PAYMENT_URL = 'https://buy.stripe.com/fZubJ04SB4AxeOZgHMebu00';
-const SUCCESS_URL = 'https://your-domain.com/payment-success';
-const CANCEL_URL = 'https://your-domain.com/payment-cancel';
+// Stripe Buy Button HTML
+const STRIPE_BUY_BUTTON_HTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Purchase Ticket</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #0A0A0A;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #FFF;
+    }
+    .price {
+      font-size: 32px;
+      font-weight: 900;
+      color: #00D4FF;
+      margin-bottom: 12px;
+    }
+    .description {
+      font-size: 16px;
+      color: #888;
+      margin-bottom: 32px;
+      line-height: 1.4;
+    }
+    stripe-buy-button {
+      width: 100%;
+    }
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">Hunt Ticket</h1>
+    <div class="price">€3.99</div>
+    <p class="description">Get access to the ultimate treasure hunt experience</p>
+    
+    <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+    <stripe-buy-button
+      buy-button-id="buy_btn_1SDPZ9ATZcBhONrD5OLBgEBU"
+      publishable-key="pk_live_51SDNfLATZcBhONrDvT4RuU80vZVQDya0arefGMMI7hjQk0iwMezXuU8yQjn6JkUzKrAfM3dyITDt2h1jQ5vgJo4600JSj9j8Ht"
+    ></stripe-buy-button>
+    
+    <div class="footer">
+      Secure payment powered by Stripe
+    </div>
+  </div>
+  
+  <script>
+    // Listen for successful payment
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'stripe_checkout_success') {
+        // Notify React Native about successful payment
+        window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'payment_success'
+        }));
+      }
+    });
+    
+    // Alternative: Listen for URL changes that indicate success
+    let lastUrl = window.location.href;
+    setInterval(() => {
+      if (window.location.href !== lastUrl) {
+        lastUrl = window.location.href;
+        if (lastUrl.includes('success') || lastUrl.includes('payment_intent')) {
+          window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'payment_success'
+          }));
+        }
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
+`;
 
 export default function PaymentSheet({
   visible,
@@ -38,8 +132,12 @@ export default function PaymentSheet({
 
   const handlePurchase = () => {
     if (Platform.OS === 'web') {
-      // On web, open in new tab
-      window.open(STRIPE_PAYMENT_URL, '_blank');
+      // On web, create a popup with the Stripe buy button
+      const popup = window.open('', '_blank', 'width=500,height=600,scrollbars=yes');
+      if (popup) {
+        popup.document.write(STRIPE_BUY_BUTTON_HTML);
+        popup.document.close();
+      }
       onClose();
     } else {
       // On mobile, show WebView
@@ -49,17 +147,37 @@ export default function PaymentSheet({
 
   const handleOpenInBrowser = async () => {
     try {
-      await Linking.openURL(STRIPE_PAYMENT_URL);
+      // Create a data URL with the HTML content
+      const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(STRIPE_BUY_BUTTON_HTML)}`;
+      await Linking.openURL(dataUrl);
       onClose();
     } catch {
       Alert.alert('Error', 'Could not open payment link');
     }
   };
 
+  const handleWebViewMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'payment_success') {
+        setShowWebView(false);
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          onSuccess();
+          onClose();
+        }, 2000);
+      }
+    } catch (error) {
+      console.log('WebView message parsing error:', error);
+    }
+  };
+
   const handleWebViewNavigationStateChange = (navState: any) => {
     const { url } = navState;
     
-    if (url.includes(SUCCESS_URL) || url.includes('payment_intent_client_secret')) {
+    // Check for Stripe success indicators
+    if (url.includes('success') || url.includes('payment_intent') || url.includes('checkout-success')) {
       setShowWebView(false);
       setShowSuccess(true);
       setTimeout(() => {
@@ -67,7 +185,7 @@ export default function PaymentSheet({
         onSuccess();
         onClose();
       }, 2000);
-    } else if (url.includes(CANCEL_URL) || url.includes('canceled=true')) {
+    } else if (url.includes('canceled') || url.includes('cancel')) {
       setShowWebView(false);
     }
   };
@@ -121,13 +239,15 @@ export default function PaymentSheet({
             </TouchableOpacity>
           </View>
           <WebView
-            source={{ uri: STRIPE_PAYMENT_URL }}
+            source={{ html: STRIPE_BUY_BUTTON_HTML }}
             onNavigationStateChange={handleWebViewNavigationStateChange}
-
+            onMessage={handleWebViewMessage}
             style={styles.webView}
             javaScriptEnabled={true}
             domStorageEnabled={true}
             startInLoadingState={true}
+            mixedContentMode="compatibility"
+            allowsInlineMediaPlayback={true}
           />
         </View>
       </Modal>
