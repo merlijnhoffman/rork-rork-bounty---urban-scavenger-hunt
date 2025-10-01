@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, Users, Target, Zap, AlertCircle, CreditCard, LogIn, CheckCircle } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTicketDetection } from '@/hooks/useTicketDetection';
 import { WebView } from 'react-native-webview';
 import * as Linking from 'expo-linking';
 import { STRIPE_CONFIG } from '@/constants/stripe';
@@ -27,13 +28,21 @@ export default function HuntScreen() {
   const { 
     currentEvent, 
     isGameActive, 
-    hasTicket,
-    userTicket,
     clues, 
     purchaseTicket,
     isLoading,
     purchaseError
   } = useGameStore();
+  
+  // Use the new ticket detection system
+  const {
+    hasTicket,
+    activeTicket,
+    isLoading: ticketLoading,
+    isError: ticketError,
+    refreshTicketStatus,
+    isMonitoring
+  } = useTicketDetection();
   
   const canPurchaseTicket = isLoggedIn && !hasTicket;
 
@@ -362,22 +371,44 @@ export default function HuntScreen() {
                       hasTicket && styles.ticketButtonTextDisabled
                     ]}>
                       {isLoading ? 'PROCESSING...' : 
-                       hasTicket ? `${userTicket?.tier.name.toUpperCase()} TICKET PURCHASED` : 
+                       hasTicket ? 'TICKET PURCHASED' : 
                        !isLoggedIn ? 'SIGN IN TO PURCHASE' :
                        'PURCHASE TICKET'}
                     </Text>
                   </View>
                 </TouchableOpacity>
                 
-                {hasTicket && userTicket && (
+                {hasTicket && activeTicket && (
                   <View style={styles.ticketInfo}>
                     <Text style={styles.ticketInfoTitle}>Your Ticket</Text>
                     <Text style={styles.ticketInfoText}>
-                      {userTicket.tier.name} • €{userTicket.tier.price}
+                      Verification Code: {activeTicket.verificationCode}
                     </Text>
                     <Text style={styles.ticketInfoDate}>
-                      Purchased: {new Date(userTicket.purchaseDate).toLocaleDateString()}
+                      Purchased: {new Date(activeTicket.purchasedAt).toLocaleDateString()}
                     </Text>
+                    {activeTicket.event && (
+                      <Text style={styles.ticketInfoEvent}>
+                        Event: {activeTicket.event.city} • €{activeTicket.event.price}
+                      </Text>
+                    )}
+                  </View>
+                )}
+                
+                {/* Ticket detection status for debugging */}
+                {isLoggedIn && (
+                  <View style={styles.debugInfo}>
+                    <Text style={styles.debugText}>
+                      Monitoring: {isMonitoring ? '✅' : '❌'} | 
+                      Loading: {ticketLoading ? '⏳' : '✅'} | 
+                      Error: {ticketError ? '❌' : '✅'}
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.refreshButton}
+                      onPress={refreshTicketStatus}
+                    >
+                      <Text style={styles.refreshButtonText}>Refresh Status</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
                 </LinearGradient>
@@ -902,5 +933,36 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     lineHeight: 22,
+  },
+  ticketInfoEvent: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+  },
+  debugInfo: {
+    backgroundColor: '#2A2A2A',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FFA500',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#FFA500',
+    marginBottom: 8,
+    fontFamily: 'monospace',
+  },
+  refreshButton: {
+    backgroundColor: '#FFA500',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  refreshButtonText: {
+    fontSize: 12,
+    color: '#000',
+    fontWeight: '600',
   },
 });

@@ -46,6 +46,23 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
   const [gameStartTime] = useState<string>('Saturday, Dec 28, 2024 • 2:00 PM EST');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [ticketCheckEnabled, setTicketCheckEnabled] = useState<boolean>(false);
+
+  // Enable ticket checking when user is set
+  const enableTicketChecking = useCallback((userId: string) => {
+    console.log('Enabling ticket checking for user:', userId);
+    setCurrentUserId(userId);
+    setTicketCheckEnabled(true);
+  }, []);
+
+  // Disable ticket checking (e.g., when user logs out)
+  const disableTicketChecking = useCallback(() => {
+    console.log('Disabling ticket checking');
+    setCurrentUserId(null);
+    setTicketCheckEnabled(false);
+    setUserTicket(null);
+  }, []);
 
   const purchaseTicket = useCallback(async (tier: TicketTier, paymentIntentId: string, isLoggedIn: boolean, user: any) => {
     if (!currentEvent) return;
@@ -80,13 +97,16 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
       setUserTicket(ticket);
       setIsLoading(false);
       
+      // Enable ticket checking for this user
+      enableTicketChecking(user.id);
+      
       return ticket;
     } catch (error) {
       setIsLoading(false);
       setPurchaseError('Failed to create ticket. Please contact support.');
       throw error;
     }
-  }, [currentEvent, userTicket]);
+  }, [currentEvent, userTicket, enableTicketChecking]);
 
   const addClue = useCallback((clue: Clue) => {
     setClues(prev => [...prev, clue].sort((a, b) => a.order - b.order));
@@ -104,7 +124,11 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     purchaseTicket,
     setGameActive: setIsGameActive,
     addClue,
-  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, purchaseError, purchaseTicket, addClue]);
+    enableTicketChecking,
+    disableTicketChecking,
+    currentUserId,
+    ticketCheckEnabled,
+  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled]);
 });
 
 // Safe wrapper hook that ensures the context is available
@@ -124,6 +148,10 @@ export function useGameStore() {
       purchaseTicket: async () => null,
       setGameActive: () => {},
       addClue: () => {},
+      enableTicketChecking: () => {},
+      disableTicketChecking: () => {},
+      currentUserId: null,
+      ticketCheckEnabled: false,
     };
   }
   return context;
