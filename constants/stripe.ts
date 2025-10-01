@@ -1,30 +1,7 @@
-// Default Stripe configuration with platform-specific handling
-import { Platform } from 'react-native';
+// Stripe configuration for web-only payments
+// All payments are now handled via Stripe Buy Button in PaymentSheet component
 
-// Configuration
-export const STRIPE_CONFIG = Platform.OS === 'web' 
-  ? {
-      publishableKey: '',
-      merchantIdentifier: '',
-      urlScheme: '',
-    }
-  : {
-      publishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
-      merchantIdentifier: 'merchant.com.yourapp.stripe',
-      urlScheme: 'bounty-app',
-    };
-
-// Stripe components - only available on native platforms
-let stripe: any = null;
-if (Platform.OS !== 'web') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    stripe = require('@stripe/stripe-react-native');
-  } catch (error) {
-    console.warn('Stripe React Native not available:', error);
-  }
-}
-
-export const StripeProvider = stripe?.StripeProvider || null;
-export const initPaymentSheet = stripe?.initPaymentSheet || null;
-export const presentPaymentSheet = stripe?.presentPaymentSheet || null;
+export const STRIPE_CONFIG = {
+  publishableKey: 'pk_live_51SDNfLATZcBhONrDvT4RuU80vZVQDya0arefGMMI7hjQk0iwMezXuU8yQjn6JkUzKrAfM3dyITDt2h1jQ5vgJo4600JSj9j8Ht',
+  buyButtonId: 'buy_btn_1SDPZ9ATZcBhONrD5OLBgEBU',
+};

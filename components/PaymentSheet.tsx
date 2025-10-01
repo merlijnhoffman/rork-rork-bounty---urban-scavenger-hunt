@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, CreditCard, CheckCircle, ExternalLink } from 'lucide-react-native';
 import * as Linking from 'expo-linking';
+import { STRIPE_CONFIG } from '@/constants/stripe';
 
 
 interface PaymentSheetProps {
@@ -83,8 +84,8 @@ const STRIPE_BUY_BUTTON_HTML = `
     
     <script async src="https://js.stripe.com/v3/buy-button.js"></script>
     <stripe-buy-button
-      buy-button-id="buy_btn_1SDPZ9ATZcBhONrD5OLBgEBU"
-      publishable-key="pk_live_51SDNfLATZcBhONrDvT4RuU80vZVQDya0arefGMMI7hjQk0iwMezXuU8yQjn6JkUzKrAfM3dyITDt2h1jQ5vgJo4600JSj9j8Ht"
+      buy-button-id="${STRIPE_CONFIG.buyButtonId}"
+      publishable-key="${STRIPE_CONFIG.publishableKey}"
     ></stripe-buy-button>
     
     <div class="footer">
