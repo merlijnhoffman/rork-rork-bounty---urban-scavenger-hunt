@@ -8,9 +8,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Phone, Shield, QrCode, Clock } from 'lucide-react-native';
+import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { router } from 'expo-router';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -33,9 +34,65 @@ export default function ProfileScreen() {
     await signOut();
   };
 
-  // Redirect to login if not authenticated - this should be handled by the auth guard
+  // Show login/signup options if not authenticated
   if (!user) {
-    return null;
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
+            <View style={styles.authHeader}>
+              <View style={styles.avatarContainer}>
+                <User color="#00D4FF" size={32} />
+              </View>
+              <Text style={styles.authTitle}>Join the Hunt</Text>
+              <Text style={styles.authSubtitle}>
+                Create an account to purchase tickets and participate in treasure hunts
+              </Text>
+            </View>
+
+            <View style={styles.authButtonsContainer}>
+              <TouchableOpacity
+                style={styles.primaryAuthButton}
+                onPress={() => router.push('/signup')}
+              >
+                <UserPlus color="#000" size={20} />
+                <Text style={styles.primaryAuthButtonText}>Create Account</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.secondaryAuthButton}
+                onPress={() => router.push('/login')}
+              >
+                <LogIn color="#00D4FF" size={20} />
+                <Text style={styles.secondaryAuthButtonText}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.benefitsContainer}>
+              <Text style={styles.benefitsTitle}>Why Create an Account?</Text>
+              
+              <View style={styles.benefitItem}>
+                <Shield color="#00D4FF" size={20} />
+                <Text style={styles.benefitText}>Secure ticket purchases</Text>
+              </View>
+              
+              <View style={styles.benefitItem}>
+                <QrCode color="#00D4FF" size={20} />
+                <Text style={styles.benefitText}>Unique verification codes</Text>
+              </View>
+              
+              <View style={styles.benefitItem}>
+                <Clock color="#00D4FF" size={20} />
+                <Text style={styles.benefitText}>Real-time hunt updates</Text>
+              </View>
+            </View>
+          </ScrollView>
+        </LinearGradient>
+      </View>
+    );
   }
 
   return (
@@ -170,6 +227,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 40,
     marginBottom: 40,
+  },
+  authButtonsContainer: {
+    marginBottom: 40,
+  },
+  primaryAuthButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00D4FF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  primaryAuthButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    marginLeft: 8,
+  },
+  secondaryAuthButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#00D4FF',
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  secondaryAuthButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#00D4FF',
+    marginLeft: 8,
+  },
+  benefitsContainer: {
+    backgroundColor: '#222',
+    borderRadius: 16,
+    padding: 20,
+  },
+  benefitsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  benefitText: {
+    fontSize: 16,
+    color: '#CCC',
+    marginLeft: 12,
+    flex: 1,
   },
   authTitle: {
     fontSize: 28,

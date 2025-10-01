@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import { GameProvider } from '@/store/game-store';
-import { UserProvider } from '@/store/user-store';
+
 import { AuthProvider } from '@/contexts/AuthContext';
 import { PaymentWrapper } from '@/contexts/PaymentContext';
 import { trpc, trpcClient } from '@/lib/trpc';
@@ -82,15 +82,13 @@ export default function RootLayout() {
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <UserProvider>
-              <PaymentWrapper>
-                <GameProvider>
-                  <GestureHandlerRootView style={styles.container}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </GameProvider>
-              </PaymentWrapper>
-            </UserProvider>
+            <PaymentWrapper>
+              <GameProvider>
+                <GestureHandlerRootView style={styles.container}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </GameProvider>
+            </PaymentWrapper>
           </AuthProvider>
         </QueryClientProvider>
       </trpc.Provider>

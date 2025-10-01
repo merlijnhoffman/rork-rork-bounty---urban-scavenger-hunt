@@ -14,6 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { X, CreditCard, CheckCircle, ExternalLink } from 'lucide-react-native';
 import * as Linking from 'expo-linking';
 import { STRIPE_CONFIG } from '@/constants/stripe';
+import { useAuth } from '@/contexts/AuthContext';
+import { router } from 'expo-router';
 
 
 interface PaymentSheetProps {
@@ -127,8 +129,23 @@ export default function PaymentSheet({
   onSuccess,
 }: PaymentSheetProps) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [showWebView, setShowWebView] = useState<boolean>(false);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  
+  // Check authentication when component mounts or becomes visible
+  React.useEffect(() => {
+    if (visible && !user) {
+      // User is not authenticated, redirect to login
+      onClose();
+      router.push('/login');
+    }
+  }, [visible, user, onClose]);
+  
+  // Don't render if user is not authenticated
+  if (!user) {
+    return null;
+  }
 
 
   const handlePurchase = () => {

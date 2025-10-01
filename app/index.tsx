@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Index() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -14,10 +14,7 @@ export default function Index() {
     );
   }
 
-  if (!user) {
-    return <Redirect href="/login" />;
-  }
-
+  // Always redirect to hunt tab - authentication is now optional
   return <Redirect href="/(tabs)/hunt" />;
 }
 

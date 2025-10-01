@@ -9,14 +9,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, Target, Zap, AlertCircle, User, CreditCard } from 'lucide-react-native';
+import { Clock, Users, Target, Zap, AlertCircle, CreditCard, LogIn } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
-import { useUserStore } from '@/store/user-store';
+import { useAuth } from '@/contexts/AuthContext';
 import PaymentSheet from '@/components/PaymentSheet';
+import { router } from 'expo-router';
 
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
-  const { isLoggedIn, user } = useUserStore();
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
   const { 
     currentEvent, 
     isGameActive, 
@@ -35,7 +37,8 @@ export default function HuntScreen() {
 
   const handleShowPaymentSheet = () => {
     if (!isLoggedIn) {
-      console.log('User must be logged in to purchase tickets');
+      // Redirect to login page
+      router.push('/login');
       return;
     }
     
@@ -168,12 +171,15 @@ export default function HuntScreen() {
                   </View>
 
                 {!isLoggedIn && (
-                  <View style={styles.authRequiredContainer}>
-                    <User color="#FF6B6B" size={20} />
+                  <TouchableOpacity 
+                    style={styles.authRequiredContainer}
+                    onPress={() => router.push('/login')}
+                  >
+                    <LogIn color="#00D4FF" size={20} />
                     <Text style={styles.authRequiredText}>
-                      Create an account to purchase tickets
+                      Sign in to purchase tickets
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 )}
                 
                 {purchaseError && (
@@ -199,8 +205,8 @@ export default function HuntScreen() {
                     ]}>
                       {isLoading ? 'PROCESSING...' : 
                        hasTicket ? `${userTicket?.tier.name.toUpperCase()} TICKET PURCHASED` : 
-                       !isLoggedIn ? 'ACCOUNT REQUIRED' :
-                       'CHOOSE TICKET TIER'}
+                       !isLoggedIn ? 'SIGN IN TO PURCHASE' :
+                       'PURCHASE TICKET'}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -525,17 +531,17 @@ const styles = StyleSheet.create({
   authRequiredContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A1A1A',
+    backgroundColor: '#1A2A2A',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     borderLeftWidth: 3,
-    borderLeftColor: '#FF6B6B',
+    borderLeftColor: '#00D4FF',
   },
   authRequiredText: {
     flex: 1,
     fontSize: 14,
-    color: '#FF6B6B',
+    color: '#00D4FF',
     marginLeft: 8,
     fontWeight: '500',
   },
