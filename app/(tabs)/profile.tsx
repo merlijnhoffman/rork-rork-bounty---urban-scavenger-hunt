@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Settings } from 'lucide-react-native';
+import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
@@ -186,14 +186,6 @@ export default function ProfileScreen() {
               )}
             </View>
           )}
-
-          <TouchableOpacity
-            style={styles.adminButton}
-            onPress={() => router.push('/admin')}
-          >
-            <Settings color="#00D4FF" size={20} />
-            <Text style={styles.adminButtonText}>Admin Panel</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.signOutButton}
@@ -557,21 +549,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFF',
   },
-  adminButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#00D4FF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  adminButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#00D4FF',
-    marginLeft: 8,
-  },
+
 });
