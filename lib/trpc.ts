@@ -71,15 +71,27 @@ export const trpcClient = trpc.createClient({
         } catch (error) {
           console.error('tRPC fetch error:', error);
           
-          if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-            const baseUrl = getBaseUrl();
-            console.error('Backend server connection failed. Expected server at:', baseUrl);
-            console.error('Please ensure your backend server is running.');
-            
-            if (__DEV__) {
-              throw new Error(`Unable to connect to backend server at ${baseUrl}. Please start your backend server and try again.`);
-            } else {
-              throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+          const baseUrl = getBaseUrl();
+          
+          // Handle different types of network errors
+          if (error instanceof TypeError) {
+            if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
+              console.error('❌ Backend server connection failed');
+              console.error('Expected server at:', baseUrl);
+              console.error('Please ensure your backend server is running.');
+              
+              if (__DEV__) {
+                console.error('\n🔧 Troubleshooting steps:');
+                console.error('1. Start backend: bun run dev:backend');
+                console.error('2. Check if backend is running at:', baseUrl);
+                console.error('3. If testing on mobile device, update EXPO_PUBLIC_RORK_API_BASE_URL in .env.local with your computer\'s IP address');
+                console.error('4. Find your IP: Mac/Linux: ifconfig | grep "inet " | Windows: ipconfig');
+                console.error('5. Make sure your device and computer are on the same network');
+                
+                throw new Error(`Unable to connect to backend server at ${baseUrl}.\n\nPlease start your backend server with: bun run dev:backend\n\nIf testing on a mobile device, make sure EXPO_PUBLIC_RORK_API_BASE_URL in .env.local uses your computer's IP address instead of localhost.`);
+              } else {
+                throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+              }
             }
           }
           
