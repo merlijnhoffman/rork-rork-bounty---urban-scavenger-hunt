@@ -22,7 +22,7 @@ interface PaymentSheetProps {
 }
 
 // Replace with your actual Stripe payment link
-const STRIPE_PAYMENT_URL = 'https://buy.stripe.com/test_your_payment_link_here';
+const STRIPE_PAYMENT_URL = 'https://buy.stripe.com/fZubJ04SB4AxeOZgHMebu00';
 const SUCCESS_URL = 'https://your-domain.com/payment-success';
 const CANCEL_URL = 'https://your-domain.com/payment-cancel';
 
