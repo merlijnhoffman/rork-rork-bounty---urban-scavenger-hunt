@@ -32,6 +32,11 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
     try {
       console.log('Creating payment intent for price:', priceId);
       
+      // Validate required inputs
+      if (!priceId) {
+        throw new Error('Price ID is required');
+      }
+      
       const result = await trpcClient.payment.createIntent.mutate({
         priceId,
         userId,
@@ -44,13 +49,33 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
 
       console.log('Payment intent created:', result.paymentIntentId);
       
+      if (!result.clientSecret) {
+        throw new Error('Invalid payment intent response - missing client secret');
+      }
+      
       return {
-        clientSecret: result.clientSecret!,
+        clientSecret: result.clientSecret,
         paymentIntentId: result.paymentIntentId,
       };
     } catch (error) {
       console.error('Payment intent creation error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create payment intent';
+      
+      let errorMessage = 'Failed to create payment intent';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Unable to connect to server')) {
+          errorMessage = 'Unable to connect to payment server. Please check your internet connection and try again.';
+        } else if (error.message.includes('HTTP 500')) {
+          errorMessage = 'Payment server error. Please try again later.';
+        } else if (error.message.includes('HTTP 401')) {
+          errorMessage = 'Authentication error. Please sign in and try again.';
+        } else if (error.message.includes('HTTP 400')) {
+          errorMessage = 'Invalid payment request. Please check your details and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       setPaymentError(errorMessage);
       throw new Error(errorMessage);
     } finally {

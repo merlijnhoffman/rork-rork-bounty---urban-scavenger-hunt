@@ -6,7 +6,23 @@ import { createContext } from "./trpc/create-context";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+// Validate required environment variables
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('STRIPE_SECRET_KEY environment variable is required');
+  process.exit(1);
+}
+
+if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+  console.error('EXPO_PUBLIC_SUPABASE_URL environment variable is required');
+  process.exit(1);
+}
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+  process.exit(1);
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2025-09-30.clover",
 });
 
