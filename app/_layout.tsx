@@ -9,7 +9,6 @@ import { GameProvider } from '@/store/game-store';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { PaymentWrapper } from '@/contexts/PaymentContext';
-import { ClueProvider } from '@/contexts/ClueContext';
 import { trpc, trpcClient } from '@/lib/trpc';
 import { ErrorBoundary } from 'react-error-boundary';
 
@@ -26,15 +25,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
-        <Stack.Screen 
-          name="admin" 
-          options={{ 
-            title: "Admin Panel",
-            headerStyle: { backgroundColor: '#0A0A0A' },
-            headerTintColor: '#00D4FF',
-            headerTitleStyle: { fontWeight: '700' },
-          }} 
-        />
+
         <Stack.Screen 
           name="modal" 
           options={{ 
@@ -94,11 +85,9 @@ export default function RootLayout() {
           <AuthProvider>
             <PaymentWrapper>
               <GameProvider>
-                <ClueProvider>
-                  <GestureHandlerRootView style={styles.container}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </ClueProvider>
+                <GestureHandlerRootView style={styles.container}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
               </GameProvider>
             </PaymentWrapper>
           </AuthProvider>
