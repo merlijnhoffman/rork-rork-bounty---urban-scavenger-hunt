@@ -1,10 +1,27 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StripeProvider, initPaymentSheet, presentPaymentSheet } from '@stripe/stripe-react-native';
 import createContextHook from '@nkzw/create-context-hook';
 import { Platform } from 'react-native';
 import { PAYMENT_CONFIG } from '@/constants/payment';
 import { PaymentResult, TicketTier, PaymentIntent } from '@/types/payment';
 import { useUserStore } from '@/store/user-store';
+
+
+// Conditionally import Stripe only on native platforms
+let StripeProvider: any = null;
+let initPaymentSheet: any = null;
+let presentPaymentSheet: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const stripe = require('@stripe/stripe-react-native');
+    StripeProvider = stripe.StripeProvider;
+    initPaymentSheet = stripe.initPaymentSheet;
+    presentPaymentSheet = stripe.presentPaymentSheet;
+  } catch (error) {
+    console.warn('Stripe React Native not available:', error);
+  }
+}
 
 interface PaymentContextType {
   selectedTier: TicketTier | null;
@@ -70,6 +87,21 @@ export const [PaymentProvider, usePayment] = createContextHook((): PaymentContex
     setPaymentError(null);
 
     try {
+      if (Platform.OS === 'web') {
+        // On web, open Stripe payment link
+        const STRIPE_PAYMENT_URL = 'https://buy.stripe.com/fZubJ04SB4AxeOZgHMebu00';
+        window.open(STRIPE_PAYMENT_URL, '_blank');
+        
+        // For web, we can't track the payment completion directly
+        // Return success immediately as the payment will be handled by Stripe
+        return { success: true };
+      }
+
+      // Native payment processing
+      if (!initPaymentSheet || !presentPaymentSheet) {
+        throw new Error('Stripe payment sheet not available');
+      }
+
       // Create payment intent
       const paymentIntent = await createPaymentIntent(tier);
 
@@ -132,6 +164,16 @@ interface PaymentWrapperProps {
 }
 
 export function PaymentWrapper({ children }: PaymentWrapperProps) {
+  if (Platform.OS === 'web' || !StripeProvider) {
+    // On web or when Stripe is not available, just use the PaymentProvider
+    return (
+      <PaymentProvider>
+        {children}
+      </PaymentProvider>
+    );
+  }
+
+  // On native platforms with Stripe available
   return (
     <StripeProvider
       publishableKey={PAYMENT_CONFIG.publishableKey}
