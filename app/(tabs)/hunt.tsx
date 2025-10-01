@@ -131,7 +131,7 @@ export default function HuntScreen() {
                   </View>
 
                   <View style={styles.citySection}>
-                    <Text style={styles.cityLabel}>DESTINATION</Text>
+                    <Text style={styles.cityLabel}>LOCATION</Text>
                     <Text style={styles.cityNameLarge}>AMSTERDAM</Text>
                     <Text style={styles.cityCountry}>Netherlands</Text>
                   </View>
