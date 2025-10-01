@@ -108,7 +108,7 @@ export default function HuntScreen() {
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
           <View style={styles.heroSection}>
             <Text style={styles.appTitle}>BOUNTY</Text>
-            <Text style={styles.tagline}>Urban Scavenger Hunt</Text>
+            <Text style={styles.tagline}>Urban Bounty Hunt</Text>
           </View>
 
           {currentEvent && (
