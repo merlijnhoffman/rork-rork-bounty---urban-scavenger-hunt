@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Lightbulb, Play, Pause } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause } from 'lucide-react-native';
 import { useGameStore, Clue } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -42,21 +42,18 @@ export default function HuntScreen() {
     {
       id: '1',
       text: 'Start your hunt at the heart of Amsterdam! Find the iconic monument where the city\'s history began. Look for the bronze plaque near the base.',
-      hint: 'Dam Square - Royal Palace area',
       timestamp: new Date().toISOString(),
       order: 1,
     },
     {
       id: '2', 
       text: 'Cross the famous canals to where art meets history. The target awaits in the museum district, near the entrance of the house where a famous painter once lived.',
-      hint: 'Van Gogh Museum vicinity',
       timestamp: new Date(Date.now() + 5 * 60000).toISOString(),
       order: 2,
     },
     {
       id: '3',
       text: 'Navigate to the floating flower market. The final clue hides where tulips bloom year-round, near the vendor with the red and white striped awning.',
-      hint: 'Bloemenmarkt - look for the striped stall',
       timestamp: new Date(Date.now() + 10 * 60000).toISOString(),
       order: 3,
     },
@@ -290,13 +287,6 @@ export default function HuntScreen() {
                   </View>
                   
                   <Text style={styles.clueText}>{clue.text}</Text>
-                  
-                  {clue.hint && (
-                    <View style={styles.hintContainer}>
-                      <Lightbulb color="#FFA500" size={16} />
-                      <Text style={styles.hintText}>{clue.hint}</Text>
-                    </View>
-                  )}
                   
                   <View style={styles.clueActions}>
                     <TouchableOpacity style={styles.mapButton}>
