@@ -28,6 +28,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
 
   useEffect(() => {
     if (visible) {
+      console.log('HuntMap visible, showing map for:', targetLocation.name);
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -43,9 +44,12 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         ])
       ).start();
     }
-  }, [visible, pulseAnim]);
+  }, [visible, pulseAnim, targetLocation.name]);
 
-  if (!visible) return null;
+  if (!visible) {
+    console.log('HuntMap not visible');
+    return null;
+  }
 
   const zoneProgress = ((clueOrder / totalClues) * 100).toFixed(0);
   const remainingClues = totalClues - clueOrder;
@@ -79,6 +83,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         showsMyLocationButton
         showsCompass
         mapType="standard"
+        onMapReady={() => console.log('Map is ready!')}
       >
         <Circle
           center={{
