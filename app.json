@@ -23,7 +23,7 @@
       ]
     },
     "config": {
-      "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+      "googleMapsApiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
     }
   },
   "android": {
@@ -34,7 +34,7 @@
     "package": "app.rork.rork-bounty-urban-scavenger-hunt",
     "config": {
       "googleMaps": {
-        "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        "apiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
       }
     }
   },
