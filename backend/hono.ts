@@ -123,4 +123,13 @@ app.post("/webhook/stripe", async (c) => {
   }
 });
 
-export default app;
+const port = process.env.PORT || 3000;
+
+console.log(`🚀 Starting server on port ${port}...`);
+console.log(`📍 Server will be available at: http://localhost:${port}`);
+console.log(`🔗 API endpoint: http://localhost:${port}/api/trpc`);
+
+export default {
+  port,
+  fetch: app.fetch,
+};
