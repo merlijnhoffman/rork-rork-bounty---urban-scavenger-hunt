@@ -34,6 +34,7 @@ export default function HuntScreen() {
   const [isHuntActive, setIsHuntActive] = useState<boolean>(false);
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
+  const [testMode, setTestMode] = useState<boolean>(true);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   
   // Mock clues for simulation
@@ -173,7 +174,7 @@ export default function HuntScreen() {
   const isLoading = gameLoading || ticketQuery.isLoading;
   
   // Check if hunt should be active (for demo, we'll use simulation)
-  const shouldShowHunt = hasTicket && (isHuntActive || isSimulating);
+  const shouldShowHunt = (hasTicket || testMode) && (isHuntActive || isSimulating);
 
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
@@ -412,6 +413,17 @@ export default function HuntScreen() {
                   </View>
                 )}
                 
+                {/* Test Mode Toggle */}
+                <TouchableOpacity 
+                  style={styles.testModeToggle}
+                  onPress={() => setTestMode(!testMode)}
+                >
+                  <Text style={styles.testModeLabel}>Test Mode (Bypass Ticket)</Text>
+                  <View style={[styles.toggleSwitch, testMode && styles.toggleSwitchActive]}>
+                    <View style={[styles.toggleThumb, testMode && styles.toggleThumbActive]} />
+                  </View>
+                </TouchableOpacity>
+
                 {hasTicket && (
                   <View style={styles.ticketInfo}>
                     <Text style={styles.ticketInfoTitle}>✓ TICKET PURCHASED</Text>
@@ -424,6 +436,22 @@ export default function HuntScreen() {
                     >
                       <Play color="#00D4FF" size={16} />
                       <Text style={styles.simulationButtonText}>Preview Hunt Experience</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                
+                {testMode && !hasTicket && (
+                  <View style={styles.testModeInfo}>
+                    <Text style={styles.testModeInfoTitle}>🧪 TEST MODE ACTIVE</Text>
+                    <Text style={styles.testModeInfoText}>
+                      You can preview the hunt without purchasing a ticket.
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.simulationButton}
+                      onPress={startSimulation}
+                    >
+                      <Play color="#00D4FF" size={16} />
+                      <Text style={styles.simulationButtonText}>Start Hunt Simulation</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1074,6 +1102,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#00D4FF',
     fontWeight: '600',
+  },
+  testModeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#2A2A1A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FFA500',
+  },
+  testModeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFA500',
+  },
+  toggleSwitch: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#333',
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleSwitchActive: {
+    backgroundColor: '#FFA500',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFF',
+  },
+  toggleThumbActive: {
+    transform: [{ translateX: 22 }],
+  },
+  testModeInfo: {
+    backgroundColor: '#2A2A1A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFA500',
+  },
+  testModeInfoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFA500',
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  testModeInfoText: {
+    fontSize: 14,
+    color: '#CCC',
+    marginBottom: 12,
   },
 
 });
