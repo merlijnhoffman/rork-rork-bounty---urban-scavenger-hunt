@@ -17,7 +17,17 @@ import { supabase } from '@/lib/supabase';
 
 import { trpc, trpcClient } from '@/lib/trpc';
 import StripePayment from '@/components/StripePayment';
+import HuntMap from '@/components/HuntMap';
 import { router } from 'expo-router';
+
+interface ClueWithLocation extends Clue {
+  location?: {
+    latitude: number;
+    longitude: number;
+    radius: number;
+    name: string;
+  };
+}
 
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
@@ -35,27 +45,46 @@ export default function HuntScreen() {
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [testMode, setTestMode] = useState<boolean>(true);
+  const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   
-  // Mock clues for simulation
-  const mockClues: Clue[] = [
+  // Mock clues for simulation with location data
+  const mockClues: ClueWithLocation[] = [
     {
       id: '1',
       text: 'Start your hunt at the heart of Amsterdam! Find the iconic monument where the city\'s history began. Look for the bronze plaque near the base.',
       timestamp: new Date().toISOString(),
       order: 1,
+      location: {
+        latitude: 52.3731,
+        longitude: 4.8922,
+        radius: 250,
+        name: 'Dam Square Area',
+      },
     },
     {
       id: '2', 
       text: 'Cross the famous canals to where art meets history. The target awaits in the museum district, near the entrance of the house where a famous painter once lived.',
       timestamp: new Date(Date.now() + 5 * 60000).toISOString(),
       order: 2,
+      location: {
+        latitude: 52.3580,
+        longitude: 4.8810,
+        radius: 200,
+        name: 'Museum District',
+      },
     },
     {
       id: '3',
       text: 'Navigate to the floating flower market. The final clue hides where tulips bloom year-round, near the vendor with the red and white striped awning.',
       timestamp: new Date(Date.now() + 10 * 60000).toISOString(),
       order: 3,
+      location: {
+        latitude: 52.3676,
+        longitude: 4.8913,
+        radius: 150,
+        name: 'Bloemenmarkt',
+      },
     },
   ];
   
@@ -289,9 +318,12 @@ export default function HuntScreen() {
                   <Text style={styles.clueText}>{clue.text}</Text>
                   
                   <View style={styles.clueActions}>
-                    <TouchableOpacity style={styles.mapButton}>
+                    <TouchableOpacity 
+                      style={styles.mapButton}
+                      onPress={() => setSelectedClueForMap(clue as ClueWithLocation)}
+                    >
                       <MapPin color="#00D4FF" size={16} />
-                      <Text style={styles.mapButtonText}>Open Map</Text>
+                      <Text style={styles.mapButtonText}>View Hunt Zone</Text>
                     </TouchableOpacity>
                   </View>
                 </Animated.View>
@@ -329,6 +361,15 @@ export default function HuntScreen() {
             <Text style={styles.notificationText}>New clue received!</Text>
           </Animated.View>
         </LinearGradient>
+        
+        {selectedClueForMap && selectedClueForMap.location && (
+          <HuntMap
+            visible={true}
+            onClose={() => setSelectedClueForMap(null)}
+            clueOrder={selectedClueForMap.order}
+            targetLocation={selectedClueForMap.location}
+          />
+        )}
       </View>
     );
   }
