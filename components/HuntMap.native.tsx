@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { X, Target } from 'lucide-react-native';
 
@@ -53,15 +54,17 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Target color="#00D4FF" size={20} />
-          <Text style={styles.title}>Hunt Zone - Clue {clueOrder}/{totalClues}</Text>
+      <SafeAreaView edges={['top']} style={styles.safeArea}>
+        <View style={styles.header}>
+          <View style={styles.titleContainer}>
+            <Target color="#00D4FF" size={20} />
+            <Text style={styles.title}>Hunt Zone - Clue {clueOrder}/{totalClues}</Text>
+          </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <X color="#FFF" size={24} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <X color="#FFF" size={24} />
-        </TouchableOpacity>
-      </View>
+      </SafeAreaView>
 
       <MapView
         style={styles.map}
@@ -121,7 +124,8 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         </Marker>
       </MapView>
 
-      <View style={styles.infoPanel}>
+      <SafeAreaView edges={['bottom']} style={styles.safeAreaBottom}>
+        <View style={styles.infoPanel}>
         <View style={styles.infoPanelHeader}>
           <Text style={styles.infoPanelTitle}>Target Zone Information</Text>
           <View style={styles.clueProgress}>
@@ -156,7 +160,8 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
             🏆 Final zone revealed! The target is within this area.
           </Text>
         )}
-      </View>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -170,6 +175,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#0A0A0A',
     zIndex: 1000,
+  },
+  safeArea: {
+    backgroundColor: '#1A1A1A',
+  },
+  safeAreaBottom: {
+    backgroundColor: '#1A1A1A',
   },
   header: {
     flexDirection: 'row',
