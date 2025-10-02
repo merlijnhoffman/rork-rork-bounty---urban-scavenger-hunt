@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause, Crosshair, Navigation } from 'lucide-react-native';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import HuntMap from '@/components/HuntMap';
 import { useGameStore, Clue } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +23,16 @@ import { supabase } from '@/lib/supabase';
 import { trpc, trpcClient } from '@/lib/trpc';
 import StripePayment from '@/components/StripePayment';
 import { router } from 'expo-router';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 
 interface ClueWithLocation extends Clue {
@@ -54,11 +65,55 @@ export default function HuntScreen() {
   const [distanceMeterUsed, setDistanceMeterUsed] = useState<boolean>(false);
   const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
   const [isCalculatingDistance, setIsCalculatingDistance] = useState<boolean>(false);
+  const [notificationPermission, setNotificationPermission] = useState<boolean>(false);
   
   const bountyLocation = {
     latitude: 52.3752,
     longitude: 4.8840,
   };
+  
+  useEffect(() => {
+    const requestNotificationPermissions = async () => {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      setNotificationPermission(finalStatus === 'granted');
+      
+      if (finalStatus !== 'granted') {
+        console.log('Notification permissions not granted');
+      }
+    };
+    
+    requestNotificationPermissions();
+  }, []);
+  
+  const sendClueNotification = useCallback(async (clue: Clue) => {
+    if (!notificationPermission) {
+      console.log('Notification permission not granted');
+      return;
+    }
+    
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🎯 New Clue Received!',
+          body: `Clue #${clue.order}: ${clue.text.substring(0, 100)}${clue.text.length > 100 ? '...' : ''}`,
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+          data: { clueId: clue.id, order: clue.order },
+        },
+        trigger: null,
+      });
+      console.log('Notification sent for clue:', clue.id);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  }, [notificationPermission]);
   
   // Mock clues for simulation with location data - based on bounty's movement and appearance
   const mockClues: ClueWithLocation[] = [
@@ -154,6 +209,8 @@ export default function HuntScreen() {
             return [...prev, newClue].sort((a, b) => a.order - b.order);
           });
           
+          sendClueNotification(newClue);
+          
           // Animate new clue appearance
           Animated.sequence([
             Animated.timing(fadeAnim, {
@@ -175,7 +232,7 @@ export default function HuntScreen() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [hasTicket, currentEvent, user, fadeAnim]);
+  }, [hasTicket, currentEvent, user, fadeAnim, sendClueNotification]);
   
   // Simulation functions
   const startSimulation = () => {
@@ -187,6 +244,8 @@ export default function HuntScreen() {
     mockClues.forEach((clue, index) => {
       setTimeout(() => {
         setLiveClues(prev => [...prev, clue]);
+        
+        sendClueNotification(clue);
         
         // Animate new clue
         Animated.sequence([
