@@ -7,6 +7,7 @@ import {
   ScrollView,
   ImageBackground,
   Animated,
+  Platform as RNPlatform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,8 +18,13 @@ import { supabase } from '@/lib/supabase';
 
 import { trpc, trpcClient } from '@/lib/trpc';
 import StripePayment from '@/components/StripePayment';
-import HuntMap from '@/components/HuntMap';
 import { router } from 'expo-router';
+import { Platform } from 'react-native';
+
+let HuntMap: any;
+if (Platform.OS !== 'web') {
+  HuntMap = require('@/components/HuntMap').default;
+}
 
 interface ClueWithLocation extends Clue {
   location?: {
@@ -362,13 +368,37 @@ export default function HuntScreen() {
           </Animated.View>
         </LinearGradient>
         
-        {selectedClueForMap && selectedClueForMap.location && (
+        {selectedClueForMap && selectedClueForMap.location && RNPlatform.OS !== 'web' && HuntMap && (
           <HuntMap
             visible={true}
             onClose={() => setSelectedClueForMap(null)}
             clueOrder={selectedClueForMap.order}
             targetLocation={selectedClueForMap.location}
           />
+        )}
+        {selectedClueForMap && selectedClueForMap.location && RNPlatform.OS === 'web' && (
+          <View style={styles.webMapOverlay}>
+            <View style={styles.webMapContainer}>
+              <View style={styles.webMapHeader}>
+                <Text style={styles.webMapTitle}>Hunt Zone - Clue {selectedClueForMap.order}</Text>
+                <TouchableOpacity onPress={() => setSelectedClueForMap(null)}>
+                  <Text style={styles.webMapClose}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.webMapContent}>
+                <MapPin color="#00D4FF" size={48} />
+                <Text style={styles.webMapLocationName}>{selectedClueForMap.location.name}</Text>
+                <Text style={styles.webMapRadius}>Search zone: ~{selectedClueForMap.location.radius}m radius</Text>
+                <Text style={styles.webMapNote}>Map view is available on mobile devices</Text>
+                <View style={styles.webMapCoords}>
+                  <Text style={styles.webMapCoordsLabel}>Approximate Center:</Text>
+                  <Text style={styles.webMapCoordsText}>
+                    {selectedClueForMap.location.latitude.toFixed(6)}, {selectedClueForMap.location.longitude.toFixed(6)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
         )}
       </View>
     );
@@ -1190,5 +1220,84 @@ const styles = StyleSheet.create({
     color: '#CCC',
     marginBottom: 12,
   },
-
+  webMapOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  webMapContainer: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
+  webMapHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  webMapTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  webMapClose: {
+    fontSize: 24,
+    color: '#FFF',
+    fontWeight: '600',
+  },
+  webMapContent: {
+    padding: 40,
+    alignItems: 'center',
+    gap: 16,
+  },
+  webMapLocationName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
+    textAlign: 'center',
+  },
+  webMapRadius: {
+    fontSize: 16,
+    color: '#00D4FF',
+    fontWeight: '600',
+  },
+  webMapNote: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  webMapCoords: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: '#0A0A0A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  webMapCoordsLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  webMapCoordsText: {
+    fontSize: 14,
+    color: '#00D4FF',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontFamily: RNPlatform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
+  },
 });
