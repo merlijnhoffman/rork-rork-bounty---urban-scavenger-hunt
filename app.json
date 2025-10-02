@@ -14,22 +14,30 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "app.rork.rork-bounty-urban-scavenger-hunt",
-      "infoPlist": {
-        "CFBundleAllowMixedLocalizations": true,
-        "CFBundleLocalizations": [
-          "fr"
-        ]
+    "supportsTablet": true,
+    "bundleIdentifier": "app.rork.rork-bounty-urban-scavenger-hunt",
+    "infoPlist": {
+      "CFBundleAllowMixedLocalizations": true,
+      "CFBundleLocalizations": [
+        "fr"
+      ]
+    },
+    "config": {
+      "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+    }
+  },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/adaptive-icon.png",
+      "backgroundColor": "#ffffff"
+    },
+    "package": "app.rork.rork-bounty-urban-scavenger-hunt",
+    "config": {
+      "googleMaps": {
+        "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
       }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "app.rork.rork-bounty-urban-scavenger-hunt"
-    },
+    }
+  },
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
