@@ -22,6 +22,11 @@ if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+  console.error('STRIPE_WEBHOOK_SECRET environment variable is required');
+  process.exit(1);
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2025-09-30.clover",
 });
