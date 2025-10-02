@@ -19,12 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { trpc, trpcClient } from '@/lib/trpc';
 import StripePayment from '@/components/StripePayment';
 import { router } from 'expo-router';
-import { Platform } from 'react-native';
 
-let HuntMap: any;
-if (Platform.OS !== 'web') {
-  HuntMap = require('@/components/HuntMap').default;
-}
 
 interface ClueWithLocation extends Clue {
   location?: {
@@ -323,15 +318,17 @@ export default function HuntScreen() {
                   
                   <Text style={styles.clueText}>{clue.text}</Text>
                   
-                  <View style={styles.clueActions}>
-                    <TouchableOpacity 
-                      style={styles.mapButton}
-                      onPress={() => setSelectedClueForMap(clue as ClueWithLocation)}
-                    >
-                      <MapPin color="#00D4FF" size={16} />
-                      <Text style={styles.mapButtonText}>View Hunt Zone</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {RNPlatform.OS !== 'web' && (
+                    <View style={styles.clueActions}>
+                      <TouchableOpacity 
+                        style={styles.mapButton}
+                        onPress={() => setSelectedClueForMap(clue as ClueWithLocation)}
+                      >
+                        <MapPin color="#00D4FF" size={16} />
+                        <Text style={styles.mapButtonText}>View Hunt Zone</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </Animated.View>
               ))
             )}
@@ -368,15 +365,7 @@ export default function HuntScreen() {
           </Animated.View>
         </LinearGradient>
         
-        {selectedClueForMap && selectedClueForMap.location && RNPlatform.OS !== 'web' && HuntMap && (
-          <HuntMap
-            visible={true}
-            onClose={() => setSelectedClueForMap(null)}
-            clueOrder={selectedClueForMap.order}
-            targetLocation={selectedClueForMap.location}
-          />
-        )}
-        {selectedClueForMap && selectedClueForMap.location && RNPlatform.OS === 'web' && (
+        {selectedClueForMap && selectedClueForMap.location && (
           <View style={styles.webMapOverlay}>
             <View style={styles.webMapContainer}>
               <View style={styles.webMapHeader}>
