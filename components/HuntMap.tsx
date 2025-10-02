@@ -6,8 +6,20 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { X, MapPin } from 'lucide-react-native';
+
+let MapView: any;
+let Circle: any;
+let Marker: any;
+let PROVIDER_GOOGLE: any;
+
+if (Platform.OS !== 'web') {
+  const maps = require('react-native-maps');
+  MapView = maps.default;
+  Circle = maps.Circle;
+  Marker = maps.Marker;
+  PROVIDER_GOOGLE = maps.PROVIDER_GOOGLE;
+}
 
 interface HuntMapProps {
   visible: boolean;
