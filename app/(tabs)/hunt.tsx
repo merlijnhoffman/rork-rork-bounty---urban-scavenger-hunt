@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause, Crosshair } from 'lucide-react-native';
+import HuntMap from '@/components/HuntMap';
 import { useGameStore, Clue } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -59,7 +60,7 @@ export default function HuntScreen() {
       location: {
         latitude: 52.3731,
         longitude: 4.8922,
-        radius: 250,
+        radius: 500,
         name: 'Dam Square Area',
       },
     },
@@ -71,7 +72,7 @@ export default function HuntScreen() {
       location: {
         latitude: 52.3580,
         longitude: 4.8810,
-        radius: 200,
+        radius: 300,
         name: 'Museum District',
       },
     },
@@ -85,6 +86,18 @@ export default function HuntScreen() {
         longitude: 4.8913,
         radius: 150,
         name: 'Bloemenmarkt',
+      },
+    },
+    {
+      id: '4',
+      text: 'Your final destination: Where Anne Frank\'s story echoes through time. The target is at the entrance, where visitors queue to learn history.',
+      timestamp: new Date(Date.now() + 15 * 60000).toISOString(),
+      order: 4,
+      location: {
+        latitude: 52.3752,
+        longitude: 4.8840,
+        radius: 50,
+        name: 'Anne Frank House',
       },
     },
   ];
@@ -318,17 +331,24 @@ export default function HuntScreen() {
                   
                   <Text style={styles.clueText}>{clue.text}</Text>
                   
-                  {RNPlatform.OS !== 'web' && (
-                    <View style={styles.clueActions}>
-                      <TouchableOpacity 
-                        style={styles.mapButton}
-                        onPress={() => setSelectedClueForMap(clue as ClueWithLocation)}
-                      >
-                        <MapPin color="#00D4FF" size={16} />
-                        <Text style={styles.mapButtonText}>View Hunt Zone</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                  <View style={styles.clueActions}>
+                    <TouchableOpacity 
+                      style={styles.mapButton}
+                      onPress={() => setSelectedClueForMap(clue as ClueWithLocation)}
+                    >
+                      <Crosshair color="#00D4FF" size={16} />
+                      <Text style={styles.mapButtonText}>View Hunt Zone</Text>
+                    </TouchableOpacity>
+                    
+                    {(clue as ClueWithLocation).location && (
+                      <View style={styles.radiusIndicator}>
+                        <MapPin color="#888" size={12} />
+                        <Text style={styles.radiusText}>
+                          {(clue as ClueWithLocation).location!.radius}m zone
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </Animated.View>
               ))
             )}
@@ -366,28 +386,13 @@ export default function HuntScreen() {
         </LinearGradient>
         
         {selectedClueForMap && selectedClueForMap.location && (
-          <View style={styles.webMapOverlay}>
-            <View style={styles.webMapContainer}>
-              <View style={styles.webMapHeader}>
-                <Text style={styles.webMapTitle}>Hunt Zone - Clue {selectedClueForMap.order}</Text>
-                <TouchableOpacity onPress={() => setSelectedClueForMap(null)}>
-                  <Text style={styles.webMapClose}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.webMapContent}>
-                <MapPin color="#00D4FF" size={48} />
-                <Text style={styles.webMapLocationName}>{selectedClueForMap.location.name}</Text>
-                <Text style={styles.webMapRadius}>Search zone: ~{selectedClueForMap.location.radius}m radius</Text>
-                <Text style={styles.webMapNote}>Map view is available on mobile devices</Text>
-                <View style={styles.webMapCoords}>
-                  <Text style={styles.webMapCoordsLabel}>Approximate Center:</Text>
-                  <Text style={styles.webMapCoordsText}>
-                    {selectedClueForMap.location.latitude.toFixed(6)}, {selectedClueForMap.location.longitude.toFixed(6)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
+          <HuntMap
+            visible={true}
+            onClose={() => setSelectedClueForMap(null)}
+            clueOrder={selectedClueForMap.order}
+            totalClues={mockClues.length}
+            targetLocation={selectedClueForMap.location}
+          />
         )}
       </View>
     );
@@ -1080,20 +1085,37 @@ const styles = StyleSheet.create({
   },
   clueActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   mapButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#0A1A2A',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 8,
     gap: 6,
+    borderWidth: 1,
+    borderColor: '#00D4FF',
   },
   mapButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#00D4FF',
+    fontWeight: '700',
+  },
+  radiusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A2A2A',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    gap: 4,
+  },
+  radiusText: {
+    fontSize: 11,
+    color: '#888',
     fontWeight: '600',
   },
   huntProgress: {

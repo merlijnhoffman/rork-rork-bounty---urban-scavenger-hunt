@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   Platform,
+  Animated,
 } from 'react-native';
-import { X, MapPin } from 'lucide-react-native';
+import { X, MapPin, Target } from 'lucide-react-native';
 
 let MapView: any;
 let Circle: any;
@@ -25,6 +26,7 @@ interface HuntMapProps {
   visible: boolean;
   onClose: () => void;
   clueOrder: number;
+  totalClues: number;
   targetLocation: {
     latitude: number;
     longitude: number;
@@ -33,16 +35,40 @@ interface HuntMapProps {
   };
 }
 
-export default function HuntMap({ visible, onClose, clueOrder, targetLocation }: HuntMapProps) {
+export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation }: HuntMapProps) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (visible && Platform.OS !== 'web') {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.3,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [visible, pulseAnim]);
+
   if (!visible) return null;
+
+  const zoneProgress = ((clueOrder / totalClues) * 100).toFixed(0);
+  const remainingClues = totalClues - clueOrder;
 
   if (Platform.OS === 'web') {
     return (
       <View style={styles.webContainer}>
         <View style={styles.webHeader}>
           <View style={styles.webTitleContainer}>
-            <MapPin color="#00D4FF" size={20} />
-            <Text style={styles.webTitle}>Hunt Zone - Clue {clueOrder}</Text>
+            <Target color="#00D4FF" size={20} />
+            <Text style={styles.webTitle}>Hunt Zone - Clue {clueOrder}/{totalClues}</Text>
           </View>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <X color="#FFF" size={24} />
@@ -50,16 +76,36 @@ export default function HuntMap({ visible, onClose, clueOrder, targetLocation }:
         </View>
         
         <View style={styles.webMapPlaceholder}>
-          <MapPin color="#00D4FF" size={48} />
+          <View style={styles.zoneIndicator}>
+            <Target color="#00D4FF" size={64} />
+          </View>
           <Text style={styles.webPlaceholderTitle}>{targetLocation.name}</Text>
-          <Text style={styles.webPlaceholderText}>
-            Search zone: ~{targetLocation.radius}m radius
-          </Text>
+          
+          <View style={styles.zoneStats}>
+            <View style={styles.zoneStat}>
+              <Text style={styles.zoneStatLabel}>Search Zone</Text>
+              <Text style={styles.zoneStatValue}>{targetLocation.radius}m</Text>
+            </View>
+            <View style={styles.zoneDivider} />
+            <View style={styles.zoneStat}>
+              <Text style={styles.zoneStatLabel}>Zone Narrowed</Text>
+              <Text style={styles.zoneStatValue}>{zoneProgress}%</Text>
+            </View>
+          </View>
+
+          {remainingClues > 0 && (
+            <View style={styles.progressInfo}>
+              <Text style={styles.progressInfoText}>
+                🎯 Zone will shrink with {remainingClues} more clue{remainingClues !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
+          
           <Text style={styles.webPlaceholderSubtext}>
-            Map view is available on mobile devices
+            Interactive map with Google Maps is available on mobile devices
           </Text>
           <View style={styles.coordinatesContainer}>
-            <Text style={styles.coordinatesLabel}>Approximate Center:</Text>
+            <Text style={styles.coordinatesLabel}>Zone Center:</Text>
             <Text style={styles.coordinatesText}>
               {targetLocation.latitude.toFixed(6)}, {targetLocation.longitude.toFixed(6)}
             </Text>
@@ -69,12 +115,15 @@ export default function HuntMap({ visible, onClose, clueOrder, targetLocation }:
     );
   }
 
+  const latitudeDelta = (targetLocation.radius / 111000) * 2.5;
+  const longitudeDelta = latitudeDelta;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <MapPin color="#00D4FF" size={20} />
-          <Text style={styles.title}>Hunt Zone - Clue {clueOrder}</Text>
+          <Target color="#00D4FF" size={20} />
+          <Text style={styles.title}>Hunt Zone - Clue {clueOrder}/{totalClues}</Text>
         </View>
         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
           <X color="#FFF" size={24} />
@@ -87,12 +136,13 @@ export default function HuntMap({ visible, onClose, clueOrder, targetLocation }:
         initialRegion={{
           latitude: targetLocation.latitude,
           longitude: targetLocation.longitude,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
+          latitudeDelta,
+          longitudeDelta,
         }}
         showsUserLocation
         showsMyLocationButton
         showsCompass
+        mapType="standard"
       >
         <Circle
           center={{
@@ -100,9 +150,20 @@ export default function HuntMap({ visible, onClose, clueOrder, targetLocation }:
             longitude: targetLocation.longitude,
           }}
           radius={targetLocation.radius}
-          fillColor="rgba(0, 212, 255, 0.15)"
-          strokeColor="rgba(0, 212, 255, 0.8)"
-          strokeWidth={3}
+          fillColor="rgba(0, 212, 255, 0.2)"
+          strokeColor="#00D4FF"
+          strokeWidth={2}
+        />
+        
+        <Circle
+          center={{
+            latitude: targetLocation.latitude,
+            longitude: targetLocation.longitude,
+          }}
+          radius={targetLocation.radius * 0.7}
+          fillColor="rgba(0, 212, 255, 0.1)"
+          strokeColor="rgba(0, 212, 255, 0.5)"
+          strokeWidth={1}
         />
         
         <Marker
@@ -113,27 +174,55 @@ export default function HuntMap({ visible, onClose, clueOrder, targetLocation }:
           title={targetLocation.name}
           description={`Search within ${targetLocation.radius}m radius`}
         >
-          <View style={styles.markerContainer}>
+          <Animated.View 
+            style={[
+              styles.markerContainer,
+              { transform: [{ scale: pulseAnim }] }
+            ]}
+          >
             <View style={styles.markerPulse} />
             <View style={styles.marker}>
-              <MapPin color="#FFF" size={20} />
+              <Target color="#FFF" size={20} />
             </View>
-          </View>
+          </Animated.View>
         </Marker>
       </MapView>
 
       <View style={styles.infoPanel}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Target Zone:</Text>
-          <Text style={styles.infoValue}>{targetLocation.name}</Text>
+        <View style={styles.infoPanelHeader}>
+          <Text style={styles.infoPanelTitle}>Target Zone Information</Text>
+          <View style={styles.clueProgress}>
+            <Text style={styles.clueProgressText}>Clue {clueOrder} of {totalClues}</Text>
+          </View>
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Search Radius:</Text>
-          <Text style={styles.infoValue}>~{targetLocation.radius}m</Text>
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>Location</Text>
+            <Text style={styles.statValue}>{targetLocation.name}</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>Search Radius</Text>
+            <Text style={styles.statValue}>{targetLocation.radius}m</Text>
+          </View>
         </View>
-        <Text style={styles.infoHint}>
-          The target is somewhere within the highlighted circle. Use the clue to narrow down the exact location!
-        </Text>
+
+        <View style={styles.zoneProgressBar}>
+          <View style={styles.zoneProgressBarBg}>
+            <View style={[styles.zoneProgressBarFill, { width: `${zoneProgress}%` }]} />
+          </View>
+          <Text style={styles.zoneProgressText}>Zone narrowed by {zoneProgress}%</Text>
+        </View>
+
+        {remainingClues > 0 ? (
+          <Text style={styles.infoHint}>
+            🎯 The zone will shrink with each new clue! {remainingClues} more clue{remainingClues !== 1 ? 's' : ''} remaining.
+          </Text>
+        ) : (
+          <Text style={styles.infoHintFinal}>
+            🏆 Final zone revealed! The target is within this area.
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -207,6 +296,93 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#333',
   },
+  infoPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoPanelTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  clueProgress: {
+    backgroundColor: '#00D4FF',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  clueProgressText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '500',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    fontSize: 14,
+    color: '#00D4FF',
+    fontWeight: '700',
+  },
+  zoneProgressBar: {
+    marginBottom: 16,
+  },
+  zoneProgressBarBg: {
+    height: 8,
+    backgroundColor: '#0A0A0A',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  zoneProgressBarFill: {
+    height: '100%',
+    backgroundColor: '#00D4FF',
+    borderRadius: 4,
+  },
+  zoneProgressText: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+  },
+  infoHint: {
+    fontSize: 13,
+    color: '#00D4FF',
+    lineHeight: 20,
+    textAlign: 'center',
+    backgroundColor: '#0A1A2A',
+    padding: 12,
+    borderRadius: 8,
+  },
+  infoHintFinal: {
+    fontSize: 13,
+    color: '#00FF88',
+    lineHeight: 20,
+    textAlign: 'center',
+    backgroundColor: '#0A2A1A',
+    padding: 12,
+    borderRadius: 8,
+    fontWeight: '600',
+  },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -222,13 +398,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFF',
     fontWeight: '600',
-  },
-  infoHint: {
-    fontSize: 13,
-    color: '#00D4FF',
-    lineHeight: 18,
-    marginTop: 8,
-    fontStyle: 'italic',
   },
   webContainer: {
     position: 'absolute',
@@ -264,13 +433,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 40,
-    gap: 16,
+    gap: 20,
+  },
+  zoneIndicator: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#00D4FF',
+    marginBottom: 8,
   },
   webPlaceholderTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '900',
     color: '#FFF',
     textAlign: 'center',
+    letterSpacing: 1,
+  },
+  zoneStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 20,
+    gap: 20,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  zoneStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  zoneStatLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  zoneStatValue: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#00D4FF',
+  },
+  zoneDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#333',
+  },
+  progressInfo: {
+    backgroundColor: '#0A1A2A',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#00D4FF',
+  },
+  progressInfoText: {
+    fontSize: 14,
+    color: '#00D4FF',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   webPlaceholderText: {
     fontSize: 16,
@@ -279,7 +505,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   webPlaceholderSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#888',
     textAlign: 'center',
     marginTop: 8,
