@@ -50,11 +50,11 @@ export default function HuntScreen() {
   const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   
-  // Mock clues for simulation with location data
+  // Mock clues for simulation with location data - based on bounty's movement and appearance
   const mockClues: ClueWithLocation[] = [
     {
       id: '1',
-      text: 'Start your hunt at the heart of Amsterdam! Find the iconic monument where the city\'s history began. Look for the bronze plaque near the base.',
+      text: 'BOUNTY SPOTTED: Wearing a bright red jacket and black baseball cap. Last seen heading towards the central square area. They were carrying a blue backpack and stopped to check their phone near a large monument.',
       timestamp: new Date().toISOString(),
       order: 1,
       location: {
@@ -66,7 +66,7 @@ export default function HuntScreen() {
     },
     {
       id: '2', 
-      text: 'Cross the famous canals to where art meets history. The target awaits in the museum district, near the entrance of the house where a famous painter once lived.',
+      text: 'UPDATE: The bounty was seen 5 minutes ago walking south. Still wearing the red jacket. Witnesses report they stopped at a coffee shop with outdoor seating. Look for someone with a blue backpack sitting alone.',
       timestamp: new Date(Date.now() + 5 * 60000).toISOString(),
       order: 2,
       location: {
@@ -78,7 +78,7 @@ export default function HuntScreen() {
     },
     {
       id: '3',
-      text: 'Navigate to the floating flower market. The final clue hides where tulips bloom year-round, near the vendor with the red and white striped awning.',
+      text: 'FRESH SIGHTING: Bounty spotted near the flower market! They removed their red jacket - now wearing a white t-shirt underneath. Still has the black cap and blue backpack. Moving slowly, checking their phone frequently.',
       timestamp: new Date(Date.now() + 10 * 60000).toISOString(),
       order: 3,
       location: {
@@ -90,7 +90,7 @@ export default function HuntScreen() {
     },
     {
       id: '4',
-      text: 'Your final destination: Where Anne Frank\'s story echoes through time. The target is at the entrance, where visitors queue to learn history.',
+      text: 'FINAL LOCATION: Bounty confirmed heading north! White t-shirt, black cap, blue backpack. They were seen entering a historic building with a long queue outside. Move fast - they\'re on the move!',
       timestamp: new Date(Date.now() + 15 * 60000).toISOString(),
       order: 4,
       location: {
