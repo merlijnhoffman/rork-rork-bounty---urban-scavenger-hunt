@@ -14,30 +14,30 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-    "supportsTablet": true,
-    "bundleIdentifier": "app.rork.rork-bounty-urban-scavenger-hunt",
-    "infoPlist": {
-      "CFBundleAllowMixedLocalizations": true,
-      "CFBundleLocalizations": [
-        "fr"
-      ]
-    },
-    "config": {
-      "googleMapsApiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
-    }
-  },
-  "android": {
-    "adaptiveIcon": {
-      "foregroundImage": "./assets/images/adaptive-icon.png",
-      "backgroundColor": "#ffffff"
-    },
-    "package": "app.rork.rork-bounty-urban-scavenger-hunt",
-    "config": {
-      "googleMaps": {
-        "apiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
+      "supportsTablet": true,
+      "bundleIdentifier": "app.rork.rork-bounty-urban-scavenger-hunt",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleLocalizations": [
+          "fr"
+        ]
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
       }
-    }
-  },
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "app.rork.rork-bounty-urban-scavenger-hunt",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
+        }
+      }
+    },
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
