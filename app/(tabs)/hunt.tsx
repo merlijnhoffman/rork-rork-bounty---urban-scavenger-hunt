@@ -8,10 +8,12 @@ import {
   ImageBackground,
   Animated,
   Platform as RNPlatform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause, Crosshair } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause, Crosshair, Navigation } from 'lucide-react-native';
+import * as Location from 'expo-location';
 import HuntMap from '@/components/HuntMap';
 import { useGameStore, Clue } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +51,14 @@ export default function HuntScreen() {
   const [testMode, setTestMode] = useState<boolean>(true);
   const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const [distanceMeterUsed, setDistanceMeterUsed] = useState<boolean>(false);
+  const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
+  const [isCalculatingDistance, setIsCalculatingDistance] = useState<boolean>(false);
+  
+  const bountyLocation = {
+    latitude: 52.3752,
+    longitude: 4.8840,
+  };
   
   // Mock clues for simulation with location data - based on bounty's movement and appearance
   const mockClues: ClueWithLocation[] = [
@@ -200,6 +210,73 @@ export default function HuntScreen() {
     setIsSimulating(false);
     setIsHuntActive(false);
     setLiveClues([]);
+    setDistanceMeterUsed(false);
+    setMeasuredDistance(null);
+  };
+  
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  };
+  
+  const handleDistanceMeter = async () => {
+    if (distanceMeterUsed) {
+      Alert.alert('Already Used', 'You have already used your distance meter for this hunt.');
+      return;
+    }
+    
+    setIsCalculatingDistance(true);
+    
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location permissions to use the distance meter.'
+        );
+        setIsCalculatingDistance(false);
+        return;
+      }
+      
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      
+      const distance = calculateDistance(
+        location.coords.latitude,
+        location.coords.longitude,
+        bountyLocation.latitude,
+        bountyLocation.longitude
+      );
+      
+      setMeasuredDistance(Math.round(distance));
+      setDistanceMeterUsed(true);
+      
+      Alert.alert(
+        '📍 Distance Measured',
+        `You are ${Math.round(distance)} meters away from the Bounty!`,
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert(
+        'Error',
+        'Failed to get your location. Please make sure location services are enabled.'
+      );
+    } finally {
+      setIsCalculatingDistance(false);
+    }
   };
   
   useEffect(() => {
@@ -278,6 +355,44 @@ export default function HuntScreen() {
             <View style={styles.huntInfo}>
               <Text style={styles.huntLocation}>AMSTERDAM</Text>
               <Text style={styles.huntTime}>Started at 3:00 PM CET</Text>
+            </View>
+            
+            <View style={styles.huntActions}>
+              <TouchableOpacity 
+                style={[
+                  styles.distanceMeterButton,
+                  (distanceMeterUsed || isCalculatingDistance) && styles.distanceMeterButtonDisabled
+                ]}
+                onPress={handleDistanceMeter}
+                disabled={distanceMeterUsed || isCalculatingDistance}
+              >
+                <Navigation 
+                  color={distanceMeterUsed ? '#888' : '#FFF'} 
+                  size={18} 
+                />
+                <Text style={[
+                  styles.distanceMeterButtonText,
+                  distanceMeterUsed && styles.distanceMeterButtonTextDisabled
+                ]}>
+                  {isCalculatingDistance ? 'Calculating...' : 
+                   distanceMeterUsed ? 'Distance Meter Used' : 
+                   'Use Distance Meter'}
+                </Text>
+                {!distanceMeterUsed && (
+                  <View style={styles.oneTimeUse}>
+                    <Text style={styles.oneTimeUseText}>1x</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              
+              {measuredDistance !== null && (
+                <View style={styles.distanceResult}>
+                  <Target color="#00D4FF" size={16} />
+                  <Text style={styles.distanceResultText}>
+                    {measuredDistance}m away
+                  </Text>
+                </View>
+              )}
             </View>
             
             {isSimulating && (
@@ -1310,5 +1425,67 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     fontFamily: RNPlatform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
+  },
+  huntActions: {
+    marginTop: 16,
+    gap: 12,
+  },
+  distanceMeterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00D4FF',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+    position: 'relative',
+  },
+  distanceMeterButtonDisabled: {
+    backgroundColor: '#333',
+  },
+  distanceMeterButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 0.5,
+  },
+  distanceMeterButtonTextDisabled: {
+    color: '#888',
+  },
+  oneTimeUse: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 2,
+    borderColor: '#0A0A0A',
+  },
+  oneTimeUseText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 0.5,
+  },
+  distanceResult: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1A1A1A',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    gap: 8,
+    borderWidth: 2,
+    borderColor: '#00D4FF',
+  },
+  distanceResultText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#00D4FF',
+    letterSpacing: 1,
   },
 });
