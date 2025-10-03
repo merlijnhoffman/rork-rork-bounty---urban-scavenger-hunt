@@ -4,6 +4,8 @@ import { createPaymentIntentProcedure } from "./routes/payment/create-intent/rou
 import { createTicketProcedure } from "./routes/payment/create-ticket/route";
 import { getUserTicketsProcedure } from "./routes/payment/get-user-tickets/route";
 import { checkTicketStatusProcedure } from "./routes/payment/check-ticket-status/route";
+import { generateConnectionCodeProcedure } from "./routes/connection/generate-code/route";
+import { verifyConnectionProcedure } from "./routes/connection/verify-connection/route";
 
 
 export const appRouter = createTRPCRouter({
@@ -16,7 +18,10 @@ export const appRouter = createTRPCRouter({
     getUserTickets: getUserTicketsProcedure,
     checkTicketStatus: checkTicketStatusProcedure,
   }),
-
+  connection: createTRPCRouter({
+    generateCode: generateConnectionCodeProcedure,
+    verifyConnection: verifyConnectionProcedure,
+  }),
 });
 
 export type AppRouter = typeof appRouter;

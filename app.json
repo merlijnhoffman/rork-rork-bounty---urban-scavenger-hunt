@@ -26,7 +26,9 @@
         "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
         "UIBackgroundModes": [
           "location"
-        ]
+        ],
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone"
       },
       "config": {
         "googleMapsApiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
@@ -50,7 +52,9 @@
         "FOREGROUND_SERVICE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "CAMERA",
+        "RECORD_AUDIO"
       ]
     },
     "web": {
@@ -89,6 +93,14 @@
             "./local/assets/notification_sound.wav"
           ],
           "enableBackgroundRemoteNotifications": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "recordAudioAndroid": true
         }
       ]
     ],

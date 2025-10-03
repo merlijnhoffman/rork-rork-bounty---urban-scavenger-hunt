@@ -10,6 +10,7 @@ import { GameProvider } from '@/store/game-store';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { PaymentWrapper } from '@/contexts/PaymentContext';
 import { LocationProvider } from '@/contexts/LocationContext';
+import { ConnectionProvider } from '@/contexts/ConnectionContext';
 import { trpc, trpcClient } from '@/lib/trpc';
 import { ErrorBoundary } from 'react-error-boundary';
 
@@ -86,11 +87,13 @@ export default function RootLayout() {
           <AuthProvider>
             <PaymentWrapper>
               <LocationProvider>
-                <GameProvider>
-                  <GestureHandlerRootView style={styles.container}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </GameProvider>
+                <ConnectionProvider>
+                  <GameProvider>
+                    <GestureHandlerRootView style={styles.container}>
+                      <RootLayoutNav />
+                    </GestureHandlerRootView>
+                  </GameProvider>
+                </ConnectionProvider>
               </LocationProvider>
             </PaymentWrapper>
           </AuthProvider>
