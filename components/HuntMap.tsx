@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { X, Target } from 'lucide-react-native';
 
@@ -40,22 +41,11 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         
         <View style={styles.webMapPlaceholder}>
           <View style={styles.mapTemplate}>
-            <View style={styles.mapGrid}>
-              {[...Array(10)].map((_, i) => (
-                <View key={`h-${i}`} style={[styles.gridLine, { top: `${i * 10}%` }]} />
-              ))}
-              {[...Array(10)].map((_, i) => (
-                <View key={`v-${i}`} style={[styles.gridLine, styles.gridLineVertical, { left: `${i * 10}%` }]} />
-              ))}
-            </View>
-            
-            <View style={styles.mapRing}>
-              <View style={styles.mapRingInner} />
-            </View>
-            
-            <View style={styles.mapPin}>
-              <Target color="#00D4FF" size={32} />
-            </View>
+            <Image
+              source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/3sia3564ewye6vpq9cko1' }}
+              style={styles.mapImage}
+              resizeMode="cover"
+            />
           </View>
           
           <Text style={styles.webPlaceholderTitle}>{targetLocation.name}</Text>
@@ -81,7 +71,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
           )}
           
           <Text style={styles.webPlaceholderSubtext}>
-            Interactive map with Google Maps is available on mobile devices
+            This is a preview of the hunt zone
           </Text>
           <View style={styles.coordinatesContainer}>
             <Text style={styles.coordinatesLabel}>Zone Center:</Text>
@@ -143,63 +133,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 20,
   },
-  mapGrid: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#1A2530',
-  },
-  gridLineVertical: {
-    top: 0,
-    bottom: 0,
-    left: 0,
-    width: 1,
+  mapImage: {
+    width: '100%',
     height: '100%',
-  },
-  mapRing: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: '60%',
-    aspectRatio: 1,
-    marginLeft: '-30%',
-    marginTop: '-30%',
-    borderRadius: 9999,
-    borderWidth: 3,
-    borderColor: '#00D4FF',
-    backgroundColor: 'rgba(0, 212, 255, 0.05)',
-  },
-  mapRingInner: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: '50%',
-    aspectRatio: 1,
-    marginLeft: '-25%',
-    marginTop: '-25%',
-    borderRadius: 9999,
-    borderWidth: 2,
-    borderColor: 'rgba(0, 212, 255, 0.4)',
-    backgroundColor: 'rgba(0, 212, 255, 0.1)',
-  },
-  mapPin: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    marginLeft: -16,
-    marginTop: -16,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   zoneIndicator: {
     width: 120,

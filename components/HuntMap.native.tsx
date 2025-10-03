@@ -5,9 +5,9 @@ import {
   Text,
   TouchableOpacity,
   Animated,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { X, Target } from 'lucide-react-native';
 
 interface HuntMapProps {
@@ -53,8 +53,6 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
 
   const zoneProgress = ((clueOrder / totalClues) * 100).toFixed(0);
   const remainingClues = totalClues - clueOrder;
-  const latitudeDelta = (targetLocation.radius / 111000) * 2.5;
-  const longitudeDelta = latitudeDelta;
 
   return (
     <View style={styles.container}>
@@ -70,64 +68,13 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         </View>
       </SafeAreaView>
 
-      <MapView
-        style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: targetLocation.latitude,
-          longitude: targetLocation.longitude,
-          latitudeDelta,
-          longitudeDelta,
-        }}
-        showsUserLocation
-        showsMyLocationButton
-        showsCompass
-        mapType="standard"
-        onMapReady={() => console.log('Map is ready!')}
-      >
-        <Circle
-          center={{
-            latitude: targetLocation.latitude,
-            longitude: targetLocation.longitude,
-          }}
-          radius={targetLocation.radius}
-          fillColor="rgba(0, 212, 255, 0.2)"
-          strokeColor="#00D4FF"
-          strokeWidth={2}
+      <View style={styles.map}>
+        <Image
+          source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/3sia3564ewye6vpq9cko1' }}
+          style={styles.mapImage}
+          resizeMode="cover"
         />
-        
-        <Circle
-          center={{
-            latitude: targetLocation.latitude,
-            longitude: targetLocation.longitude,
-          }}
-          radius={targetLocation.radius * 0.7}
-          fillColor="rgba(0, 212, 255, 0.1)"
-          strokeColor="rgba(0, 212, 255, 0.5)"
-          strokeWidth={1}
-        />
-        
-        <Marker
-          coordinate={{
-            latitude: targetLocation.latitude,
-            longitude: targetLocation.longitude,
-          }}
-          title={targetLocation.name}
-          description={`Search within ${targetLocation.radius}m radius`}
-        >
-          <Animated.View 
-            style={[
-              styles.markerContainer,
-              { transform: [{ scale: pulseAnim }] }
-            ]}
-          >
-            <View style={styles.markerPulse} />
-            <View style={styles.marker}>
-              <Target color="#FFF" size={20} />
-            </View>
-          </Animated.View>
-        </Marker>
-      </MapView>
+      </View>
 
       <SafeAreaView edges={['bottom']} style={styles.safeAreaBottom}>
         <View style={styles.infoPanel}>
@@ -213,31 +160,9 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  markerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerPulse: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 212, 255, 0.3)',
-  },
-  marker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#00D4FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#FFF',
-    shadowColor: '#00D4FF',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 5,
+  mapImage: {
+    width: '100%',
+    height: '100%',
   },
   infoPanel: {
     backgroundColor: '#1A1A1A',
