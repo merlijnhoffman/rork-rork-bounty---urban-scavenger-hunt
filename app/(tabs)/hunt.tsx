@@ -594,7 +594,7 @@ export default function HuntScreen() {
             <Text style={styles.tagline}>Urban Bounty Hunt</Text>
           </View>
 
-          {isEventLive && (
+          {isEventLive && !hasTicket && (
             <View style={styles.liveEventNotice}>
               <View style={styles.liveEventHeader}>
                 <View style={styles.liveIndicator}>
