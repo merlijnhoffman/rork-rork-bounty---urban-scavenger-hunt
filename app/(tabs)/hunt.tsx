@@ -349,6 +349,16 @@ export default function HuntScreen() {
   const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading;
   const isLoading = gameLoading || ticketQuery.isLoading;
   
+  // Check if event is currently live (between start time and end time)
+  const isEventLive = useMemo(() => {
+    if (!currentEvent) return false;
+    const now = new Date();
+    const eventStart = new Date(currentEvent.startTime);
+    // Assume event lasts 3 hours
+    const eventEnd = new Date(eventStart.getTime() + 3 * 60 * 60 * 1000);
+    return now >= eventStart && now <= eventEnd;
+  }, [currentEvent]);
+  
   // Check if hunt should be active (for demo, we'll use simulation)
   const shouldShowHunt = (hasTicket || testMode) && (isHuntActive || isSimulating);
 
@@ -584,6 +594,27 @@ export default function HuntScreen() {
             <Text style={styles.tagline}>Urban Bounty Hunt</Text>
           </View>
 
+          {isEventLive && (
+            <View style={styles.liveEventNotice}>
+              <View style={styles.liveEventHeader}>
+                <View style={styles.liveIndicator}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>EVENT LIVE NOW</Text>
+                </View>
+              </View>
+              <Text style={styles.liveEventTitle}>The Hunt is Currently Active!</Text>
+              <Text style={styles.liveEventMessage}>
+                Ticket sales are closed for this event. Hunters are currently tracking the bounty in real-time.
+              </Text>
+              <View style={styles.nextEventPrompt}>
+                <AlertCircle color="#00D4FF" size={20} />
+                <Text style={styles.nextEventPromptText}>
+                  Stay alert for the next upcoming event announcement!
+                </Text>
+              </View>
+            </View>
+          )}
+
           {currentEvent && (
             <View style={styles.eventCard}>
               <ImageBackground
@@ -688,18 +719,19 @@ export default function HuntScreen() {
                 <TouchableOpacity
                   style={[
                     styles.ticketButton,
-                    (!canPurchaseTicket || isLoading) && styles.ticketButtonDisabled
+                    (!canPurchaseTicket || isLoading || isEventLive) && styles.ticketButtonDisabled
                   ]}
                   onPress={handlePurchaseTicket}
-                  disabled={!canPurchaseTicket || isLoading}
+                  disabled={!canPurchaseTicket || isLoading || isEventLive}
                 >
                   <View style={styles.ticketButtonContent}>
-                    <CreditCard color={hasTicket ? '#888' : '#000'} size={20} />
+                    <CreditCard color={hasTicket || isEventLive ? '#888' : '#000'} size={20} />
                     <Text style={[
                       styles.ticketButtonText,
-                      hasTicket && styles.ticketButtonTextDisabled
+                      (hasTicket || isEventLive) && styles.ticketButtonTextDisabled
                     ]}>
                       {isLoading ? 'PROCESSING...' : 
+                       isEventLive ? 'EVENT LIVE - SALES CLOSED' :
                        hasTicket ? 'TICKET PURCHASED' : 
                        !isLoggedIn ? 'SIGN IN TO PURCHASE' :
                        'PURCHASE TICKET'}
@@ -1546,5 +1578,70 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#00D4FF',
     letterSpacing: 1,
+  },
+  liveEventNotice: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: '#FF6B6B',
+  },
+  liveEventHeader: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2A1A1A',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 8,
+  },
+  liveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FF6B6B',
+  },
+  liveText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#FF6B6B',
+    letterSpacing: 1.5,
+  },
+  liveEventTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFF',
+    textAlign: 'center',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  liveEventMessage: {
+    fontSize: 16,
+    color: '#CCC',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  nextEventPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0A1A2A',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#00D4FF',
+  },
+  nextEventPromptText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#00D4FF',
+    fontWeight: '600',
+    lineHeight: 20,
   },
 });
