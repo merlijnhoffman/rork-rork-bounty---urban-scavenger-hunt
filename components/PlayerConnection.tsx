@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import { X, Users, QrCode, Camera } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -245,7 +246,15 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
               </Text>
 
               <View style={styles.qrContainer}>
-                <QRCode value={qrCode} size={200} backgroundColor="#FFF" />
+                {qrCode.includes('SIMULATION') ? (
+                  <Image
+                    source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/18pwwnhwwzn279k1ivt1w' }}
+                    style={styles.qrImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <QRCode value={qrCode} size={200} backgroundColor="#FFF" />
+                )}
               </View>
 
               <View style={styles.timerContainer}>
@@ -415,6 +424,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 16,
     alignSelf: 'center',
+  },
+  qrImage: {
+    width: 200,
+    height: 200,
   },
   timerContainer: {
     backgroundColor: '#2A1A1A',
