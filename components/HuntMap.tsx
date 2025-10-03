@@ -39,9 +39,25 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         </View>
         
         <View style={styles.webMapPlaceholder}>
-          <View style={styles.zoneIndicator}>
-            <Target color="#00D4FF" size={64} />
+          <View style={styles.mapTemplate}>
+            <View style={styles.mapGrid}>
+              {[...Array(10)].map((_, i) => (
+                <View key={`h-${i}`} style={[styles.gridLine, { top: `${i * 10}%` }]} />
+              ))}
+              {[...Array(10)].map((_, i) => (
+                <View key={`v-${i}`} style={[styles.gridLine, styles.gridLineVertical, { left: `${i * 10}%` }]} />
+              ))}
+            </View>
+            
+            <View style={styles.mapRing}>
+              <View style={styles.mapRingInner} />
+            </View>
+            
+            <View style={styles.mapPin}>
+              <Target color="#00D4FF" size={32} />
+            </View>
           </View>
+          
           <Text style={styles.webPlaceholderTitle}>{targetLocation.name}</Text>
           
           <View style={styles.zoneStats}>
@@ -114,6 +130,76 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 40,
     gap: 20,
+  },
+  mapTemplate: {
+    width: '100%',
+    maxWidth: 500,
+    aspectRatio: 1,
+    backgroundColor: '#0F1419',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#333',
+    position: 'relative',
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  mapGrid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  gridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: '#1A2530',
+  },
+  gridLineVertical: {
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 1,
+    height: '100%',
+  },
+  mapRing: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '60%',
+    aspectRatio: 1,
+    marginLeft: '-30%',
+    marginTop: '-30%',
+    borderRadius: 9999,
+    borderWidth: 3,
+    borderColor: '#00D4FF',
+    backgroundColor: 'rgba(0, 212, 255, 0.05)',
+  },
+  mapRingInner: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: '50%',
+    aspectRatio: 1,
+    marginLeft: '-25%',
+    marginTop: '-25%',
+    borderRadius: 9999,
+    borderWidth: 2,
+    borderColor: 'rgba(0, 212, 255, 0.4)',
+    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+  },
+  mapPin: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -16,
+    marginTop: -16,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   zoneIndicator: {
     width: 120,
