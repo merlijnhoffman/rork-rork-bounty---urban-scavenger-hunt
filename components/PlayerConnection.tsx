@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,10 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
-  ActivityIndicator,
   Platform,
   Image,
 } from 'react-native';
-import { X, Users, QrCode, Camera } from 'lucide-react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { X, Users, Camera } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
 import { trpcClient } from '@/lib/trpc';
@@ -28,76 +26,11 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
   const { user } = useAuth();
   const { addConnection } = useConnection();
   const [mode, setMode] = useState<'menu' | 'generate' | 'scan'>('menu');
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<number | null>(null);
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [timeLeft, setTimeLeft] = useState<number>(0);
 
-  useEffect(() => {
-    if (expiresAt) {
-      const interval = setInterval(() => {
-        const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-        setTimeLeft(remaining);
-        
-        if (remaining === 0) {
-          setQrCode(null);
-          setExpiresAt(null);
-          setMode('menu');
-        }
-      }, 1000);
-
-      return () => clearInterval(interval);
-    }
-  }, [expiresAt]);
-
-  const handleGenerateCode = async () => {
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to generate a connection code');
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        const simulationCode = JSON.stringify({
-          userId: 'simulation-user',
-          eventId: 'simulation-event',
-          timestamp: Date.now(),
-          token: 'SIMULATION-TOKEN-' + Math.random().toString(36).substring(7).toUpperCase(),
-        });
-        
-        setQrCode(simulationCode);
-        setExpiresAt(Date.now() + 60000);
-        setMode('generate');
-        setIsGenerating(false);
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const result = await trpcClient.connection.generateCode.mutate({
-        userId: user.id,
-        eventId,
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-
-      setQrCode(result.code);
-      setExpiresAt(result.expiresAt);
-      setMode('generate');
-    } catch (error) {
-      console.error('Error generating code:', error);
-      Alert.alert('Error', 'Failed to generate connection code. Please try again.');
-    } finally {
-      setIsGenerating(false);
-    }
+  const handleShowQRCode = () => {
+    setMode('generate');
   };
 
   const handleScanCode = async () => {
@@ -177,8 +110,6 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
 
   const handleClose = () => {
     setMode('menu');
-    setQrCode(null);
-    setExpiresAt(null);
     onClose();
   };
 
@@ -206,7 +137,7 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
                 <Text style={styles.infoTitle}>How it works:</Text>
                 <Text style={styles.infoText}>
                   • Both players must be within 5 meters{'\n'}
-                  • One player generates a QR code{'\n'}
+                  • One player shows their QR code{'\n'}
                   • The other player scans it{'\n'}
                   • Both players get +1 Distance Meter use
                 </Text>
@@ -214,17 +145,9 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
 
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={handleGenerateCode}
-                disabled={isGenerating}
+                onPress={handleShowQRCode}
               >
-                {isGenerating ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <>
-                    <QrCode color="#000" size={24} />
-                    <Text style={styles.actionButtonText}>Generate QR Code</Text>
-                  </>
-                )}
+                <Text style={styles.actionButtonText}>Show My QR Code</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -239,27 +162,23 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
             </View>
           )}
 
-          {mode === 'generate' && qrCode && (
+          {mode === 'generate' && (
             <View style={styles.content}>
               <Text style={styles.description}>
                 Show this QR code to another player to connect
               </Text>
 
               <View style={styles.qrContainer}>
-                {qrCode.includes('SIMULATION') ? (
-                  <Image
-                    source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/18pwwnhwwzn279k1ivt1w' }}
-                    style={styles.qrImage}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <QRCode value={qrCode} size={200} backgroundColor="#FFF" />
-                )}
+                <Image
+                  source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/18pwwnhwwzn279k1ivt1w' }}
+                  style={styles.qrImage}
+                  resizeMode="contain"
+                />
               </View>
 
-              <View style={styles.timerContainer}>
-                <Text style={styles.timerText}>
-                  Expires in: {timeLeft}s
+              <View style={styles.instructionBox}>
+                <Text style={styles.instructionText}>
+                  💡 Have another player scan this code with their camera
                 </Text>
               </View>
 
@@ -269,11 +188,7 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.backButton]}
-                onPress={() => {
-                  setMode('menu');
-                  setQrCode(null);
-                  setExpiresAt(null);
-                }}
+                onPress={() => setMode('menu')}
               >
                 <Text style={[styles.actionButtonText, styles.backButtonText]}>
                   Back to Menu
@@ -420,25 +335,33 @@ const styles = StyleSheet.create({
   qrContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: 24,
     backgroundColor: '#FFF',
-    borderRadius: 16,
+    borderRadius: 20,
     alignSelf: 'center',
+    shadowColor: '#00D4FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   qrImage: {
-    width: 200,
-    height: 200,
+    width: 240,
+    height: 240,
   },
-  timerContainer: {
-    backgroundColor: '#2A1A1A',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+  instructionBox: {
+    backgroundColor: '#0A1A2A',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#00D4FF',
   },
-  timerText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FF6B6B',
+  instructionText: {
+    fontSize: 15,
+    color: '#00D4FF',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '600',
   },
   proximityWarning: {
     fontSize: 14,
