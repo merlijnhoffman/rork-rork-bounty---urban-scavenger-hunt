@@ -63,10 +63,16 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
       const { status } = await Location.requestForegroundPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert(
-          'Location Permission Required',
-          'Please enable location permissions to generate a connection code.'
-        );
+        const simulationCode = JSON.stringify({
+          userId: 'simulation-user',
+          eventId: 'simulation-event',
+          timestamp: Date.now(),
+          token: 'SIMULATION-TOKEN-' + Math.random().toString(36).substring(7).toUpperCase(),
+        });
+        
+        setQrCode(simulationCode);
+        setExpiresAt(Date.now() + 60000);
+        setMode('generate');
         setIsGenerating(false);
         return;
       }
