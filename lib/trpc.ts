@@ -22,28 +22,7 @@ const getBaseUrl = () => {
   );
 };
 
-// Test backend connection on startup
-const testBackendConnection = async () => {
-  if (__DEV__) {
-    try {
-      const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/`, { method: 'GET' });
-      if (response.ok) {
-        console.log('✅ Backend server is running at:', baseUrl);
-      } else {
-        console.warn('⚠️ Backend server responded with status:', response.status);
-      }
-    } catch (error) {
-      console.warn('⚠️ Backend server is not running. Payment features will not work.');
-      console.warn('To start the backend server, run: bun run dev:backend');
-    }
-  }
-};
 
-// Test connection on startup
-if (__DEV__) {
-  testBackendConnection();
-}
 
 export const trpcClient = trpc.createClient({
   links: [
