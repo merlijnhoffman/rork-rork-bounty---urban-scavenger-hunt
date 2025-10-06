@@ -6,7 +6,7 @@
     "start": "bunx rork start -p 92dokpnm94nubmxh14any --tunnel",
     "start-web": "bunx rork start -p 92dokpnm94nubmxh14any --web --tunnel",
     "start-web-dev": "DEBUG=expo* bunx rork start -p 92dokpnm94nubmxh14any --web --tunnel",
-    "dev:backend": "bun run backend/hono.ts"
+    "dev:backend": "bun run backend/hono.ts",
     "lint": "expo lint"
   },
   "dependencies": {
