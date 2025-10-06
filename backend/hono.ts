@@ -129,12 +129,16 @@ if (hasStripe) {
 }
 
 const port = process.env.PORT || 3000;
+const hostname = process.env.HOSTNAME || '0.0.0.0';
 
-console.log(`🚀 Starting server on port ${port}...`);
-console.log(`📍 Server will be available at: http://localhost:${port}`);
+console.log(`🚀 Starting server on ${hostname}:${port}...`);
+console.log(`📍 Server will be available at:`);
+console.log(`   - Local: http://localhost:${port}`);
+console.log(`   - Network: http://10.22.5.214:${port}`);
 console.log(`🔗 API endpoint: http://localhost:${port}/api/trpc`);
 
 export default {
   port,
+  hostname,
   fetch: app.fetch,
 };
