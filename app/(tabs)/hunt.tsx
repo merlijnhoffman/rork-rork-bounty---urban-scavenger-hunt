@@ -360,7 +360,7 @@ export default function HuntScreen() {
 
   
   const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading;
-  const isLoading = gameLoading || ticketQuery.isLoading;
+  const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched);
   
   // Check if event is currently live (between start time and end time)
   const isEventLive = useMemo(() => {
