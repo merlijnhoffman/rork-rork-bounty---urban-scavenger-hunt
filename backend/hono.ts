@@ -128,14 +128,16 @@ if (hasStripe) {
   app.post("/webhook/stripe", (c) => c.json({ error: "Stripe not configured" }, 501));
 }
 
-const port = process.env.PORT || 3000;
+const port = parseInt(process.env.PORT || '3000', 10);
 const hostname = process.env.HOSTNAME || '0.0.0.0';
 
 console.log(`🚀 Starting server on ${hostname}:${port}...`);
 console.log(`📍 Server will be available at:`);
 console.log(`   - Local: http://localhost:${port}`);
-console.log(`   - Network: http://10.22.5.214:${port}`);
-console.log(`🔗 API endpoint: http://localhost:${port}/api/trpc`);
+console.log(`   - Network: http://10.22.5.214:${port} (or your device IP)`);
+console.log(`🔗 API endpoint: /api/trpc`);
+console.log(`✅ Health check: http://localhost:${port}/`);
+console.log(`\n⚠️  Make sure your .env.local has: EXPO_PUBLIC_RORK_API_BASE_URL=http://YOUR_IP:${port}`);
 
 export default {
   port,
