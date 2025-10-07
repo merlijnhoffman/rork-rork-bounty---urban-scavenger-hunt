@@ -33,13 +33,19 @@ export const trpcClient = trpc.createClient({
         try {
           console.log('Making tRPC request to:', url);
           
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+          
           const response = await fetch(url, {
             ...options,
+            signal: controller.signal,
             headers: {
               'Content-Type': 'application/json',
               ...options?.headers,
             },
           });
+          
+          clearTimeout(timeoutId);
           
           if (!response.ok) {
             console.error(`HTTP ${response.status}: ${response.statusText}`);
@@ -49,6 +55,11 @@ export const trpcClient = trpc.createClient({
           return response;
         } catch (error) {
           console.error('tRPC fetch error:', error);
+          
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.error('❌ Request timed out after 30 seconds');
+            throw new Error('Request timed out. Please check your network connection and ensure the backend server is running.');
+          }
           
           const baseUrl = getBaseUrl();
           
