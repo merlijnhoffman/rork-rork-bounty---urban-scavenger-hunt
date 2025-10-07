@@ -9,6 +9,7 @@ import {
   Animated,
   Platform as RNPlatform,
   Alert,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -374,13 +375,37 @@ export default function HuntScreen() {
   // Check if hunt should be active (for demo, we'll use simulation)
   const shouldShowHunt = (hasTicket || testMode) && (isHuntActive || isSimulating);
 
-  const handlePurchaseTicket = () => {
+  const handlePurchaseTicket = async () => {
     if (!isLoggedIn) {
       router.push('/login');
       return;
     }
     
-    setShowPayment(true);
+    const paymentLink = process.env.EXPO_PUBLIC_STRIPE_PAYMENT_LINK;
+    
+    if (!paymentLink || paymentLink === 'https://buy.stripe.com/YOUR_PAYMENT_LINK_HERE') {
+      Alert.alert(
+        'Configuration Required',
+        'Please set up your Stripe payment link in .env.local file.\n\nAdd: EXPO_PUBLIC_STRIPE_PAYMENT_LINK=https://buy.stripe.com/YOUR_LINK',
+        [
+          { text: 'Use Old Flow', onPress: () => setShowPayment(true) },
+          { text: 'OK', style: 'cancel' }
+        ]
+      );
+      return;
+    }
+    
+    try {
+      const canOpen = await Linking.canOpenURL(paymentLink);
+      if (canOpen) {
+        await Linking.openURL(paymentLink);
+      } else {
+        Alert.alert('Error', 'Unable to open payment link');
+      }
+    } catch (error) {
+      console.error('Error opening payment link:', error);
+      Alert.alert('Error', 'Failed to open payment link');
+    }
   };
 
   const handlePaymentSuccess = async (paymentIntentId: string) => {
@@ -392,7 +417,6 @@ export default function HuntScreen() {
     }
 
     try {
-      // Create ticket in database
       const ticket = await trpcClient.payment.createTicket.mutate({
         userId: user.id,
         eventId: currentEvent.id,
@@ -401,16 +425,77 @@ export default function HuntScreen() {
       
       console.log('Ticket created successfully:', ticket.ticketId);
       
-      // Refresh ticket status
       await ticketQuery.refetch();
       
     } catch (error) {
       console.error('Error creating ticket:', error);
     }
   };
+  
+  useEffect(() => {
+    const handleDeepLink = async (event: { url: string }) => {
+      const url = event.url;
+      console.log('Deep link received:', url);
+      
+      if (url.includes('payment-success')) {
+        Alert.alert(
+          'Payment Successful!',
+          'Your ticket purchase was successful. Please check your email for confirmation.',
+          [
+            {
+              text: 'OK',
+              onPress: async () => {
+                await ticketQuery.refetch();
+              }
+            }
+          ]
+        );
+      } else if (url.includes('payment-cancel')) {
+        Alert.alert(
+          'Payment Cancelled',
+          'Your payment was cancelled. You can try again when ready.'
+        );
+      }
+    };
+    
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+    
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+    
+    return () => {
+      subscription.remove();
+    };
+  }, [ticketQuery]);
 
   const handlePaymentClose = () => {
     setShowPayment(false);
+  };
+  
+  const handleManualTicketCheck = async () => {
+    if (!user || !currentEvent) return;
+    
+    Alert.alert(
+      'Check Ticket Status',
+      'If you just completed a payment, click Refresh to check your ticket status.',
+      [
+        {
+          text: 'Refresh',
+          onPress: async () => {
+            await ticketQuery.refetch();
+            if (ticketQuery.data?.hasTicket) {
+              Alert.alert('Success!', 'Your ticket has been confirmed!');
+            } else {
+              Alert.alert('No Ticket Found', 'No ticket found yet. If you just paid, please wait a moment and try again.');
+            }
+          }
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
 
