@@ -23,8 +23,8 @@ import { useConnection } from '@/contexts/ConnectionContext';
 import PlayerConnection from '@/components/PlayerConnection';
 import { supabase } from '@/lib/supabase';
 
-import { trpc, trpcClient } from '@/lib/trpc';
 import StripePayment from '@/components/StripePayment';
+import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 
 Notifications.setNotificationHandler({
@@ -172,17 +172,32 @@ export default function HuntScreen() {
     },
   ];
   
-  // Check ticket status when user logs in
-  const ticketQuery = trpc.payment.checkTicketStatus.useQuery(
-    {
-      userId: user?.id || '',
-      eventId: currentEvent?.id || '',
+  // Check ticket status when user logs in using Supabase
+  const ticketQuery = useQuery({
+    queryKey: ['ticket-status', user?.id, currentEvent?.id],
+    queryFn: async () => {
+      if (!user || !currentEvent) {
+        return { hasTicket: false };
+      }
+
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .eq('event_id', currentEvent.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking ticket status:', error);
+        throw error;
+      }
+
+      return { hasTicket: !!data };
     },
-    {
-      enabled: !!user && !!currentEvent,
-      refetchInterval: 30000, // Refetch every 30 seconds
-    }
-  );
+    enabled: !!user && !!currentEvent,
+    refetchInterval: 30000,
+  });
   
   // Subscribe to real-time clues from Supabase
   useEffect(() => {
@@ -417,18 +432,32 @@ export default function HuntScreen() {
     }
 
     try {
-      const ticket = await trpcClient.payment.createTicket.mutate({
-        userId: user.id,
-        eventId: currentEvent.id,
-        paymentIntentId,
-      });
+      // Create ticket in Supabase
+      const { data: ticket, error } = await supabase
+        .from('tickets')
+        .insert({
+          user_id: user.id,
+          event_id: currentEvent.id,
+          payment_intent_id: paymentIntentId,
+          status: 'active',
+          purchased_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
       
-      console.log('Ticket created successfully:', ticket.ticketId);
+      if (error) {
+        console.error('Error creating ticket:', error);
+        Alert.alert('Error', 'Failed to create ticket. Please contact support.');
+        return;
+      }
+      
+      console.log('Ticket created successfully:', ticket.id);
       
       await ticketQuery.refetch();
       
     } catch (error) {
       console.error('Error creating ticket:', error);
+      Alert.alert('Error', 'Failed to create ticket. Please contact support.');
     }
   };
   

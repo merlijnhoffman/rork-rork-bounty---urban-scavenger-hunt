@@ -11,7 +11,6 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { PaymentWrapper } from '@/contexts/PaymentContext';
 import { LocationProvider } from '@/contexts/LocationContext';
 import { ConnectionProvider } from '@/contexts/ConnectionContext';
-import { trpc, trpcClient } from '@/lib/trpc';
 import { ErrorBoundary } from 'react-error-boundary';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -82,23 +81,21 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <PaymentWrapper>
-              <LocationProvider>
-                <ConnectionProvider>
-                  <GameProvider>
-                    <GestureHandlerRootView style={styles.container}>
-                      <RootLayoutNav />
-                    </GestureHandlerRootView>
-                  </GameProvider>
-                </ConnectionProvider>
-              </LocationProvider>
-            </PaymentWrapper>
-          </AuthProvider>
-        </QueryClientProvider>
-      </trpc.Provider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <PaymentWrapper>
+            <LocationProvider>
+              <ConnectionProvider>
+                <GameProvider>
+                  <GestureHandlerRootView style={styles.container}>
+                    <RootLayoutNav />
+                  </GestureHandlerRootView>
+                </GameProvider>
+              </ConnectionProvider>
+            </LocationProvider>
+          </PaymentWrapper>
+        </AuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
