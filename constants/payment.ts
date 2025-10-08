@@ -14,7 +14,7 @@ export const TICKET_TIERS: TicketTier[] = [
       'Community chat',
       'Full hunt access'
     ],
-    stripePriceId: 'price_hunt_ticket'
+    stripePriceId: process.env.EXPO_PUBLIC_STRIPE_PRICE_ID || 'price_1SFbUhATZcBhONrDPUlVyFRJ'
   }
 ];
 

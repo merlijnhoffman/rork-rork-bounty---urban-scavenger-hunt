@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -46,13 +46,7 @@ export default function StripePayment({
   const [isInitializing, setIsInitializing] = useState<boolean>(false);
   const [initError, setInitError] = useState<string>('');
 
-  useEffect(() => {
-    if (visible && !clientSecret) {
-      initializePayment();
-    }
-  }, [visible, clientSecret]);
-
-  const initializePayment = async () => {
+  const initializePayment = useCallback(async () => {
     if (!user) {
       Alert.alert('Authentication Required', 'Please sign in to make a payment');
       onClose();
@@ -89,7 +83,13 @@ export default function StripePayment({
     } finally {
       setIsInitializing(false);
     }
-  };
+  }, [user, priceId, createPaymentIntent, clearError, onClose]);
+
+  useEffect(() => {
+    if (visible && !clientSecret) {
+      initializePayment();
+    }
+  }, [visible, clientSecret, initializePayment]);
 
   const handlePaymentSuccess = (intentId: string) => {
     console.log('Payment successful:', intentId);
@@ -140,8 +140,7 @@ export default function StripePayment({
             <CheckCircle color="#00D4FF" size={80} />
             <Text style={styles.successTitle}>Payment Successful!</Text>
             <Text style={styles.successMessage}>
-              Your payment has been processed successfully.
-              Payment ID: {paymentIntentId}
+              Your payment has been processed successfully. Payment ID: {paymentIntentId}
             </Text>
           </View>
         </LinearGradient>
