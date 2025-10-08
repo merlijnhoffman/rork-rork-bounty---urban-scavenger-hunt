@@ -70,11 +70,34 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorText = await response.text();
+          console.log('Error response text:', errorText);
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+        } catch (textError) {
+          console.error('Failed to read error response:', textError);
+        }
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      const responseText = await response.text();
+      console.log('Success response text:', responseText);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        console.error('Failed to parse response as JSON');
+        console.error('Response text (first 200 chars):', responseText.substring(0, 200));
+        throw new Error('Invalid response from payment server. The edge function may not be deployed or configured correctly.');
+      }
 
       console.log('Payment intent created:', result.paymentIntentId);
       
