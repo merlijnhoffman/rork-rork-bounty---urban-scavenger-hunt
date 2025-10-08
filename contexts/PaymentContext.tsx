@@ -42,10 +42,18 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
 
       const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-payment-intent`;
       
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Authentication required. Please sign in and try again.');
+      }
+      
       const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
           'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
         },
         body: JSON.stringify({

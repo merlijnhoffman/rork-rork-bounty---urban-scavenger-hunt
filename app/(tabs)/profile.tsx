@@ -198,11 +198,7 @@ export default function ProfileScreen() {
             <Shield color="#00D4FF" size={24} />
             <Text style={styles.securityTitle}>Security Features</Text>
             <Text style={styles.securityDescription}>
-              • Account verification required{'\n'}
-              • Secure authentication{'\n'}
-              • Screenshot protection enabled{'\n'}
-              • Unique verification codes{'\n'}
-              • Anti-sharing technology
+              {`• Account verification required\n• Secure authentication\n• Screenshot protection enabled\n• Unique verification codes\n• Anti-sharing technology`}
             </Text>
           </View>
         </ScrollView>

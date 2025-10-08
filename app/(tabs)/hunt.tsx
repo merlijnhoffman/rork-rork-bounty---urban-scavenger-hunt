@@ -188,8 +188,8 @@ export default function HuntScreen() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error checking ticket status:', error);
-        throw error;
+        console.error('Error checking ticket status:', error.message || 'Unknown error');
+        throw new Error(error.message || 'Failed to check ticket status');
       }
 
       return { hasTicket: !!data };
