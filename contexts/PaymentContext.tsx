@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import { TicketTier } from '@/types/payment';
-import { trpcClient } from '@/lib/trpc';
 
 interface PaymentContextType {
   selectedTier: TicketTier | null;
@@ -32,20 +31,40 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
     try {
       console.log('Creating payment intent for price:', priceId);
       
-      // Validate required inputs
       if (!priceId) {
         throw new Error('Price ID is required');
       }
+
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured');
+      }
+
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-payment-intent`;
       
-      const result = await trpcClient.payment.createIntent.mutate({
-        priceId,
-        userId,
-        customerEmail,
-        metadata: {
-          source: 'mobile_app',
-          timestamp: new Date().toISOString(),
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
         },
+        body: JSON.stringify({
+          priceId,
+          userId,
+          customerEmail,
+          metadata: {
+            source: 'mobile_app',
+            timestamp: new Date().toISOString(),
+          },
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
 
       console.log('Payment intent created:', result.paymentIntentId);
       
@@ -63,11 +82,7 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
       let errorMessage = 'Failed to create payment intent';
       
       if (error instanceof Error) {
-        if (error.message.includes('Unable to connect to backend server')) {
-          errorMessage = 'Backend server is not running. Please start the server and try again.';
-        } else if (error.message.includes('Unable to connect to server')) {
-          errorMessage = 'Unable to connect to payment server. Please check your internet connection and try again.';
-        } else if (error.message.includes('Failed to fetch')) {
+        if (error.message.includes('Failed to fetch')) {
           errorMessage = 'Network error. Please check your connection and try again.';
         } else if (error.message.includes('HTTP 500')) {
           errorMessage = 'Payment server error. Please try again later.';

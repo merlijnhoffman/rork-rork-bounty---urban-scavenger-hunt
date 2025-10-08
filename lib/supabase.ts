@@ -125,6 +125,152 @@ CREATE POLICY "Service role can insert clues" ON clues
   FOR INSERT WITH CHECK (auth.role() = 'service_role');
 */
 
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+export async function generateConnectionCode({
+  userId,
+  eventId,
+  latitude,
+  longitude,
+}: {
+  userId: string;
+  eventId: string;
+  latitude: number;
+  longitude: number;
+}) {
+  const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+  const expiresAt = new Date(Date.now() + 60000).toISOString();
+
+  const { data, error } = await supabase
+    .from('connection_codes')
+    .insert({
+      code,
+      user_id: userId,
+      event_id: eventId,
+      latitude,
+      longitude,
+      expires_at: expiresAt,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error generating connection code:', error);
+    throw new Error('Failed to generate connection code');
+  }
+
+  console.log(`Generated connection code for user ${userId}:`, code);
+
+  return {
+    code: data.code,
+    expiresAt: data.expires_at,
+  };
+}
+
+export async function verifyConnection({
+  code,
+  scannerUserId,
+  scannerLatitude,
+  scannerLongitude,
+}: {
+  code: string;
+  scannerUserId: string;
+  scannerLatitude: number;
+  scannerLongitude: number;
+}) {
+  const { data: codeData, error: codeError } = await supabase
+    .from('connection_codes')
+    .select('*')
+    .eq('code', code)
+    .single();
+
+  if (codeError || !codeData) {
+    throw new Error('Invalid or expired connection code');
+  }
+
+  if (new Date(codeData.expires_at) < new Date()) {
+    await supabase.from('connection_codes').delete().eq('code', code);
+    throw new Error('Connection code has expired');
+  }
+
+  if (codeData.user_id === scannerUserId) {
+    throw new Error('Cannot connect with yourself');
+  }
+
+  const connectionKey = [codeData.user_id, scannerUserId].sort().join('-');
+
+  const { data: existingConnection } = await supabase
+    .from('player_connections')
+    .select('*')
+    .eq('connection_key', connectionKey)
+    .single();
+
+  if (existingConnection) {
+    throw new Error('You have already connected with this player');
+  }
+
+  const distance = calculateDistance(
+    codeData.latitude,
+    codeData.longitude,
+    scannerLatitude,
+    scannerLongitude
+  );
+
+  console.log(`Distance between players: ${distance}m`);
+
+  if (distance > 5) {
+    throw new Error(
+      `Players must be within 5 meters of each other (current distance: ${Math.round(distance)}m)`
+    );
+  }
+
+  const { error: insertError } = await supabase
+    .from('player_connections')
+    .insert({
+      connection_key: connectionKey,
+      generator_user_id: codeData.user_id,
+      scanner_user_id: scannerUserId,
+      event_id: codeData.event_id,
+      distance: Math.round(distance),
+    });
+
+  if (insertError) {
+    console.error('Error creating connection:', insertError);
+    throw new Error('Failed to create connection');
+  }
+
+  await supabase.from('connection_codes').delete().eq('code', code);
+
+  console.log(
+    `Connection successful between ${codeData.user_id} and ${scannerUserId}`
+  );
+
+  return {
+    success: true,
+    generatorUserId: codeData.user_id,
+    scannerUserId: scannerUserId,
+    distance: Math.round(distance),
+  };
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -232,6 +378,67 @@ export type Database = {
           hint?: string;
           order_number?: number;
           release_time?: string;
+          created_at?: string;
+        };
+      };
+      connection_codes: {
+        Row: {
+          id: string;
+          code: string;
+          user_id: string;
+          event_id: string;
+          latitude: number;
+          longitude: number;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          user_id: string;
+          event_id: string;
+          latitude: number;
+          longitude: number;
+          expires_at: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          user_id?: string;
+          event_id?: string;
+          latitude?: number;
+          longitude?: number;
+          expires_at?: string;
+          created_at?: string;
+        };
+      };
+      player_connections: {
+        Row: {
+          id: string;
+          connection_key: string;
+          generator_user_id: string;
+          scanner_user_id: string;
+          event_id: string;
+          distance: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          connection_key: string;
+          generator_user_id: string;
+          scanner_user_id: string;
+          event_id: string;
+          distance: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          connection_key?: string;
+          generator_user_id?: string;
+          scanner_user_id?: string;
+          event_id?: string;
+          distance?: number;
           created_at?: string;
         };
       };

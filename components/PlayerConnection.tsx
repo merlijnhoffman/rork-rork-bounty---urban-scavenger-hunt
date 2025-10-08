@@ -7,14 +7,14 @@ import {
   Modal,
   Alert,
   Platform,
-  Image,
 } from 'react-native';
 import { X, Users, Camera } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Location from 'expo-location';
-import { trpcClient } from '@/lib/trpc';
+import { generateConnectionCode, verifyConnection } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConnection } from '@/contexts/ConnectionContext';
+import QRCode from 'react-native-qrcode-svg';
 
 interface PlayerConnectionProps {
   visible: boolean;
@@ -28,9 +28,48 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
   const [mode, setMode] = useState<'menu' | 'generate' | 'scan'>('menu');
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [connectionCode, setConnectionCode] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-  const handleShowQRCode = () => {
-    setMode('generate');
+  const handleShowQRCode = async () => {
+    if (!user) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location permissions to generate a connection code.'
+        );
+        setIsGenerating(false);
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const result = await generateConnectionCode({
+        userId: user.id,
+        eventId,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      setConnectionCode(result.code);
+      setMode('generate');
+    } catch (error: any) {
+      console.error('Error generating connection code:', error);
+      Alert.alert('Error', error.message || 'Failed to generate connection code');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleScanCode = async () => {
@@ -74,7 +113,7 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
         accuracy: Location.Accuracy.High,
       });
 
-      const result = await trpcClient.connection.verifyConnection.mutate({
+      const result = await verifyConnection({
         code: data,
         scannerUserId: user.id,
         scannerLatitude: location.coords.latitude,
@@ -146,8 +185,11 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={handleShowQRCode}
+                disabled={isGenerating}
               >
-                <Text style={styles.actionButtonText}>Show My QR Code</Text>
+                <Text style={styles.actionButtonText}>
+                  {isGenerating ? 'Generating...' : 'Show My QR Code'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -169,11 +211,16 @@ export default function PlayerConnection({ visible, onClose, eventId }: PlayerCo
               </Text>
 
               <View style={styles.qrContainer}>
-                <Image
-                  source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/18pwwnhwwzn279k1ivt1w' }}
-                  style={styles.qrImage}
-                  resizeMode="contain"
-                />
+                {connectionCode ? (
+                  <QRCode
+                    value={connectionCode}
+                    size={240}
+                    backgroundColor="white"
+                    color="black"
+                  />
+                ) : (
+                  <Text style={styles.loadingText}>Generating QR Code...</Text>
+                )}
               </View>
 
               <View style={styles.instructionBox}>
@@ -425,5 +472,10 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
