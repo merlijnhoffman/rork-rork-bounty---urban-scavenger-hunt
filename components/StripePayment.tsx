@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,6 +7,7 @@ import {
   Modal,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +15,8 @@ import { X, CreditCard, CheckCircle } from 'lucide-react-native';
 import { usePayment } from '@/contexts/PaymentContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { STRIPE_CONFIG } from '@/constants/stripe';
+import StripePaymentWebView from './StripePaymentWebView';
+import StripePaymentWeb from './StripePaymentWeb';
 
 interface StripePaymentProps {
   visible: boolean;
@@ -36,81 +39,88 @@ export default function StripePayment({
 }: StripePaymentProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { createPaymentIntent, isProcessing, paymentError, clearError } = usePayment();
+  const { createPaymentIntent, isProcessing, clearError } = usePayment();
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [paymentIntentId, setPaymentIntentId] = useState<string>('');
+  const [clientSecret, setClientSecret] = useState<string>('');
+  const [isInitializing, setIsInitializing] = useState<boolean>(false);
+  const [initError, setInitError] = useState<string>('');
 
-  const handlePayment = async () => {
+  useEffect(() => {
+    if (visible && !clientSecret) {
+      initializePayment();
+    }
+  }, [visible, clientSecret]);
+
+  const initializePayment = async () => {
     if (!user) {
       Alert.alert('Authentication Required', 'Please sign in to make a payment');
+      onClose();
       return;
     }
 
+    setIsInitializing(true);
+    setInitError('');
+    clearError();
+
     try {
-      clearError();
-      console.log('Starting payment process with price ID:', priceId);
+      console.log('Initializing payment with price ID:', priceId);
       
-      const { paymentIntentId: intentId } = await createPaymentIntent(
+      const { clientSecret: secret, paymentIntentId: intentId } = await createPaymentIntent(
         priceId,
         user.id,
         user.email
       );
 
       console.log('Payment intent created:', intentId);
+      setClientSecret(secret);
       setPaymentIntentId(intentId);
-
-      // For now, simulate successful payment
-      // In a real implementation, you would integrate with Stripe's web SDK
-      // or redirect to a Stripe Checkout session
-      
-      if (Platform.OS === 'web') {
-        // On web, you would use Stripe.js to handle the payment
-        Alert.alert(
-          'Payment Ready',
-          `Payment intent created: ${intentId}\n\nIn a real implementation, this would redirect to Stripe Checkout or use Stripe Elements.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Simulate Success', 
-              onPress: () => handlePaymentSuccess(intentId)
-            }
-          ]
-        );
-      } else {
-        // On mobile, you would typically redirect to a web view with Stripe Checkout
-        Alert.alert(
-          'Payment Ready',
-          `Payment intent created: ${intentId}\n\nIn a real implementation, this would open a WebView with Stripe Checkout.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Simulate Success', 
-              onPress: () => handlePaymentSuccess(intentId)
-            }
-          ]
-        );
-      }
-
     } catch (error) {
-      console.error('Payment failed:', error);
+      console.error('Payment initialization failed:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to initialize payment';
+      setInitError(errorMsg);
       Alert.alert(
-        'Payment Failed',
-        error instanceof Error ? error.message : 'An unexpected error occurred'
+        'Payment Initialization Failed',
+        errorMsg + '\n\nPlease try again.',
+        [
+          { text: 'Close', onPress: onClose }
+        ]
       );
+    } finally {
+      setIsInitializing(false);
     }
   };
 
   const handlePaymentSuccess = (intentId: string) => {
+    console.log('Payment successful:', intentId);
     setShowSuccess(true);
     setTimeout(() => {
       setShowSuccess(false);
+      setClientSecret('');
+      setPaymentIntentId('');
       onSuccess(intentId);
       onClose();
     }, 2000);
   };
 
+  const handlePaymentError = (error: string) => {
+    console.error('Payment error:', error);
+    Alert.alert('Payment Failed', error);
+  };
+
   const handleClose = () => {
+    if (isProcessing || isInitializing) {
+      Alert.alert(
+        'Payment in Progress',
+        'Please wait for the payment to complete before closing.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     clearError();
+    setClientSecret('');
+    setPaymentIntentId('');
+    setInitError('');
     onClose();
   };
 
@@ -170,33 +180,50 @@ export default function StripePayment({
               Secure payment powered by Stripe
             </Text>
 
-            {paymentError && (
+            {(isInitializing || !clientSecret) && !initError ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#00D4FF" />
+                <Text style={styles.loadingText}>Preparing payment...</Text>
+              </View>
+            ) : initError ? (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{paymentError}</Text>
+                <Text style={styles.errorText}>{initError}</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={initializePayment}
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.paymentFormContainer}>
+                {Platform.OS === 'web' ? (
+                  <StripePaymentWeb
+                    clientSecret={clientSecret}
+                    publishableKey={STRIPE_CONFIG.publishableKey}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                  />
+                ) : (
+                  <StripePaymentWebView
+                    clientSecret={clientSecret}
+                    publishableKey={STRIPE_CONFIG.publishableKey}
+                    onSuccess={handlePaymentSuccess}
+                    onError={handlePaymentError}
+                  />
+                )}
               </View>
             )}
-
-            <TouchableOpacity
-              style={[styles.payButton, isProcessing && styles.payButtonDisabled]}
-              onPress={handlePayment}
-              disabled={isProcessing}
-            >
-              <CreditCard color="#FFF" size={20} />
-              <Text style={styles.payButtonText}>
-                {isProcessing ? 'Processing...' : 'Pay Now'}
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Your payment information is encrypted and secure
-          </Text>
-          <Text style={styles.footerSubtext}>
-            Price ID: {priceId}
-          </Text>
-        </View>
+        {!isInitializing && clientSecret && (
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>
+              Your payment information is encrypted and secure
+            </Text>
+          </View>
+        )}
       </LinearGradient>
     </Modal>
   );
@@ -237,21 +264,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
     borderRadius: 16,
     padding: 24,
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#333',
+    flex: 1,
   },
   paymentTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#FFF',
     marginBottom: 8,
+    textAlign: 'center',
   },
   paymentPrice: {
     fontSize: 32,
     fontWeight: '900',
     color: '#00D4FF',
     marginBottom: 12,
+    textAlign: 'center',
   },
   paymentDescription: {
     fontSize: 16,
@@ -260,39 +289,49 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     lineHeight: 22,
   },
+  loadingContainer: {
+    marginTop: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#888',
+  },
   errorContainer: {
     backgroundColor: '#2A1A1A',
-    padding: 12,
+    padding: 16,
     borderRadius: 8,
-    marginBottom: 16,
-    width: '100%',
+    marginTop: 24,
     borderLeftWidth: 4,
     borderLeftColor: '#FF6B6B',
+    alignItems: 'center',
   },
   errorText: {
     fontSize: 14,
     color: '#FF6B6B',
     textAlign: 'center',
+    marginBottom: 12,
   },
-  payButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  retryButton: {
     backgroundColor: '#00D4FF',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    width: '100%',
-    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8,
   },
-  payButtonDisabled: {
-    backgroundColor: '#666',
-  },
-  payButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
+  retryButtonText: {
     color: '#FFF',
-    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '700',
   },
+  paymentFormContainer: {
+    flex: 1,
+    marginTop: 24,
+  },
+
   successContainer: {
     flex: 1,
     alignItems: 'center',
@@ -324,12 +363,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#00D4FF',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  footerSubtext: {
-    fontSize: 12,
-    color: '#888',
     textAlign: 'center',
   },
 });
