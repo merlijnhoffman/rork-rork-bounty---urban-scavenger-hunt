@@ -59,6 +59,9 @@ export default function StripePayment({
 
     try {
       console.log('Initializing payment with price ID:', priceId);
+      console.log('Price ID type:', typeof priceId);
+      console.log('Price ID length:', priceId?.length);
+      console.log('EXPO_PUBLIC_STRIPE_PRICE_ID:', process.env.EXPO_PUBLIC_STRIPE_PRICE_ID);
       
       const { clientSecret: secret, paymentIntentId: intentId } = await createPaymentIntent(
         priceId,

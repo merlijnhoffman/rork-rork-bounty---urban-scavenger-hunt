@@ -30,9 +30,11 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
 
     try {
       console.log('Creating payment intent for price:', priceId);
+      console.log('Price ID from env:', process.env.EXPO_PUBLIC_STRIPE_PRICE_ID);
       
-      if (!priceId || priceId === 'price_...') {
-        throw new Error('Invalid price ID. Please configure EXPO_PUBLIC_STRIPE_PRICE_ID in .env.local');
+      if (!priceId || priceId.trim() === '' || priceId === 'price_...') {
+        console.error('Invalid price ID detected:', { priceId, env: process.env.EXPO_PUBLIC_STRIPE_PRICE_ID });
+        throw new Error('Invalid price ID');
       }
 
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;

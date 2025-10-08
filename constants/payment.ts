@@ -1,3 +1,5 @@
+const STRIPE_PRICE_ID = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID || 'price_1SFbUhATZcBhONrDPUlVyFRJ';
+
 export const TICKET = {
   id: 'hunt_ticket',
   name: 'Hunt Ticket',
@@ -10,7 +12,7 @@ export const TICKET = {
     'Connect with other hunters',
     'Chance to win the prize'
   ],
-  stripePriceId: process.env.EXPO_PUBLIC_STRIPE_PRICE_ID || 'price_1SFbUhATZcBhONrDPUlVyFRJ'
+  stripePriceId: STRIPE_PRICE_ID
 };
 
 export const TICKET_TIERS = [TICKET];

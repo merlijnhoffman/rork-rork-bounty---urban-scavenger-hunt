@@ -845,7 +845,7 @@ export default function HuntScreen() {
           visible={showPayment}
           onClose={handlePaymentClose}
           onSuccess={handlePaymentSuccess}
-          priceId={TICKET.stripePriceId}
+          priceId={TICKET.stripePriceId || process.env.EXPO_PUBLIC_STRIPE_PRICE_ID || ''}
           amount={Math.round(TICKET.price * 100)}
           currency={TICKET.currency.toLowerCase()}
           description={TICKET.name}

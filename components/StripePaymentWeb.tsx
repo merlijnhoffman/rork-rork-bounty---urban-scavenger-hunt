@@ -121,7 +121,7 @@ export default function StripePaymentWeb({
           <Text style={styles.loadingText}>Loading payment form...</Text>
         </View>
       ) : (
-        <>
+        <View style={styles.formContainer}>
           <div id="payment-element" style={{ marginBottom: 24 }} />
           
           {errorMessage ? (
@@ -144,7 +144,7 @@ export default function StripePaymentWeb({
               <Text style={styles.submitButtonText}>Pay Now</Text>
             )}
           </TouchableOpacity>
-        </>
+        </View>
       )}
     </View>
   );
@@ -197,5 +197,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  formContainer: {
+    flex: 1,
   },
 });
