@@ -25,8 +25,7 @@ import { supabase } from '@/lib/supabase';
 import StripePayment from '@/components/StripePayment';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { TICKET_TIERS } from '@/constants/payment';
-import { TicketTier } from '@/types/payment';
+import { TICKET } from '@/constants/payment';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -59,7 +58,6 @@ export default function HuntScreen() {
   } = useGameStore();
   
   const [showPayment, setShowPayment] = useState<boolean>(false);
-  const [selectedTicketTier, setSelectedTicketTier] = useState<TicketTier | null>(null);
   const [hasTicket, setHasTicket] = useState<boolean>(false);
   const [isHuntActive, setIsHuntActive] = useState<boolean>(false);
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
@@ -398,8 +396,6 @@ export default function HuntScreen() {
       return;
     }
     
-    const ticketTier = TICKET_TIERS[0];
-    setSelectedTicketTier(ticketTier);
     setShowPayment(true);
   };
 
@@ -849,10 +845,10 @@ export default function HuntScreen() {
           visible={showPayment}
           onClose={handlePaymentClose}
           onSuccess={handlePaymentSuccess}
-          priceId={selectedTicketTier?.stripePriceId || TICKET_TIERS[0].stripePriceId || ''}
-          amount={selectedTicketTier ? Math.round(selectedTicketTier.price * 100) : 399}
-          currency={selectedTicketTier?.currency.toLowerCase() || 'eur'}
-          description={selectedTicketTier?.name || 'Hunt Ticket'}
+          priceId={TICKET.stripePriceId}
+          amount={Math.round(TICKET.price * 100)}
+          currency={TICKET.currency.toLowerCase()}
+          description={TICKET.name}
         />
       </LinearGradient>
     </View>
