@@ -140,7 +140,10 @@ export default function StripePayment({
             <CheckCircle color="#00D4FF" size={80} />
             <Text style={styles.successTitle}>Payment Successful!</Text>
             <Text style={styles.successMessage}>
-              Your payment has been processed successfully. Payment ID: {paymentIntentId}
+              Your payment has been processed successfully.
+            </Text>
+            <Text style={styles.successMessage}>
+              Payment ID: {paymentIntentId}
             </Text>
           </View>
         </LinearGradient>
