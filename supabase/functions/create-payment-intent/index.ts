@@ -23,23 +23,33 @@ serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     })
 
-    const { priceId, userId, customerEmail, metadata } = await req.json()
+    const { priceId, amount, currency, userId, customerEmail, metadata } = await req.json()
 
-    console.log('Creating payment intent for price:', priceId)
+    console.log('Creating payment intent. Price ID:', priceId)
 
-    const price = await stripe.prices.retrieve(priceId)
-    
-    if (!price.unit_amount) {
-      throw new Error('Price must have a unit amount')
+    let finalAmount = amount as number | undefined
+    let finalCurrency = currency as string | undefined
+
+    if (priceId) {
+      const price = await stripe.prices.retrieve(priceId)
+      if (!price.unit_amount || !price.currency) {
+        throw new Error('Price must have a unit amount and currency')
+      }
+      finalAmount = price.unit_amount
+      finalCurrency = price.currency
     }
 
-    console.log(`Creating payment intent for ${price.unit_amount} ${price.currency}`)
+    if (!finalAmount || !finalCurrency) {
+      throw new Error('Invalid payment inputs: provide priceId or amount+currency')
+    }
+
+    console.log(`Creating payment intent for ${finalAmount} ${finalCurrency}`)
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: price.unit_amount,
-      currency: price.currency,
+      amount: finalAmount,
+      currency: finalCurrency,
       metadata: {
-        priceId: priceId,
+        priceId: priceId || 'custom',
         userId: userId || 'anonymous',
         ...metadata,
       },

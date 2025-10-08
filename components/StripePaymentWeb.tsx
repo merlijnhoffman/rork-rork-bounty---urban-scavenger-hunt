@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -24,6 +24,7 @@ export default function StripePaymentWeb({
 }: StripePaymentWebProps) {
   const [stripe, setStripe] = useState<Stripe | null>(null);
   const [elements, setElements] = useState<StripeElements | null>(null);
+  const containerRef = useRef<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [processing, setProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -61,7 +62,11 @@ export default function StripePaymentWeb({
         setElements(elementsInstance);
 
         const paymentElement = elementsInstance.create('payment');
-        paymentElement.mount('#payment-element');
+        const el = (containerRef.current as unknown as HTMLElement | null);
+        if (!el) {
+          throw new Error('Unable to find payment container');
+        }
+        paymentElement.mount(el);
 
         setLoading(false);
       } catch (error) {
@@ -122,7 +127,7 @@ export default function StripePaymentWeb({
         </View>
       ) : (
         <View style={styles.formContainer}>
-          <div id="payment-element" style={{ marginBottom: 24 }} />
+          <View ref={containerRef} style={{ marginBottom: 24 }} />
           
           {errorMessage ? (
             <View style={styles.errorContainer}>

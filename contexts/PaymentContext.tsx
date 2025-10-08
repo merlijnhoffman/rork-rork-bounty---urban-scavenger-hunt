@@ -5,7 +5,13 @@ import { TicketTier } from '@/types/payment';
 interface PaymentContextType {
   selectedTier: TicketTier | null;
   setSelectedTier: (tier: TicketTier | null) => void;
-  createPaymentIntent: (priceId: string, userId?: string, customerEmail?: string) => Promise<{ clientSecret: string; paymentIntentId: string }>;
+  createPaymentIntent: (
+    priceId: string | undefined,
+    userId?: string,
+    customerEmail?: string,
+    amount?: number,
+    currency?: string,
+  ) => Promise<{ clientSecret: string; paymentIntentId: string }>;
   isProcessing: boolean;
   paymentError: string | null;
   clearError: () => void;
@@ -21,9 +27,11 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
 
 
   const createPaymentIntent = useCallback(async (
-    priceId: string, 
-    userId?: string, 
-    customerEmail?: string
+    priceId: string | undefined,
+    userId?: string,
+    customerEmail?: string,
+    amount?: number,
+    currency?: string,
   ): Promise<{ clientSecret: string; paymentIntentId: string }> => {
     setIsProcessing(true);
     setPaymentError(null);
@@ -31,10 +39,15 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
     try {
       console.log('Creating payment intent for price:', priceId);
       console.log('Price ID from env:', process.env.EXPO_PUBLIC_STRIPE_PRICE_ID);
-      
-      if (!priceId || priceId.trim() === '' || priceId === 'price_...') {
-        console.error('Invalid price ID detected:', { priceId, env: process.env.EXPO_PUBLIC_STRIPE_PRICE_ID });
-        throw new Error('Invalid price ID');
+
+      let priceIdToSend: string | undefined = priceId;
+      const hasValidPriceId = Boolean(priceId && priceId.trim() !== '' && priceId !== 'price_...');
+      if (!hasValidPriceId) {
+        console.warn('Invalid or missing price ID. Falling back to amount/currency.', { priceId, env: process.env.EXPO_PUBLIC_STRIPE_PRICE_ID, amount, currency });
+        priceIdToSend = undefined;
+        if (!amount || !currency) {
+          throw new Error('Invalid price ID');
+        }
       }
 
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -59,7 +72,9 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
           'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
         },
         body: JSON.stringify({
-          priceId,
+          priceId: priceIdToSend,
+          amount,
+          currency,
           userId,
           customerEmail,
           metadata: {

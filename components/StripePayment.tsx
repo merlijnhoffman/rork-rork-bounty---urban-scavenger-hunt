@@ -66,7 +66,9 @@ export default function StripePayment({
       const { clientSecret: secret, paymentIntentId: intentId } = await createPaymentIntent(
         priceId,
         user.id,
-        user.email
+        user.email,
+        amount,
+        currency
       );
 
       console.log('Payment intent created:', intentId);
@@ -86,7 +88,7 @@ export default function StripePayment({
     } finally {
       setIsInitializing(false);
     }
-  }, [user, priceId, createPaymentIntent, clearError, onClose]);
+  }, [user, priceId, amount, currency, createPaymentIntent, clearError, onClose]);
 
   useEffect(() => {
     if (visible && !clientSecret) {
