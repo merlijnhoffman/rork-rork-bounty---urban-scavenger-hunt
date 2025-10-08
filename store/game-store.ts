@@ -31,7 +31,7 @@ export interface Clue {
 const [GameProvider, useGameStoreInternal] = createContextHook(() => {
   
   const [currentEvent] = useState<GameEvent>({
-    id: '1',
+    id: '00000000-0000-0000-0000-000000000001',
     city: 'New York City',
     date: 'Saturday, Dec 28, 2024 • 2:00 PM EST',
     ticketPrice: 25,
