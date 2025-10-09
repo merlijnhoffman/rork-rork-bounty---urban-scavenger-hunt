@@ -1,14 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   Animated,
-  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Target } from 'lucide-react-native';
+import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import * as Location from 'expo-location';
 
 interface HuntMapProps {
   visible: boolean;
@@ -25,10 +27,53 @@ interface HuntMapProps {
 
 export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation }: HuntMapProps) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(true);
+  const mapRef = useRef<MapView>(null);
+
+  const getUserLocation = useCallback(async () => {
+    try {
+      setIsLoadingLocation(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        console.log('Location permission not granted');
+        setIsLoadingLocation(false);
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      setUserLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (mapRef.current) {
+        mapRef.current.fitToCoordinates(
+          [
+            { latitude: location.coords.latitude, longitude: location.coords.longitude },
+            { latitude: targetLocation.latitude, longitude: targetLocation.longitude },
+          ],
+          {
+            edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
+            animated: true,
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Error getting user location:', error);
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  }, [targetLocation.latitude, targetLocation.longitude]);
 
   useEffect(() => {
     if (visible) {
       console.log('HuntMap visible, showing map for:', targetLocation.name);
+      
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -43,8 +88,10 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
           }),
         ])
       ).start();
+
+      getUserLocation();
     }
-  }, [visible, pulseAnim, targetLocation.name]);
+  }, [visible, pulseAnim, targetLocation.name, getUserLocation]);
 
   if (!visible) {
     console.log('HuntMap not visible');
@@ -69,11 +116,56 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
       </SafeAreaView>
 
       <View style={styles.map}>
-        <Image
-          source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/3sia3564ewye6vpq9cko1' }}
-          style={styles.mapImage}
-          resizeMode="cover"
-        />
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_GOOGLE}
+          style={styles.mapView}
+          initialRegion={{
+            latitude: targetLocation.latitude,
+            longitude: targetLocation.longitude,
+            latitudeDelta: 0.02,
+            longitudeDelta: 0.02,
+          }}
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+          showsCompass={true}
+        >
+          <Circle
+            center={{
+              latitude: targetLocation.latitude,
+              longitude: targetLocation.longitude,
+            }}
+            radius={targetLocation.radius}
+            fillColor="rgba(0, 212, 255, 0.2)"
+            strokeColor="#00D4FF"
+            strokeWidth={3}
+          />
+
+          <Marker
+            coordinate={{
+              latitude: targetLocation.latitude,
+              longitude: targetLocation.longitude,
+            }}
+            title="Hunt Zone Center"
+            description={targetLocation.name}
+            pinColor="#00D4FF"
+          />
+
+          {userLocation && (
+            <Marker
+              coordinate={userLocation}
+              title="Your Location"
+              pinColor="#00FF88"
+            />
+          )}
+        </MapView>
+
+        {isLoadingLocation && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#00D4FF" />
+            <Text style={styles.loadingText}>Getting your location...</Text>
+          </View>
+        )}
       </View>
 
       <SafeAreaView edges={['bottom']} style={styles.safeAreaBottom}>
@@ -159,10 +251,27 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+    position: 'relative',
   },
-  mapImage: {
+  mapView: {
     width: '100%',
     height: '100%',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(10, 10, 10, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#00D4FF',
+    fontWeight: '600',
   },
   infoPanel: {
     backgroundColor: '#1A1A1A',

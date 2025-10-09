@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { X, Target } from 'lucide-react-native';
 
@@ -21,7 +21,104 @@ interface HuntMapProps {
   };
 }
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation }: HuntMapProps) {
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const loadGoogleMaps = () => {
+      if (window.google && window.google.maps) {
+        setMapLoaded(true);
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setMapLoaded(true);
+      document.head.appendChild(script);
+    };
+
+    loadGoogleMaps();
+  }, [visible]);
+
+  useEffect(() => {
+    if (!mapLoaded || !visible) return;
+
+    const mapElement = document.getElementById('google-map');
+    if (!mapElement) return;
+
+    const googleMap = new window.google.maps.Map(mapElement, {
+      center: { lat: targetLocation.latitude, lng: targetLocation.longitude },
+      zoom: 14,
+      mapTypeControl: true,
+      streetViewControl: true,
+      fullscreenControl: false,
+    });
+
+    new window.google.maps.Circle({
+      map: googleMap,
+      center: { lat: targetLocation.latitude, lng: targetLocation.longitude },
+      radius: targetLocation.radius,
+      fillColor: '#00D4FF',
+      fillOpacity: 0.2,
+      strokeColor: '#00D4FF',
+      strokeWeight: 3,
+    });
+
+    new window.google.maps.Marker({
+      position: { lat: targetLocation.latitude, lng: targetLocation.longitude },
+      map: googleMap,
+      title: 'Hunt Zone Center',
+      label: {
+        text: '🎯',
+        fontSize: '24px',
+      },
+    });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userPos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+
+          new window.google.maps.Marker({
+            position: userPos,
+            map: googleMap,
+            title: 'Your Location',
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: '#00FF88',
+              fillOpacity: 1,
+              strokeColor: '#FFF',
+              strokeWeight: 2,
+            },
+          });
+
+          const bounds = new window.google.maps.LatLngBounds();
+          bounds.extend(userPos);
+          bounds.extend({ lat: targetLocation.latitude, lng: targetLocation.longitude });
+          googleMap.fitBounds(bounds, { padding: 100 });
+        },
+        (error) => {
+          console.error('Error getting user location:', error);
+        }
+      );
+    }
+  }, [mapLoaded, visible, targetLocation]);
+
   if (!visible) return null;
 
   const zoneProgress = ((clueOrder / totalClues) * 100).toFixed(0);
@@ -41,11 +138,14 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         
         <View style={styles.webMapPlaceholder}>
           <View style={styles.mapTemplate}>
-            <Image
-              source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/3sia3564ewye6vpq9cko1' }}
-              style={styles.mapImage}
-              resizeMode="cover"
-            />
+            {!mapLoaded ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#00D4FF" />
+                <Text style={styles.loadingText}>Loading map...</Text>
+              </View>
+            ) : (
+              <div id="google-map" style={{ width: '100%', height: '100%', borderRadius: 16 }} />
+            )}
           </View>
           
           <Text style={styles.webPlaceholderTitle}>{targetLocation.name}</Text>
@@ -129,13 +229,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: '#333',
-    position: 'relative',
+    position: 'relative' as const,
     overflow: 'hidden',
     marginBottom: 20,
   },
-  mapImage: {
+  loadingContainer: {
     width: '100%',
     height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#00D4FF',
+    fontWeight: '600',
   },
   zoneIndicator: {
     width: 120,
