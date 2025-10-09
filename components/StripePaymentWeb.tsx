@@ -9,14 +9,6 @@ import {
 } from 'react-native';
 import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      div: any;
-    }
-  }
-}
-
 interface StripePaymentWebProps {
   clientSecret: string;
   publishableKey: string;
@@ -182,13 +174,15 @@ export default function StripePaymentWeb({
         </View>
       ) : (
         <View style={styles.formContainer}>
-          <div 
-            id="stripe-payment-element"
-            style={{
-              minHeight: '200px',
-              marginBottom: '24px',
-            }}
-          />
+          <View style={styles.paymentElementContainer}>
+            <div 
+              id="stripe-payment-element"
+              style={{
+                minHeight: '200px',
+                marginBottom: '24px',
+              }}
+            />
+          </View>
           
           {errorMessage ? (
             <View style={styles.errorContainer}>
@@ -267,5 +261,9 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
+  },
+  paymentElementContainer: {
+    minHeight: 200,
+    marginBottom: 24,
   },
 });

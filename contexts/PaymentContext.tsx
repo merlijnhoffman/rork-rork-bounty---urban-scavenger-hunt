@@ -64,6 +64,15 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
         throw new Error('Authentication required. Please sign in and try again.');
       }
       
+      console.log('Calling edge function:', edgeFunctionUrl);
+      console.log('Request payload:', {
+        priceId: priceIdToSend,
+        amount,
+        currency,
+        userId,
+        customerEmail,
+      });
+
       const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: {
@@ -82,6 +91,9 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
             timestamp: new Date().toISOString(),
           },
         }),
+      }).catch((fetchError) => {
+        console.error('Fetch error details:', fetchError);
+        throw new Error(`Network request failed: ${fetchError.message}. Please check if the edge function is deployed and accessible.`);
       });
 
       if (!response.ok) {
@@ -142,10 +154,10 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
       let errorMessage = 'Failed to create payment intent';
       
       if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch')) {
-          errorMessage = 'Network error. Please check your connection and try again.';
+        if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
+          errorMessage = 'Network error. Please verify:\n1. Edge function is deployed in Supabase\n2. CORS is configured correctly\n3. Your internet connection is stable';
         } else if (error.message.includes('HTTP 500')) {
-          errorMessage = 'Payment server error. Please try again later.';
+          errorMessage = 'Payment server error. Please check the edge function logs in Supabase.';
         } else if (error.message.includes('HTTP 401')) {
           errorMessage = 'Authentication error. Please sign in and try again.';
         } else if (error.message.includes('HTTP 400')) {
