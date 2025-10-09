@@ -1,6 +1,4 @@
-// @ts-ignore: Deno imports
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-// @ts-ignore: Deno imports
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
 
 const corsHeaders = {
@@ -8,13 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // @ts-ignore: Deno global
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     if (!stripeSecretKey) {
       throw new Error('STRIPE_SECRET_KEY is not configured');
@@ -29,7 +26,7 @@ serve(async (req: Request) => {
 
     console.log('Creating payment intent with:', { priceId, amount, currency, userId, customerEmail });
 
-    let paymentIntentParams: Stripe.PaymentIntentCreateParams;
+    let paymentIntentParams;
 
     if (priceId && priceId.trim() !== '' && priceId !== 'price_...') {
       const price = await stripe.prices.retrieve(priceId);
