@@ -89,12 +89,18 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
         try {
           const errorText = await response.text();
           console.log('Error response text:', errorText);
+          console.log('Error response status:', response.status);
+          console.log('Error response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
           
           try {
             const errorData = JSON.parse(errorText);
-            errorMessage = errorData.error || errorMessage;
+            errorMessage = errorData.error || errorData.message || errorMessage;
           } catch {
-            errorMessage = errorText || errorMessage;
+            if (errorText.includes("';' expected") || errorText.includes('SyntaxError')) {
+              errorMessage = 'Edge function syntax error: ' + errorText.substring(0, 200);
+            } else {
+              errorMessage = errorText || errorMessage;
+            }
           }
         } catch (textError) {
           console.error('Failed to read error response:', textError);
@@ -108,9 +114,15 @@ const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): Paym
       let result;
       try {
         result = JSON.parse(responseText);
-      } catch {
+      } catch (parseError) {
         console.error('Failed to parse response as JSON');
-        console.error('Response text (first 200 chars):', responseText.substring(0, 200));
+        console.error('Parse error:', parseError);
+        console.error('Response text (first 500 chars):', responseText.substring(0, 500));
+        
+        if (responseText.includes("';' expected") || responseText.includes('SyntaxError')) {
+          throw new Error('Edge function has a syntax error. Please check the function code in Supabase dashboard.');
+        }
+        
         throw new Error('Invalid response from payment server. The edge function may not be deployed or configured correctly.');
       }
 
