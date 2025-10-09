@@ -24,7 +24,8 @@ export default function StripePaymentWeb({
 }: StripePaymentWebProps) {
   const [stripe, setStripe] = useState<Stripe | null>(null);
   const [elements, setElements] = useState<StripeElements | null>(null);
-  const containerRef = useRef<any>(null);
+  const containerRef = useRef<View | null>(null);
+  const paymentElementRef = useRef<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [processing, setProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -62,13 +63,26 @@ export default function StripePaymentWeb({
         setElements(elementsInstance);
 
         const paymentElement = elementsInstance.create('payment');
-        const el = (containerRef.current as unknown as HTMLElement | null);
-        if (!el) {
-          throw new Error('Unable to find payment container');
-        }
-        paymentElement.mount(el);
-
-        setLoading(false);
+        paymentElementRef.current = paymentElement;
+        
+        setTimeout(() => {
+          const el = document.getElementById('stripe-payment-element');
+          if (!el) {
+            console.error('Payment container not found');
+            onError('Failed to initialize payment form');
+            setLoading(false);
+            return;
+          }
+          
+          try {
+            paymentElement.mount('#stripe-payment-element');
+            setLoading(false);
+          } catch (mountError) {
+            console.error('Error mounting payment element:', mountError);
+            onError('Failed to initialize payment form');
+            setLoading(false);
+          }
+        }, 100);
       } catch (error) {
         console.error('Error initializing Stripe:', error);
         onError('Failed to initialize payment form');
@@ -127,7 +141,11 @@ export default function StripePaymentWeb({
         </View>
       ) : (
         <View style={styles.formContainer}>
-          <View ref={containerRef} style={{ marginBottom: 24 }} />
+          <View 
+            ref={containerRef}
+            nativeID="stripe-payment-element"
+            style={styles.paymentElementContainer}
+          />
           
           {errorMessage ? (
             <View style={styles.errorContainer}>
@@ -142,7 +160,7 @@ export default function StripePaymentWeb({
           >
             {processing ? (
               <View style={styles.buttonContent}>
-                <ActivityIndicator size="small" color="#FFF" />
+                <ActivityIndicator size="small" color="#FFF" style={{ marginRight: 8 }} />
                 <Text style={styles.submitButtonText}>Processing...</Text>
               </View>
             ) : (
@@ -201,9 +219,13 @@ const styles = StyleSheet.create({
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
   formContainer: {
     flex: 1,
+  },
+  paymentElementContainer: {
+    minHeight: 200,
+    marginBottom: 24,
   },
 });

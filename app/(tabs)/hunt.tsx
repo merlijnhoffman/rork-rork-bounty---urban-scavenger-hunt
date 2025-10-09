@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   stepContainer: {
-    gap: 20,
+    marginTop: 0,
   },
   step: {
     flexDirection: 'row',
@@ -1218,7 +1218,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    gap: 12,
   },
   huntTitle: {
     fontSize: 24,
@@ -1229,7 +1228,7 @@ const styles = StyleSheet.create({
   huntStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    marginLeft: 12,
   },
   statusDot: {
     width: 8,
@@ -1265,7 +1264,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    gap: 6,
   },
   simulationText: {
     fontSize: 12,
@@ -1280,7 +1278,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-    gap: 16,
   },
   waitingTitle: {
     fontSize: 20,
@@ -1325,7 +1322,6 @@ const styles = StyleSheet.create({
   clueTimestamp: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
   timestampText: {
     fontSize: 12,
@@ -1345,7 +1341,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
-    gap: 8,
   },
   hintText: {
     flex: 1,
@@ -1366,7 +1361,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 8,
-    gap: 6,
     borderWidth: 1,
     borderColor: '#00D4FF',
   },
@@ -1382,7 +1376,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
-    gap: 4,
   },
   radiusText: {
     fontSize: 11,
@@ -1417,7 +1410,6 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     borderWidth: 1,
     borderColor: '#00D4FF',
     shadowColor: '#00D4FF',
@@ -1439,7 +1431,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     marginTop: 12,
-    gap: 8,
   },
   simulationButtonText: {
     fontSize: 14,
@@ -1542,7 +1533,6 @@ const styles = StyleSheet.create({
   webMapContent: {
     padding: 40,
     alignItems: 'center',
-    gap: 16,
   },
   webMapLocationName: {
     fontSize: 24,
@@ -1584,11 +1574,10 @@ const styles = StyleSheet.create({
   },
   huntActions: {
     marginTop: 16,
-    gap: 12,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 12,
+    marginBottom: 12,
   },
   distanceMeterButton: {
     flex: 1,
@@ -1599,8 +1588,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
-    gap: 8,
     position: 'relative',
+    marginRight: 12,
   },
   connectButton: {
     backgroundColor: '#0A1A2A',
@@ -1649,7 +1638,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
-    gap: 8,
     borderWidth: 2,
     borderColor: '#00D4FF',
   },
@@ -1678,7 +1666,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    gap: 8,
   },
   liveDot: {
     width: 10,
@@ -1713,7 +1700,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A1A2A',
     padding: 16,
     borderRadius: 12,
-    gap: 12,
     borderWidth: 1,
     borderColor: '#00D4FF',
   },
