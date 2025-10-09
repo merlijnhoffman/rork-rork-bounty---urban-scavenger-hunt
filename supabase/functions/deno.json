@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "imports": {
+    "stripe": "https://esm.sh/stripe@14.21.0?target=deno"
+  }
+}
