@@ -9,6 +9,14 @@ import {
 } from 'react-native';
 import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
 
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      div: any;
+    }
+  }
+}
+
 interface StripePaymentWebProps {
   clientSecret: string;
   publishableKey: string;
@@ -24,12 +32,12 @@ export default function StripePaymentWeb({
 }: StripePaymentWebProps) {
   const [stripe, setStripe] = useState<Stripe | null>(null);
   const [elements, setElements] = useState<StripeElements | null>(null);
-  const containerRef = useRef<View | null>(null);
   const paymentElementRef = useRef<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [processing, setProcessing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const mountAttemptedRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -73,6 +81,12 @@ export default function StripePaymentWeb({
         paymentElementRef.current = paymentElement;
         
         const mountElement = () => {
+          if (isMountedRef.current) {
+            console.log('Payment element already mounted');
+            setLoading(false);
+            return;
+          }
+
           const el = document.getElementById('stripe-payment-element');
           if (!el) {
             console.log('Payment container not ready, retrying...');
@@ -82,12 +96,14 @@ export default function StripePaymentWeb({
           
           try {
             paymentElement.mount('#stripe-payment-element');
+            isMountedRef.current = true;
             console.log('Payment element mounted successfully');
             setLoading(false);
           } catch (mountError) {
             console.error('Error mounting payment element:', mountError);
             const errorMsg = mountError instanceof Error ? mountError.message : 'Failed to initialize payment form';
             if (errorMsg.includes('already mounted')) {
+              isMountedRef.current = true;
               setLoading(false);
             } else {
               onError('Failed to initialize payment form');
@@ -96,7 +112,7 @@ export default function StripePaymentWeb({
           }
         };
         
-        setTimeout(mountElement, 200);
+        setTimeout(mountElement, 300);
       } catch (error) {
         console.error('Error initializing Stripe:', error);
         onError('Failed to initialize payment form');
@@ -107,9 +123,10 @@ export default function StripePaymentWeb({
     initializeStripe();
 
     return () => {
-      if (paymentElementRef.current) {
+      if (paymentElementRef.current && isMountedRef.current) {
         try {
           paymentElementRef.current.unmount();
+          isMountedRef.current = false;
         } catch (e) {
           console.log('Error unmounting payment element:', e);
         }
@@ -165,10 +182,12 @@ export default function StripePaymentWeb({
         </View>
       ) : (
         <View style={styles.formContainer}>
-          <View 
-            ref={containerRef}
-            nativeID="stripe-payment-element"
-            style={styles.paymentElementContainer}
+          <div 
+            id="stripe-payment-element"
+            style={{
+              minHeight: '200px',
+              marginBottom: '24px',
+            }}
           />
           
           {errorMessage ? (
@@ -248,9 +267,5 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
-  },
-  paymentElementContainer: {
-    minHeight: 200,
-    marginBottom: 24,
   },
 });
