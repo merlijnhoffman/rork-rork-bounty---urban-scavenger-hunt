@@ -1,5 +1,5 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno';
+import { serve } from 'http';
+import Stripe from 'stripe';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +26,7 @@ serve(async (req) => {
 
     console.log('Creating payment intent with:', { priceId, amount, currency, userId, customerEmail });
 
-    let paymentIntentParams;
+    let paymentIntentParams: Stripe.PaymentIntentCreateParams;
 
     if (priceId && priceId.trim() !== '' && priceId !== 'price_...') {
       const price = await stripe.prices.retrieve(priceId);
