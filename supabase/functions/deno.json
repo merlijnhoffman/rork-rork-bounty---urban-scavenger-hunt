@@ -2,13 +2,11 @@
   "compilerOptions": {
     "allowJs": true,
     "allowImportingTsExtensions": true,
-    "lib": ["deno.window"],
-    "types": ["https://deno.land/x/types/"],
+    "lib": ["deno.window", "deno.ns"],
     "strict": false,
     "noImplicitAny": false
   },
   "imports": {
-    "stripe": "https://esm.sh/stripe@14.21.0?target=deno",
-    "http": "https://deno.land/std@0.168.0/http/server.ts"
+    "stripe": "https://esm.sh/stripe@14.21.0?target=deno"
   }
 }
