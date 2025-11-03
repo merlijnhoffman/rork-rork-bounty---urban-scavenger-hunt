@@ -5,11 +5,10 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Target } from 'lucide-react-native';
-import Map, { Marker, Layer, Source } from 'react-map-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface HuntMapProps {
   visible: boolean;
@@ -26,6 +25,25 @@ interface HuntMapProps {
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoicmVlZGJhcm5hcmQiLCJhIjoiY2t2b3YzYTNrMjE0NjJvcDJndHN4cXJiYSJ9.2lGv2LUrC8pNpFvNBBQ3dQ';
 
+let MapboxMap: any = null;
+let MapboxMarker: any = null;
+let MapboxLayer: any = null;
+let MapboxSource: any = null;
+
+if (Platform.OS === 'web') {
+  try {
+    const mapboxgl = require('react-map-gl');
+    MapboxMap = mapboxgl.default || mapboxgl.Map;
+    MapboxMarker = mapboxgl.Marker;
+    MapboxLayer = mapboxgl.Layer;
+    MapboxSource = mapboxgl.Source;
+    
+    require('mapbox-gl/dist/mapbox-gl.css');
+  } catch (error) {
+    console.warn('Mapbox GL not available:', error);
+  }
+}
+
 export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation }: HuntMapProps) {
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -36,7 +54,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
     
     setMapLoaded(true);
     
-    if (navigator.geolocation) {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLocation({
@@ -95,13 +113,13 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         
         <View style={styles.webMapPlaceholder}>
           <View style={styles.mapTemplate}>
-            {!mapLoaded ? (
+            {!mapLoaded || !MapboxMap ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#00D4FF" />
-                <Text style={styles.loadingText}>Loading map...</Text>
+                <Text style={styles.loadingText}>{!MapboxMap ? 'Map unavailable' : 'Loading map...'}</Text>
               </View>
             ) : (
-              <Map
+              <MapboxMap
                 ref={mapRef}
                 mapboxAccessToken={MAPBOX_TOKEN}
                 initialViewState={{
@@ -112,8 +130,8 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
                 style={{ width: '100%', height: '100%', borderRadius: 16 }}
                 mapStyle="mapbox://styles/mapbox/dark-v11"
               >
-                <Source id="hunt-zone" type="geojson" data={createCircleGeoJSON() as any}>
-                  <Layer
+                <MapboxSource id="hunt-zone" type="geojson" data={createCircleGeoJSON() as any}>
+                  <MapboxLayer
                     id="hunt-zone-fill"
                     type="fill"
                     paint={{
@@ -121,7 +139,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
                       'fill-opacity': 0.2,
                     }}
                   />
-                  <Layer
+                  <MapboxLayer
                     id="hunt-zone-outline"
                     type="line"
                     paint={{
@@ -129,26 +147,26 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
                       'line-width': 3,
                     }}
                   />
-                </Source>
+                </MapboxSource>
                 
-                <Marker
+                <MapboxMarker
                   longitude={targetLocation.longitude}
                   latitude={targetLocation.latitude}
                 >
                   <Text style={{ fontSize: 32 }}>🎯</Text>
-                </Marker>
+                </MapboxMarker>
                 
                 {userLocation && (
-                  <Marker
+                  <MapboxMarker
                     longitude={userLocation.longitude}
                     latitude={userLocation.latitude}
                   >
                     <View style={styles.userMarker}>
                       <View style={styles.userMarkerInner} />
                     </View>
-                  </Marker>
+                  </MapboxMarker>
                 )}
-              </Map>
+              </MapboxMap>
             )}
           </View>
           
