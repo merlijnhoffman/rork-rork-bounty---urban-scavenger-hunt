@@ -404,10 +404,14 @@ export default function HuntScreen() {
     
     if (!user || !currentEvent) {
       console.error('Missing user or event data');
+      Alert.alert('Error', 'Session expired. Please try again.');
       return;
     }
 
     try {
+      // Generate a unique verification code for the ticket
+      const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
       // Create ticket in Supabase
       const { data: ticket, error } = await supabase
         .from('tickets')
@@ -416,6 +420,7 @@ export default function HuntScreen() {
           event_id: currentEvent.id,
           payment_intent_id: paymentIntentId,
           status: 'active',
+          verification_code: verificationCode,
           purchased_at: new Date().toISOString(),
         })
         .select()
@@ -423,13 +428,33 @@ export default function HuntScreen() {
       
       if (error) {
         console.error('Error creating ticket:', error);
-        Alert.alert('Error', 'Failed to create ticket. Please contact support.');
+        Alert.alert('Error', 'Failed to create ticket. Please contact support with payment ID: ' + paymentIntentId);
         return;
       }
       
       console.log('Ticket created successfully:', ticket.id);
       
+      // Refetch ticket data to update UI
       await ticketQuery.refetch();
+      
+      // Show success message and redirect to profile
+      Alert.alert(
+        '🎉 Ticket Purchased!',
+        'Your ticket has been purchased successfully. Check your profile for your verification code.',
+        [
+          {
+            text: 'View Profile',
+            onPress: () => {
+              setShowPayment(false);
+              router.push('/(tabs)/profile');
+            },
+          },
+          {
+            text: 'OK',
+            onPress: () => setShowPayment(false),
+          },
+        ]
+      );
       
     } catch (error) {
       console.error('Error creating ticket:', error);

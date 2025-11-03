@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,27 +8,47 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus } from 'lucide-react-native';
+import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { isGameActive, hasTicket, gameStartTime } = useGameStore();
+  const { currentEvent } = useGameStore();
   const { user, signOut } = useAuth();
   
-  // Mock verification code for now - this will be generated when game starts
-  const verificationCode = hasTicket && isGameActive ? 'HUNT2024' : null;
-  
-  const [showVerificationCode, setShowVerificationCode] = useState(false);
+  // Fetch ticket data from Supabase
+  const ticketQuery = useQuery({
+    queryKey: ['user-ticket', user?.id, currentEvent?.id],
+    queryFn: async () => {
+      if (!user || !currentEvent) {
+        return { hasTicket: false, ticket: null };
+      }
 
-  useEffect(() => {
-    // Show verification code only when game is active and user has ticket
-    if (isGameActive && hasTicket && user) {
-      setShowVerificationCode(true);
-    }
-  }, [isGameActive, hasTicket, user]);
+      const { data, error } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('event_id', currentEvent.id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching ticket:', error.message || 'Unknown error');
+        throw new Error(error.message || 'Failed to fetch ticket');
+      }
+
+      return { hasTicket: !!data, ticket: data };
+    },
+    enabled: !!user && !!currentEvent,
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
+  
+  const hasTicket = ticketQuery.data?.hasTicket || false;
+  const verificationCode = ticketQuery.data?.ticket?.verification_code || null;
 
   const handleSignOut = async () => {
     await signOut();
@@ -140,17 +160,17 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.detailRow}>
-              <Shield color="#888" size={20} />
+              <Ticket color="#888" size={20} />
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Ticket Status</Text>
                 <Text style={[styles.detailValue, { color: hasTicket ? '#00FF88' : '#888' }]}>
-                  {hasTicket ? 'Ticket Purchased' : 'No Active Ticket'}
+                  {hasTicket ? 'Active Ticket' : 'No Active Ticket'}
                 </Text>
               </View>
             </View>
           </View>
 
-          {showVerificationCode && verificationCode && (
+          {hasTicket && verificationCode && (
             <View style={styles.verificationCard}>
               <LinearGradient
                 colors={['#00D4FF', '#0099CC']}
@@ -158,7 +178,7 @@ export default function ProfileScreen() {
               >
                 <View style={styles.verificationHeader}>
                   <QrCode color="#000" size={24} />
-                  <Text style={styles.verificationTitle}>Winner Verification</Text>
+                  <Text style={styles.verificationTitle}>Your Ticket Verification Code</Text>
                 </View>
                 
                 <View style={styles.codeContainer}>
@@ -166,24 +186,26 @@ export default function ProfileScreen() {
                 </View>
                 
                 <Text style={styles.verificationNote}>
-                  Present this code to claim your prize if you find the target first
+                  Present this code to claim your prize if you find the target first during the hunt!
                 </Text>
+                
+                <View style={styles.ticketDetails}>
+                  <Shield color="#000" size={16} />
+                  <Text style={styles.ticketDetailsText}>
+                    Keep this code secure and don&apos;t share it
+                  </Text>
+                </View>
               </LinearGradient>
             </View>
           )}
 
-          {!showVerificationCode && hasTicket && (
+          {hasTicket && !verificationCode && (
             <View style={styles.waitingCard}>
               <Clock color="#00D4FF" size={32} />
-              <Text style={styles.waitingTitle}>Verification Code</Text>
+              <Text style={styles.waitingTitle}>Loading Ticket...</Text>
               <Text style={styles.waitingText}>
-                Your unique verification code will appear here when the hunt begins
+                Your verification code is being retrieved
               </Text>
-              {gameStartTime && (
-                <Text style={styles.startTime}>
-                  Game starts: {gameStartTime}
-                </Text>
-              )}
             </View>
           )}
 
@@ -444,6 +466,22 @@ const styles = StyleSheet.create({
     color: '#000',
     textAlign: 'center',
     opacity: 0.8,
+    marginBottom: 16,
+  },
+  ticketDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  ticketDetailsText: {
+    fontSize: 12,
+    color: '#000',
+    marginLeft: 8,
+    fontWeight: '600',
   },
   waitingCard: {
     backgroundColor: '#222',
