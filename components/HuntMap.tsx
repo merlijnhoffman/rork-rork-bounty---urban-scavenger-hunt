@@ -223,8 +223,9 @@ const styles = StyleSheet.create({
   webMapPlaceholder: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: 20,
+    paddingTop: 60,
     gap: 16,
   },
   mapTemplate: {
