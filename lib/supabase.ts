@@ -303,24 +303,24 @@ export type Database = {
           user_id: string;
           event_id: string;
           verification_code: string;
-          purchased_at: string;
-          is_used: boolean;
+          status: string;
+          created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
           event_id: string;
           verification_code: string;
-          purchased_at?: string;
-          is_used?: boolean;
+          status?: string;
+          created_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
           event_id?: string;
           verification_code?: string;
-          purchased_at?: string;
-          is_used?: boolean;
+          status?: string;
+          created_at?: string;
         };
       };
       events: {
