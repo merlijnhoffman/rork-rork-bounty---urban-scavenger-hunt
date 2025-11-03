@@ -859,7 +859,7 @@ export default function HuntScreen() {
                   </View>
                 )}
 
-                {TICKET.isFirstEvent && (
+                {TICKET.isFirstEvent && !hasTicket && (
                   <View style={styles.firstEventBanner}>
                     <Text style={styles.firstEventText}>🎉 FIRST EVENT - FREE ENTRY!</Text>
                     <Text style={styles.firstEventSubtext}>This is a special launch event. Future hunts will require paid tickets.</Text>
