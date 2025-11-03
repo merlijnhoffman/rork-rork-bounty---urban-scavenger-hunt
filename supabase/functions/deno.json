@@ -3,6 +3,7 @@
     "allowJs": true,
     "allowImportingTsExtensions": true,
     "lib": ["deno.window"],
+    "types": ["https://deno.land/x/types/"],
     "strict": false,
     "noImplicitAny": false
   },
