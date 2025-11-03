@@ -71,7 +71,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
               year: 'numeric',
             }),
             ticketPrice: data.ticket_price || 25,
-            prize: data.prize_amount || 5000,
+            prize: data.prize_amount || 1000,
             registeredPlayers: 189,
             startTime: data.start_time,
           });
