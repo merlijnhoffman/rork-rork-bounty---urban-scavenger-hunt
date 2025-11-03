@@ -62,7 +62,6 @@ export default function HuntScreen() {
   const [isHuntActive, setIsHuntActive] = useState<boolean>(false);
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
-  const [testMode, setTestMode] = useState<boolean>(true);
   const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   const [distanceMeterUsed, setDistanceMeterUsed] = useState<boolean>(false);
@@ -388,7 +387,7 @@ export default function HuntScreen() {
   }, [currentEvent]);
   
   // Check if hunt should be active (for demo, we'll use simulation)
-  const shouldShowHunt = (hasTicket || testMode) && (isHuntActive || isSimulating);
+  const shouldShowHunt = hasTicket && (isHuntActive || isSimulating);
 
   const handleClaimFreeTicket = async () => {
     if (!user || !currentEvent) {
@@ -815,21 +814,10 @@ export default function HuntScreen() {
                     <Text style={styles.errorText}>{purchaseError}</Text>
                   </View>
                 )}
-                
-                {/* Test Mode Toggle */}
-                <TouchableOpacity 
-                  style={styles.testModeToggle}
-                  onPress={() => setTestMode(!testMode)}
-                >
-                  <Text style={styles.testModeLabel}>Test Mode (Bypass Ticket)</Text>
-                  <View style={[styles.toggleSwitch, testMode && styles.toggleSwitchActive]}>
-                    <View style={[styles.toggleThumb, testMode && styles.toggleThumbActive]} />
-                  </View>
-                </TouchableOpacity>
 
                 {hasTicket && (
                   <View style={styles.ticketInfo}>
-                    <Text style={styles.ticketInfoTitle}>✓ TICKET PURCHASED</Text>
+                    <Text style={styles.ticketInfoTitle}>✓ TICKET CLAIMED</Text>
                     <Text style={styles.ticketInfoText}>
                       Hunt starts at the scheduled time.
                     </Text>
@@ -839,22 +827,6 @@ export default function HuntScreen() {
                     >
                       <Play color="#00D4FF" size={16} />
                       <Text style={styles.simulationButtonText}>Preview Hunt Experience</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                
-                {testMode && !hasTicket && (
-                  <View style={styles.testModeInfo}>
-                    <Text style={styles.testModeInfoTitle}>🧪 TEST MODE ACTIVE</Text>
-                    <Text style={styles.testModeInfoText}>
-                      You can preview the hunt without purchasing a ticket.
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.simulationButton}
-                      onPress={startSimulation}
-                    >
-                      <Play color="#00D4FF" size={16} />
-                      <Text style={styles.simulationButtonText}>Start Hunt Simulation</Text>
                     </TouchableOpacity>
                   </View>
                 )}
