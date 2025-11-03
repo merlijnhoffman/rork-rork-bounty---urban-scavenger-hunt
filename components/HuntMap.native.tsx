@@ -34,39 +34,51 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
   const getUserLocation = useCallback(async () => {
     try {
       setIsLoadingLocation(true);
+      console.log('Requesting location permission...');
       const { status } = await Location.requestForegroundPermissionsAsync();
+      console.log('Location permission status:', status);
       
       if (status !== 'granted') {
-        console.log('Location permission not granted');
+        console.log('Location permission not granted, proceeding without user location');
         setIsLoadingLocation(false);
         return;
       }
 
+      console.log('Getting current position...');
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 5000,
+        distanceInterval: 0,
       });
+      console.log('Got location:', location.coords);
 
       setUserLocation({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
 
-      if (mapRef.current) {
-        mapRef.current.fitToCoordinates(
-          [
-            { latitude: location.coords.latitude, longitude: location.coords.longitude },
-            { latitude: targetLocation.latitude, longitude: targetLocation.longitude },
-          ],
-          {
-            edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
-            animated: true,
-          }
-        );
-      }
+      setTimeout(() => {
+        if (mapRef.current) {
+          console.log('Fitting map to coordinates...');
+          mapRef.current.fitToCoordinates(
+            [
+              { latitude: location.coords.latitude, longitude: location.coords.longitude },
+              { latitude: targetLocation.latitude, longitude: targetLocation.longitude },
+            ],
+            {
+              edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
+              animated: true,
+            }
+          );
+        }
+      }, 500);
     } catch (error) {
       console.error('Error getting user location:', error);
-    } finally {
       setIsLoadingLocation(false);
+    } finally {
+      setTimeout(() => {
+        setIsLoadingLocation(false);
+      }, 2000);
     }
   }, [targetLocation.latitude, targetLocation.longitude]);
 
@@ -116,54 +128,60 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
       </SafeAreaView>
 
       <View style={styles.map}>
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          style={styles.mapView}
-          initialRegion={{
-            latitude: targetLocation.latitude,
-            longitude: targetLocation.longitude,
-            latitudeDelta: 0.02,
-            longitudeDelta: 0.02,
-          }}
-          showsUserLocation={true}
-          showsMyLocationButton={true}
-          showsCompass={true}
-        >
-          <Circle
-            center={{
+        {visible && (
+          <MapView
+            ref={mapRef}
+            provider={PROVIDER_GOOGLE}
+            style={styles.mapView}
+            initialRegion={{
               latitude: targetLocation.latitude,
               longitude: targetLocation.longitude,
+              latitudeDelta: 0.02,
+              longitudeDelta: 0.02,
             }}
-            radius={targetLocation.radius}
-            fillColor="rgba(0, 212, 255, 0.2)"
-            strokeColor="#00D4FF"
-            strokeWidth={3}
-          />
-
-          <Marker
-            coordinate={{
-              latitude: targetLocation.latitude,
-              longitude: targetLocation.longitude,
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+            showsCompass={true}
+            onMapReady={() => {
+              console.log('Map is ready');
+              setIsLoadingLocation(false);
             }}
-            title="Hunt Zone Center"
-            description={targetLocation.name}
-            pinColor="#00D4FF"
-          />
-
-          {userLocation && (
-            <Marker
-              coordinate={userLocation}
-              title="Your Location"
-              pinColor="#00FF88"
+          >
+            <Circle
+              center={{
+                latitude: targetLocation.latitude,
+                longitude: targetLocation.longitude,
+              }}
+              radius={targetLocation.radius}
+              fillColor="rgba(0, 212, 255, 0.2)"
+              strokeColor="#00D4FF"
+              strokeWidth={3}
             />
-          )}
-        </MapView>
+
+            <Marker
+              coordinate={{
+                latitude: targetLocation.latitude,
+                longitude: targetLocation.longitude,
+              }}
+              title="Hunt Zone Center"
+              description={targetLocation.name}
+              pinColor="#00D4FF"
+            />
+
+            {userLocation && (
+              <Marker
+                coordinate={userLocation}
+                title="Your Location"
+                pinColor="#00FF88"
+              />
+            )}
+          </MapView>
+        )}
 
         {isLoadingLocation && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#00D4FF" />
-            <Text style={styles.loadingText}>Getting your location...</Text>
+            <Text style={styles.loadingText}>Loading map...</Text>
           </View>
         )}
       </View>

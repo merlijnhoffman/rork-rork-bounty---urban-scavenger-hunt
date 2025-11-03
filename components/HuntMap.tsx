@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Target } from 'lucide-react-native';
 
 interface HuntMapProps {
@@ -126,15 +127,17 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
 
   return (
       <View style={styles.webContainer}>
-        <View style={styles.webHeader}>
-          <View style={styles.webTitleContainer}>
-            <Target color="#00D4FF" size={20} />
-            <Text style={styles.webTitle}>Hunt Zone - Clue {clueOrder}/{totalClues}</Text>
+        <SafeAreaView edges={['top']} style={styles.safeArea}>
+          <View style={styles.webHeader}>
+            <View style={styles.webTitleContainer}>
+              <Target color="#00D4FF" size={20} />
+              <Text style={styles.webTitle}>Hunt Zone - Clue {clueOrder}/{totalClues}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <X color="#FFF" size={24} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <X color="#FFF" size={24} />
-          </TouchableOpacity>
-        </View>
+        </SafeAreaView>
         
         <View style={styles.webMapPlaceholder}>
           <View style={styles.mapTemplate}>
@@ -193,6 +196,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#0A0A0A',
     zIndex: 1000,
+  },
+  safeArea: {
+    backgroundColor: '#1A1A1A',
   },
   webHeader: {
     flexDirection: 'row',
