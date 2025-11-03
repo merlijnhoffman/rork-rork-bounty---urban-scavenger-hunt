@@ -407,7 +407,6 @@ export default function HuntScreen() {
           event_id: currentEvent.id,
           status: 'active',
           verification_code: verificationCode,
-          purchased_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -476,10 +475,8 @@ export default function HuntScreen() {
         .insert({
           user_id: user.id,
           event_id: currentEvent.id,
-          payment_intent_id: paymentIntentId,
           status: 'active',
           verification_code: verificationCode,
-          purchased_at: new Date().toISOString(),
         })
         .select()
         .single();
