@@ -1041,6 +1041,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
+    marginTop: 16,
   },
   ticketButtonDisabled: {
     backgroundColor: '#333',
