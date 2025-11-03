@@ -24,6 +24,8 @@ export interface TicketTier {
   features: string[];
   popular?: boolean;
   stripePriceId?: string;
+  isFree?: boolean;
+  isFirstEvent?: boolean;
 }
 
 export interface PaymentResult {

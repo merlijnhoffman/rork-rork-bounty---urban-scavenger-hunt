@@ -3,16 +3,18 @@ const STRIPE_PRICE_ID = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID || 'price_1SFbUh
 export const TICKET = {
   id: 'hunt_ticket',
   name: 'Hunt Ticket',
-  price: 3.99,
+  price: 0,
   currency: 'EUR',
-  description: 'Join the treasure hunt adventure',
+  description: 'Join the first treasure hunt - FREE!',
   features: [
     'Real-time clues during the hunt',
     'Distance meter to track proximity',
     'Connect with other hunters',
-    'Chance to win the prize'
+    'Chance to win €1,000'
   ],
-  stripePriceId: STRIPE_PRICE_ID
+  stripePriceId: STRIPE_PRICE_ID,
+  isFree: true,
+  isFirstEvent: true
 };
 
 export const TICKET_TIERS = [TICKET];

@@ -75,7 +75,7 @@ export default function PriceSelection({
               </View>
               <View style={styles.priceContainer}>
                 <Text style={styles.price}>
-                  €{ticket.price}
+                  {ticket.isFree ? 'FREE' : `€${ticket.price}`}
                 </Text>
               </View>
             </View>
@@ -103,7 +103,7 @@ export default function PriceSelection({
               <Text style={styles.purchaseButtonText}>
                 {isProcessing && selectedTier?.id === ticket.id
                   ? 'PROCESSING...'
-                  : 'BUY TICKET'
+                  : ticket.isFree ? 'CLAIM TICKET' : 'BUY TICKET'
                 }
               </Text>
             </TouchableOpacity>

@@ -390,13 +390,70 @@ export default function HuntScreen() {
   // Check if hunt should be active (for demo, we'll use simulation)
   const shouldShowHunt = (hasTicket || testMode) && (isHuntActive || isSimulating);
 
+  const handleClaimFreeTicket = async () => {
+    if (!user || !currentEvent) {
+      console.error('Missing user or event data');
+      Alert.alert('Error', 'Session expired. Please try again.');
+      return;
+    }
+
+    try {
+      const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+      const { data: ticket, error } = await supabase
+        .from('tickets')
+        .insert({
+          user_id: user.id,
+          event_id: currentEvent.id,
+          payment_intent_id: 'free_first_event',
+          status: 'active',
+          verification_code: verificationCode,
+          purchased_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error creating ticket:', error);
+        Alert.alert('Error', 'Failed to claim ticket. Please contact support.');
+        return;
+      }
+      
+      console.log('Free ticket claimed successfully:', ticket.id);
+      
+      await ticketQuery.refetch();
+      
+      Alert.alert(
+        '🎉 Free Ticket Claimed!',
+        'Welcome to the first hunt! This event is FREE for early supporters. Check your profile for your verification code.',
+        [
+          {
+            text: 'View Profile',
+            onPress: () => router.push('/(tabs)/profile'),
+          },
+          {
+            text: 'OK',
+          },
+        ]
+      );
+      
+    } catch (error) {
+      console.error('Error claiming free ticket:', error);
+      Alert.alert('Error', 'Failed to claim ticket. Please contact support.');
+    }
+  };
+
   const handlePurchaseTicket = async () => {
     if (!isLoggedIn) {
       router.push('/login');
       return;
     }
     
-    setShowPayment(true);
+    if (TICKET.isFree) {
+      handleClaimFreeTicket();
+    } else {
+      setShowPayment(true);
+    }
   };
 
   const handlePaymentSuccess = async (paymentIntentId: string) => {
@@ -715,7 +772,7 @@ export default function HuntScreen() {
                   <View style={styles.eventHeader}>
                     <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
                     <View style={styles.prizeContainer}>
-                      <Text style={styles.prizeAmount}>${currentEvent.prize}</Text>
+                      <Text style={styles.prizeAmount}>€{currentEvent.prize}</Text>
                       <Text style={styles.prizeLabel}>PRIZE</Text>
                     </View>
                   </View>
@@ -802,6 +859,13 @@ export default function HuntScreen() {
                   </View>
                 )}
 
+                {TICKET.isFirstEvent && (
+                  <View style={styles.firstEventBanner}>
+                    <Text style={styles.firstEventText}>🎉 FIRST EVENT - FREE ENTRY!</Text>
+                    <Text style={styles.firstEventSubtext}>This is a special launch event. Future hunts will require paid tickets.</Text>
+                  </View>
+                )}
+
                 <TouchableOpacity
                   style={[
                     styles.ticketButton,
@@ -818,9 +882,9 @@ export default function HuntScreen() {
                     ]}>
                       {isLoading ? 'PROCESSING...' : 
                        isEventLive ? 'EVENT LIVE - SALES CLOSED' :
-                       hasTicket ? 'TICKET PURCHASED' : 
-                       !isLoggedIn ? 'SIGN IN TO PURCHASE' :
-                       'PURCHASE TICKET'}
+                       hasTicket ? 'TICKET CLAIMED' : 
+                       !isLoggedIn ? 'SIGN IN TO CLAIM FREE TICKET' :
+                       TICKET.isFree ? 'CLAIM FREE TICKET' : 'PURCHASE TICKET'}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -846,7 +910,7 @@ export default function HuntScreen() {
                 <View style={styles.stepNumber}>
                   <Text style={styles.stepNumberText}>2</Text>
                 </View>
-                <Text style={styles.stepText}>Purchase your ticket for the next hunt</Text>
+                <Text style={styles.stepText}>{TICKET.isFree ? 'Claim your FREE ticket (verified accounts only)' : 'Purchase your ticket for the next hunt'}</Text>
               </View>
               
               <View style={styles.step}>
@@ -1734,5 +1798,28 @@ const styles = StyleSheet.create({
     color: '#00D4FF',
     fontWeight: '600',
     lineHeight: 20,
+  },
+  firstEventBanner: {
+    backgroundColor: '#1A2A1A',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#00FF88',
+    alignItems: 'center',
+  },
+  firstEventText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#00FF88',
+    letterSpacing: 1,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  firstEventSubtext: {
+    fontSize: 13,
+    color: '#CCC',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
