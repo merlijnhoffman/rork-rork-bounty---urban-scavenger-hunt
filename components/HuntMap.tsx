@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Target } from 'lucide-react-native';
+import Map, { Marker, Layer, Source } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface HuntMapProps {
   visible: boolean;
@@ -22,103 +24,55 @@ interface HuntMapProps {
   };
 }
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+const MAPBOX_TOKEN = 'pk.eyJ1IjoicmVlZGJhcm5hcmQiLCJhIjoiY2t2b3YzYTNrMjE0NjJvcDJndHN4cXJiYSJ9.2lGv2LUrC8pNpFvNBBQ3dQ';
 
 export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation }: HuntMapProps) {
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
-
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
     if (!visible) return;
-
-    const loadGoogleMaps = () => {
-      if (window.google && window.google.maps) {
-        setMapLoaded(true);
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => setMapLoaded(true);
-      document.head.appendChild(script);
-    };
-
-    loadGoogleMaps();
-  }, [visible]);
-
-  useEffect(() => {
-    if (!mapLoaded || !visible) return;
-
-    const mapElement = document.getElementById('google-map');
-    if (!mapElement) return;
-
-    const googleMap = new window.google.maps.Map(mapElement, {
-      center: { lat: targetLocation.latitude, lng: targetLocation.longitude },
-      zoom: 14,
-      mapTypeControl: true,
-      streetViewControl: true,
-      fullscreenControl: false,
-    });
-
-    new window.google.maps.Circle({
-      map: googleMap,
-      center: { lat: targetLocation.latitude, lng: targetLocation.longitude },
-      radius: targetLocation.radius,
-      fillColor: '#00D4FF',
-      fillOpacity: 0.2,
-      strokeColor: '#00D4FF',
-      strokeWeight: 3,
-    });
-
-    new window.google.maps.Marker({
-      position: { lat: targetLocation.latitude, lng: targetLocation.longitude },
-      map: googleMap,
-      title: 'Hunt Zone Center',
-      label: {
-        text: '🎯',
-        fontSize: '24px',
-      },
-    });
-
+    
+    setMapLoaded(true);
+    
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const userPos = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-
-          new window.google.maps.Marker({
-            position: userPos,
-            map: googleMap,
-            title: 'Your Location',
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: '#00FF88',
-              fillOpacity: 1,
-              strokeColor: '#FFF',
-              strokeWeight: 2,
-            },
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
           });
-
-          const bounds = new window.google.maps.LatLngBounds();
-          bounds.extend(userPos);
-          bounds.extend({ lat: targetLocation.latitude, lng: targetLocation.longitude });
-          googleMap.fitBounds(bounds, { padding: 100 });
         },
         (error) => {
           console.error('Error getting user location:', error);
         }
       );
     }
-  }, [mapLoaded, visible, targetLocation]);
+  }, [visible]);
+
+  const createCircleGeoJSON = () => {
+    const points = 64;
+    const coords = [];
+    const distanceX = targetLocation.radius / (111.32 * 1000 * Math.cos((targetLocation.latitude * Math.PI) / 180));
+    const distanceY = targetLocation.radius / (111.32 * 1000);
+
+    for (let i = 0; i < points; i++) {
+      const angle = (i / points) * 2 * Math.PI;
+      const dx = distanceX * Math.cos(angle);
+      const dy = distanceY * Math.sin(angle);
+      coords.push([targetLocation.longitude + dx, targetLocation.latitude + dy]);
+    }
+    coords.push(coords[0]);
+
+    return {
+      type: 'Feature',
+      geometry: {
+        type: 'Polygon',
+        coordinates: [coords],
+      },
+    };
+  };
 
   if (!visible) return null;
 
@@ -147,7 +101,54 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
                 <Text style={styles.loadingText}>Loading map...</Text>
               </View>
             ) : (
-              <div id="google-map" style={{ width: '100%', height: '100%', borderRadius: 16 }} />
+              <Map
+                ref={mapRef}
+                mapboxAccessToken={MAPBOX_TOKEN}
+                initialViewState={{
+                  longitude: targetLocation.longitude,
+                  latitude: targetLocation.latitude,
+                  zoom: 14,
+                }}
+                style={{ width: '100%', height: '100%', borderRadius: 16 }}
+                mapStyle="mapbox://styles/mapbox/dark-v11"
+              >
+                <Source id="hunt-zone" type="geojson" data={createCircleGeoJSON() as any}>
+                  <Layer
+                    id="hunt-zone-fill"
+                    type="fill"
+                    paint={{
+                      'fill-color': '#00D4FF',
+                      'fill-opacity': 0.2,
+                    }}
+                  />
+                  <Layer
+                    id="hunt-zone-outline"
+                    type="line"
+                    paint={{
+                      'line-color': '#00D4FF',
+                      'line-width': 3,
+                    }}
+                  />
+                </Source>
+                
+                <Marker
+                  longitude={targetLocation.longitude}
+                  latitude={targetLocation.latitude}
+                >
+                  <Text style={{ fontSize: 32 }}>🎯</Text>
+                </Marker>
+                
+                {userLocation && (
+                  <Marker
+                    longitude={userLocation.longitude}
+                    latitude={userLocation.latitude}
+                  >
+                    <View style={styles.userMarker}>
+                      <View style={styles.userMarkerInner} />
+                    </View>
+                  </Marker>
+                )}
+              </Map>
             )}
           </View>
           
@@ -363,5 +364,25 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+  },
+  userMarker: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#00FF88',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFF',
+    shadowColor: '#00FF88',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  userMarkerInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFF',
   },
 });

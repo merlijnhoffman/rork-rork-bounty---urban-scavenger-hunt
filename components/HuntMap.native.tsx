@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Target } from 'lucide-react-native';
-import MapView, { Circle, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Circle, Marker, PROVIDER_DEFAULT, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
 
 interface HuntMapProps {
@@ -131,7 +131,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         {visible && (
           <MapView
             ref={mapRef}
-            provider={PROVIDER_GOOGLE}
+            provider={PROVIDER_DEFAULT}
             style={styles.mapView}
             initialRegion={{
               latitude: targetLocation.latitude,
@@ -142,11 +142,18 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
             showsUserLocation={true}
             showsMyLocationButton={true}
             showsCompass={true}
+            mapType="standard"
             onMapReady={() => {
               console.log('Map is ready');
               setIsLoadingLocation(false);
             }}
           >
+            <UrlTile
+              urlTemplate="https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoicmVlZGJhcm5hcmQiLCJhIjoiY2t2b3YzYTNrMjE0NjJvcDJndHN4cXJiYSJ9.2lGv2LUrC8pNpFvNBBQ3dQ"
+              maximumZ={19}
+              flipY={false}
+              zIndex={-1}
+            />
             <Circle
               center={{
                 latitude: targetLocation.latitude,
