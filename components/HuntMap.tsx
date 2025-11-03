@@ -9,7 +9,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Target } from 'lucide-react-native';
 import Map, { Marker, Layer, Source } from 'react-map-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface HuntMapProps {
   visible: boolean;
