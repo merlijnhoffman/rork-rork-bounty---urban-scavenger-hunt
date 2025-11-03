@@ -134,7 +134,7 @@ export default function StripePayment({
       <Modal
         visible={visible}
         animationType="slide"
-        presentationStyle="pageSheet"
+        presentationStyle="fullScreen"
         onRequestClose={handleClose}
       >
         <LinearGradient
@@ -160,7 +160,7 @@ export default function StripePayment({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
       <LinearGradient
