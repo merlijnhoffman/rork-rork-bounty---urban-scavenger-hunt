@@ -405,7 +405,6 @@ export default function HuntScreen() {
         .insert({
           user_id: user.id,
           event_id: currentEvent.id,
-          payment_intent_id: 'free_first_event',
           status: 'active',
           verification_code: verificationCode,
           purchased_at: new Date().toISOString(),
