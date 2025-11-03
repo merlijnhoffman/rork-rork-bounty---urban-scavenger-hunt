@@ -414,8 +414,9 @@ export default function HuntScreen() {
         .single();
       
       if (error) {
-        console.error('Error creating ticket:', error);
-        Alert.alert('Error', 'Failed to claim ticket. Please contact support.');
+        const errorMessage = error.message || error.toString() || 'Unknown error occurred';
+        console.error('Error creating ticket:', errorMessage);
+        Alert.alert('Error', `Failed to claim ticket: ${errorMessage}`);
         return;
       }
       
@@ -438,8 +439,9 @@ export default function HuntScreen() {
       );
       
     } catch (error) {
-      console.error('Error claiming free ticket:', error);
-      Alert.alert('Error', 'Failed to claim ticket. Please contact support.');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error claiming free ticket:', errorMessage);
+      Alert.alert('Error', `Failed to claim ticket: ${errorMessage}`);
     }
   };
 
@@ -484,8 +486,9 @@ export default function HuntScreen() {
         .single();
       
       if (error) {
-        console.error('Error creating ticket:', error);
-        Alert.alert('Error', 'Failed to create ticket. Please contact support with payment ID: ' + paymentIntentId);
+        const errorMessage = error.message || error.toString() || 'Unknown error occurred';
+        console.error('Error creating ticket:', errorMessage);
+        Alert.alert('Error', `Failed to create ticket: ${errorMessage}. Please contact support with payment ID: ${paymentIntentId}`);
         return;
       }
       
@@ -514,8 +517,9 @@ export default function HuntScreen() {
       );
       
     } catch (error) {
-      console.error('Error creating ticket:', error);
-      Alert.alert('Error', 'Failed to create ticket. Please contact support.');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error creating ticket:', errorMessage);
+      Alert.alert('Error', `Failed to create ticket: ${errorMessage}`);
     }
   };
   
