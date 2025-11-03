@@ -146,7 +146,7 @@ export default function StripePaymentWebView({
               const { error, paymentIntent } = await stripe.confirmPayment({
                 elements,
                 confirmParams: {
-                  return_url: window.location.href,
+                  return_url: 'https://rork.app/payment-success',
                 },
                 redirect: 'if_required',
               });
