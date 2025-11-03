@@ -109,26 +109,67 @@ export default function StripePaymentWebView({
         </form>
 
         <script>
-          const stripe = Stripe('${publishableKey}');
+          function log(message) {
+            console.log(message);
+            window.ReactNativeWebView?.postMessage(JSON.stringify({
+              type: 'log',
+              message: message,
+            }));
+          }
           
-          const options = {
-            clientSecret: '${clientSecret}',
-            appearance: {
-              theme: 'night',
-              variables: {
-                colorPrimary: '#00D4FF',
-                colorBackground: '#1A1A1A',
-                colorText: '#FFF',
-                colorDanger: '#FF6B6B',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                borderRadius: '12px',
+          try {
+            log('Initializing Stripe...');
+            
+            if (!window.Stripe) {
+              throw new Error('Stripe.js failed to load');
+            }
+            
+            const stripe = Stripe('${publishableKey}');
+            log('Stripe initialized');
+            
+            const clientSecret = '${clientSecret}';
+            log('Client secret length: ' + clientSecret.length);
+            
+            if (!clientSecret || clientSecret === 'undefined') {
+              throw new Error('Invalid client secret');
+            }
+            
+            const options = {
+              clientSecret: clientSecret,
+              appearance: {
+                theme: 'night',
+                variables: {
+                  colorPrimary: '#00D4FF',
+                  colorBackground: '#1A1A1A',
+                  colorText: '#FFF',
+                  colorDanger: '#FF6B6B',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  borderRadius: '12px',
+                },
               },
-            },
-          };
+            };
 
-          const elements = stripe.elements(options);
-          const paymentElement = elements.create('payment');
-          paymentElement.mount('#payment-element');
+            log('Creating elements...');
+            const elements = stripe.elements(options);
+            const paymentElement = elements.create('payment');
+            
+            log('Mounting payment element...');
+            paymentElement.mount('#payment-element');
+            
+            paymentElement.on('ready', () => {
+              log('Payment element ready');
+              window.ReactNativeWebView?.postMessage(JSON.stringify({
+                type: 'ready',
+              }));
+            });
+            
+            paymentElement.on('loaderror', (event) => {
+              log('Payment element load error: ' + JSON.stringify(event));
+              window.ReactNativeWebView?.postMessage(JSON.stringify({
+                type: 'error',
+                message: 'Failed to load payment form: ' + (event.error ? event.error.message : 'Unknown error'),
+              }));
+            });
 
           const form = document.getElementById('payment-form');
           const submitButton = document.getElementById('submit');
@@ -185,9 +226,18 @@ export default function StripePaymentWebView({
             }
           });
 
-          window.ReactNativeWebView?.postMessage(JSON.stringify({
-            type: 'ready',
-          }));
+          } catch (error) {
+            log('Stripe initialization error: ' + error.message);
+            const errorDiv = document.getElementById('error-message');
+            if (errorDiv) {
+              errorDiv.textContent = error.message || 'Failed to initialize payment form';
+              errorDiv.classList.add('visible');
+            }
+            window.ReactNativeWebView?.postMessage(JSON.stringify({
+              type: 'error',
+              message: error.message || 'Failed to initialize payment form',
+            }));
+          }
         </script>
       </body>
     </html>
@@ -201,13 +251,20 @@ export default function StripePaymentWebView({
 
       switch (data.type) {
         case 'ready':
+          console.log('Payment form is ready');
           setLoading(false);
           break;
         case 'success':
+          console.log('Payment successful, ID:', data.paymentIntentId);
           onSuccess(data.paymentIntentId);
           break;
         case 'error':
+          console.log('Payment error:', data.message);
+          setLoading(false);
           onError(data.message);
+          break;
+        case 'log':
+          console.log('WebView log:', data.message);
           break;
       }
     } catch (error) {
@@ -238,6 +295,13 @@ export default function StripePaymentWebView({
           const { nativeEvent } = syntheticEvent;
           console.error('WebView error:', nativeEvent);
           onError('Failed to load payment form');
+        }}
+        onHttpError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          console.error('WebView HTTP error:', nativeEvent);
+        }}
+        onLoadEnd={() => {
+          console.log('WebView loaded');
         }}
       />
     </View>

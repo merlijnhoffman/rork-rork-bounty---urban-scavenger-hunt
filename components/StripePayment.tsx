@@ -58,9 +58,13 @@ export default function StripePayment({
     clearError();
 
     try {
-      console.log('Initializing payment with price ID:', priceId);
-      console.log('Price ID type:', typeof priceId);
-      console.log('Price ID length:', priceId?.length);
+      console.log('=== Payment Initialization ===');
+      console.log('Price ID:', priceId);
+      console.log('Amount:', amount);
+      console.log('Currency:', currency);
+      console.log('User ID:', user.id);
+      console.log('User Email:', user.email);
+      console.log('Publishable Key:', STRIPE_CONFIG.publishableKey?.substring(0, 20) + '...');
       console.log('EXPO_PUBLIC_STRIPE_PRICE_ID:', process.env.EXPO_PUBLIC_STRIPE_PRICE_ID);
       
       const { clientSecret: secret, paymentIntentId: intentId } = await createPaymentIntent(
@@ -72,6 +76,8 @@ export default function StripePayment({
       );
 
       console.log('Payment intent created:', intentId);
+      console.log('Client secret received (length):', secret?.length);
+      console.log('Client secret starts with:', secret?.substring(0, 20));
       setClientSecret(secret);
       setPaymentIntentId(intentId);
     } catch (error) {
