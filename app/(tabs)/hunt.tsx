@@ -450,7 +450,7 @@ export default function HuntScreen() {
     }
   };
 
-  const handlePurchaseTicket = async () => {
+  const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
       router.push('/(tabs)/profile');
       return;
