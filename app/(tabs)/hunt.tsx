@@ -5,7 +5,6 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  ImageBackground,
   Animated,
   Platform as RNPlatform,
   Alert,
@@ -47,6 +46,32 @@ interface ClueWithLocation extends Clue {
   };
 }
 
+const renderAmsterdamHouses = (side: 'left' | 'right') => {
+  const houses = [
+    { width: 40, height: 100, windows: 6 },
+    { width: 35, height: 90, windows: 4 },
+    { width: 45, height: 110, windows: 8 },
+    { width: 38, height: 95, windows: 5 },
+  ];
+
+  return (
+    <View style={styles.housesRow}>
+      {houses.map((house, index) => (
+        <View key={`${side}-${index}`} style={[styles.house, { width: house.width, height: house.height }]}>
+          <View style={styles.houseRoof} />
+          <View style={styles.houseBody}>
+            <View style={styles.windowsGrid}>
+              {Array.from({ length: house.windows }).map((_, i) => (
+                <View key={i} style={styles.window} />
+              ))}
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -64,6 +89,10 @@ export default function HuntScreen() {
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
+  const slideUpAnim = useMemo(() => new Animated.Value(50), []);
+  const opacityAnim = useMemo(() => new Animated.Value(0), []);
+  const housesAnimL = useMemo(() => new Animated.Value(-20), []);
+  const housesAnimR = useMemo(() => new Animated.Value(20), []);
   const [distanceMeterUsed, setDistanceMeterUsed] = useState<boolean>(false);
   const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
   const [isCalculatingDistance, setIsCalculatingDistance] = useState<boolean>(false);
@@ -75,6 +104,31 @@ export default function HuntScreen() {
     latitude: 52.3752,
     longitude: 4.8840,
   }), []);
+  
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideUpAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(housesAnimL, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(housesAnimR, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [slideUpAnim, opacityAnim, housesAnimL, housesAnimR]);
   
   useEffect(() => {
     const requestNotificationPermissions = async () => {
@@ -119,7 +173,6 @@ export default function HuntScreen() {
     }
   }, [notificationPermission]);
   
-  // Mock clues for simulation with location data - based on bounty's movement and appearance
   const mockClues: ClueWithLocation[] = [
     {
       id: '1',
@@ -171,7 +224,6 @@ export default function HuntScreen() {
     },
   ];
   
-  // Check ticket status when user logs in using Supabase
   const ticketQuery = useQuery({
     queryKey: ['ticket-status', user?.id, currentEvent?.id],
     queryFn: async () => {
@@ -198,7 +250,6 @@ export default function HuntScreen() {
     refetchInterval: 30000,
   });
   
-  // Subscribe to real-time clues from Supabase
   useEffect(() => {
     if (!hasTicket || !currentEvent || !user) return;
     
@@ -230,7 +281,6 @@ export default function HuntScreen() {
           
           sendClueNotification(newClue);
           
-          // Animate new clue appearance
           Animated.sequence([
             Animated.timing(fadeAnim, {
               toValue: 1,
@@ -253,20 +303,17 @@ export default function HuntScreen() {
     };
   }, [hasTicket, currentEvent, user, fadeAnim, sendClueNotification]);
   
-  // Simulation functions
   const startSimulation = () => {
     setIsSimulating(true);
     setIsHuntActive(true);
     setLiveClues([]);
     
-    // Add clues progressively
     mockClues.forEach((clue, index) => {
       setTimeout(() => {
         setLiveClues(prev => [...prev, clue]);
         
         sendClueNotification(clue);
         
-        // Animate new clue
         Animated.sequence([
           Animated.timing(fadeAnim, {
             toValue: 1,
@@ -280,7 +327,7 @@ export default function HuntScreen() {
             useNativeDriver: true,
           }),
         ]).start();
-      }, index * 8000); // 8 seconds between clues
+      }, index * 8000);
     });
   };
   
@@ -376,17 +423,14 @@ export default function HuntScreen() {
   const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading;
   const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched);
   
-  // Check if event is currently live (between start time and end time)
   const isEventLive = useMemo(() => {
     if (!currentEvent) return false;
     const now = new Date();
     const eventStart = new Date(currentEvent.startTime);
-    // Assume event lasts 3 hours
     const eventEnd = new Date(eventStart.getTime() + 3 * 60 * 60 * 1000);
     return now >= eventStart && now <= eventEnd;
   }, [currentEvent]);
   
-  // Check if hunt should be active (for demo, we'll use simulation)
   const shouldShowHunt = hasTicket && (isHuntActive || isSimulating);
 
   const handleClaimFreeTicket = async () => {
@@ -465,10 +509,8 @@ export default function HuntScreen() {
     }
 
     try {
-      // Generate a unique verification code for the ticket
       const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
       
-      // Create ticket in Supabase
       const { data: ticket, error } = await supabase
         .from('tickets')
         .insert({
@@ -489,10 +531,8 @@ export default function HuntScreen() {
       
       console.log('Ticket created successfully:', ticket.id);
       
-      // Refetch ticket data to update UI
       await ticketQuery.refetch();
       
-      // Show success message and redirect to profile
       Alert.alert(
         '🎉 Ticket Purchased!',
         'Your ticket has been purchased successfully. Check your profile for your verification code.',
@@ -528,7 +568,6 @@ export default function HuntScreen() {
 
 
 
-  // Render live hunt interface
   if (shouldShowHunt) {
     return (
       <View style={styles.container}>
@@ -685,7 +724,6 @@ export default function HuntScreen() {
             )}
           </ScrollView>
           
-          {/* New clue notification overlay */}
           <Animated.View 
             style={[
               styles.newClueNotification,
@@ -758,16 +796,31 @@ export default function HuntScreen() {
           )}
 
           {currentEvent && (
-            <View style={styles.eventCard}>
-              <ImageBackground
-                source={{ uri: 'https://r2-pub.rork.com/generated-images/a9cf554f-16c0-4074-828e-4eb741a7bf80.png' }}
-                style={styles.cityBackground}
-                imageStyle={styles.cityBackgroundImage}
-              >
+            <Animated.View 
+              style={[
+                styles.eventCard,
+                {
+                  opacity: opacityAnim,
+                  transform: [{ translateY: slideUpAnim }]
+                }
+              ]}
+            >
+              <View style={styles.amsterdamBackground}>
                 <LinearGradient
-                  colors={['#00D4FF', '#0099CC']}
-                  style={styles.eventGradient}
+                  colors={['#FF6B35', '#F7931E', '#FDC830']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.sunsetGradient}
                 >
+                  <View style={styles.housesContainer}>
+                    <Animated.View style={[styles.housesLeft, { transform: [{ translateX: housesAnimL }] }]}>
+                      {renderAmsterdamHouses('left')}
+                    </Animated.View>
+                    <Animated.View style={[styles.housesRight, { transform: [{ translateX: housesAnimR }] }]}>
+                      {renderAmsterdamHouses('right')}
+                    </Animated.View>
+                  </View>
+
                   <View style={styles.eventHeader}>
                     <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
                     <View style={styles.prizeContainer}>
@@ -816,7 +869,7 @@ export default function HuntScreen() {
                 )}
 
                 {hasTicket && (
-                  <View style={styles.ticketInfo}>
+                  <View style={styles.ticketInfoSeparate}>
                     <Text style={styles.ticketInfoTitle}>✓ TICKET CLAIMED</Text>
                     <Text style={styles.ticketInfoText}>
                       Hunt starts at the scheduled time.
@@ -831,40 +884,45 @@ export default function HuntScreen() {
                   </View>
                 )}
 
-                {TICKET.isFirstEvent && !hasTicket && (
-                  <View style={styles.firstEventBanner}>
-                    <Text style={styles.firstEventText}>🎉 FIRST EVENT - FREE ENTRY!</Text>
-                    <Text style={styles.firstEventSubtext}>This is a special launch event. Future hunts will require paid tickets.</Text>
-                  </View>
-                )}
-
-                <TouchableOpacity
-                  style={[
-                    styles.ticketButton,
-                    (!canPurchaseTicket || isLoading || isEventLive) && styles.ticketButtonDisabled
-                  ]}
-                  onPress={handlePurchaseTicket}
-                  disabled={!canPurchaseTicket || isLoading || isEventLive}
-                >
-                  <View style={styles.ticketButtonContent}>
-                    <CreditCard color={hasTicket || isEventLive ? '#888' : '#000'} size={20} />
-                    <Text style={[
-                      styles.ticketButtonText,
-                      (hasTicket || isEventLive) && styles.ticketButtonTextDisabled
-                    ]}>
-                      {isLoading ? 'PROCESSING...' : 
-                       isEventLive ? 'EVENT LIVE - SALES CLOSED' :
-                       hasTicket ? 'TICKET CLAIMED' : 
-                       !isLoggedIn ? 'SIGN IN TO CLAIM FREE TICKET' :
-                       TICKET.isFree ? 'CLAIM FREE TICKET' : 'PURCHASE TICKET'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-                
-
                 </LinearGradient>
-              </ImageBackground>
-            </View>
+              </View>
+            </Animated.View>
+          )}
+          
+          {TICKET.isFirstEvent && !hasTicket && currentEvent && (
+            <Animated.View style={[styles.firstEventBannerSeparate, { opacity: opacityAnim }]}>
+              <View style={styles.firstEventBanner}>
+                <Text style={styles.firstEventText}>🎉 FIRST EVENT - FREE ENTRY!</Text>
+                <Text style={styles.firstEventSubtext}>This is a special launch event. Future hunts will require paid tickets.</Text>
+              </View>
+            </Animated.View>
+          )}
+          
+          {currentEvent && (
+            <Animated.View style={{ opacity: opacityAnim }}>
+              <TouchableOpacity
+                style={[
+                  styles.ticketButtonSeparate,
+                  (!canPurchaseTicket || isLoading || isEventLive) && styles.ticketButtonDisabled
+                ]}
+                onPress={handlePurchaseTicket}
+                disabled={!canPurchaseTicket || isLoading || isEventLive}
+              >
+                <View style={styles.ticketButtonContent}>
+                  <CreditCard color={hasTicket || isEventLive ? '#888' : '#00D4FF'} size={20} />
+                  <Text style={[
+                    styles.ticketButtonTextSeparate,
+                    (hasTicket || isEventLive) && styles.ticketButtonTextDisabled
+                  ]}>
+                    {isLoading ? 'PROCESSING...' : 
+                     isEventLive ? 'EVENT LIVE - SALES CLOSED' :
+                     hasTicket ? 'TICKET CLAIMED' : 
+                     !isLoggedIn ? 'SIGN IN TO CLAIM FREE TICKET' :
+                     TICKET.isFree ? 'CLAIM FREE TICKET' : 'PURCHASE TICKET'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
           )}
 
           <View style={styles.howItWorks}>
@@ -949,11 +1007,80 @@ const styles = StyleSheet.create({
   },
   eventCard: {
     borderRadius: 20,
-    marginBottom: 40,
+    marginBottom: 20,
+    overflow: 'hidden',
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  amsterdamBackground: {
+    width: '100%',
+  },
+  sunsetGradient: {
+    padding: 24,
+    paddingTop: 140,
+  },
+  housesContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 140,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
     overflow: 'hidden',
   },
-  eventGradient: {
-    padding: 24,
+  housesLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  housesRight: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+  },
+  housesRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  house: {
+    alignItems: 'center',
+  },
+  houseRoof: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 20,
+    borderRightWidth: 20,
+    borderBottomWidth: 15,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  houseBody: {
+    width: '100%',
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  windowsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 4,
+    gap: 4,
+    justifyContent: 'center',
+  },
+  window: {
+    width: 6,
+    height: 8,
+    backgroundColor: 'rgba(255, 200, 100, 0.6)',
+    borderRadius: 1,
   },
   eventHeader: {
     flexDirection: 'row',
@@ -989,12 +1116,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  eventCity: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
-    marginLeft: 12,
-  },
   eventDate: {
     fontSize: 16,
     fontWeight: '600',
@@ -1007,23 +1128,26 @@ const styles = StyleSheet.create({
     color: '#000',
     marginLeft: 12,
   },
-  ticketButton: {
-    backgroundColor: '#000',
-    paddingVertical: 16,
+  ticketButtonSeparate: {
+    backgroundColor: '#1A1A1A',
+    paddingVertical: 18,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 16,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#00D4FF',
   },
   ticketButtonDisabled: {
-    backgroundColor: '#333',
+    backgroundColor: '#1A1A1A',
+    borderColor: '#333',
   },
   ticketButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ticketButtonText: {
+  ticketButtonTextSeparate: {
     color: '#00D4FF',
     fontSize: 16,
     fontWeight: '700',
@@ -1045,6 +1169,7 @@ const styles = StyleSheet.create({
   },
   stepContainer: {
     marginTop: 0,
+    gap: 20,
   },
   step: {
     flexDirection: 'row',
@@ -1074,7 +1199,7 @@ const styles = StyleSheet.create({
   authRequiredContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A2A2A',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
@@ -1091,7 +1216,7 @@ const styles = StyleSheet.create({
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A1A1A',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
@@ -1104,15 +1229,6 @@ const styles = StyleSheet.create({
     color: '#FF6B6B',
     marginLeft: 8,
     fontWeight: '500',
-  },
-  cityBackground: {
-    width: '100%',
-  },
-  cityBackgroundImage: {
-    opacity: 0.1,
-    resizeMode: 'contain',
-    height: 120,
-    bottom: 0,
   },
   citySection: {
     alignItems: 'center',
@@ -1141,8 +1257,8 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     marginTop: 2,
   },
-  ticketInfo: {
-    backgroundColor: '#1A1A1A',
+  ticketInfoSeparate: {
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     padding: 16,
     borderRadius: 12,
     marginTop: 16,
@@ -1162,114 +1278,21 @@ const styles = StyleSheet.create({
     color: '#FFF',
     marginBottom: 4,
   },
-  ticketInfoDate: {
-    fontSize: 12,
-    color: '#888',
-  },
-  webViewContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  webViewHeader: {
+  simulationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    backgroundColor: '#0A1A2A',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 8,
   },
-  webViewTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    fontSize: 18,
-    color: '#FFF',
-    fontWeight: '600',
-  },
-  webView: {
-    flex: 1,
-  },
-  browserButton: {
-    backgroundColor: '#1A1A1A',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-  },
-  browserButtonText: {
+  simulationButtonText: {
     fontSize: 14,
     color: '#00D4FF',
     fontWeight: '600',
   },
-  successOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successContainer: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 20,
-    padding: 40,
-    alignItems: 'center',
-    maxWidth: 300,
-    margin: 20,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFF',
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 12,
-  },
-  successMessage: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  ticketInfoEvent: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 4,
-  },
-  debugInfo: {
-    backgroundColor: '#2A2A2A',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: '#FFA500',
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#FFA500',
-    marginBottom: 8,
-    fontFamily: 'monospace',
-  },
-  refreshButton: {
-    backgroundColor: '#FFA500',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  refreshButtonText: {
-    fontSize: 12,
-    color: '#000',
-    fontWeight: '600',
-  },
-
-  // Hunt interface styles
   huntHeader: {
     padding: 20,
     borderBottomWidth: 1,
@@ -1280,17 +1303,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    gap: 8,
   },
   huntTitle: {
     fontSize: 24,
     fontWeight: '900',
     color: '#00D4FF',
     letterSpacing: 2,
+    marginLeft: 8,
   },
   huntStatus: {
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 12,
+    gap: 6,
   },
   statusDot: {
     width: 8,
@@ -1303,6 +1329,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#00FF88',
     letterSpacing: 1,
+    marginLeft: 6,
   },
   huntInfo: {
     alignItems: 'center',
@@ -1326,11 +1353,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
+    gap: 8,
+    marginTop: 16,
   },
   simulationText: {
     fontSize: 12,
     color: '#FF6B6B',
     fontWeight: '600',
+    marginLeft: 8,
   },
   cluesContainer: {
     flex: 1,
@@ -1340,12 +1370,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
+    gap: 16,
   },
   waitingTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#FFF',
     textAlign: 'center',
+    marginTop: 16,
   },
   waitingText: {
     fontSize: 16,
@@ -1384,32 +1416,19 @@ const styles = StyleSheet.create({
   clueTimestamp: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
   timestampText: {
     fontSize: 12,
     color: '#888',
     fontWeight: '500',
+    marginLeft: 6,
   },
   clueText: {
     fontSize: 16,
     color: '#FFF',
     lineHeight: 24,
     marginBottom: 16,
-  },
-  hintContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#2A2A1A',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  hintText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#FFA500',
-    fontStyle: 'italic',
-    lineHeight: 20,
   },
   clueActions: {
     flexDirection: 'row',
@@ -1425,11 +1444,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#00D4FF',
+    gap: 6,
   },
   mapButtonText: {
     fontSize: 13,
     color: '#00D4FF',
     fontWeight: '700',
+    marginLeft: 6,
   },
   radiusIndicator: {
     flexDirection: 'row',
@@ -1438,11 +1459,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
+    gap: 6,
   },
   radiusText: {
     fontSize: 11,
     color: '#888',
     fontWeight: '600',
+    marginLeft: 6,
   },
   huntProgress: {
     alignItems: 'center',
@@ -1479,160 +1502,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    gap: 12,
   },
   notificationText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#00D4FF',
-  },
-  simulationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0A1A2A',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginTop: 12,
-  },
-  simulationButtonText: {
-    fontSize: 14,
-    color: '#00D4FF',
-    fontWeight: '600',
-  },
-  testModeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#2A2A1A',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: '#FFA500',
-  },
-  testModeLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFA500',
-  },
-  toggleSwitch: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#333',
-    padding: 2,
-    justifyContent: 'center',
-  },
-  toggleSwitchActive: {
-    backgroundColor: '#FFA500',
-  },
-  toggleThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFF',
-  },
-  toggleThumbActive: {
-    transform: [{ translateX: 22 }],
-  },
-  testModeInfo: {
-    backgroundColor: '#2A2A1A',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FFA500',
-  },
-  testModeInfoTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFA500',
-    marginBottom: 8,
-    letterSpacing: 1,
-  },
-  testModeInfoText: {
-    fontSize: 14,
-    color: '#CCC',
-    marginBottom: 12,
-  },
-  webMapOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  webMapContainer: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    width: '90%',
-    maxWidth: 500,
-    maxHeight: '80%',
-    overflow: 'hidden',
-  },
-  webMapHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  webMapTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  webMapClose: {
-    fontSize: 24,
-    color: '#FFF',
-    fontWeight: '600',
-  },
-  webMapContent: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  webMapLocationName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFF',
-    textAlign: 'center',
-  },
-  webMapRadius: {
-    fontSize: 16,
-    color: '#00D4FF',
-    fontWeight: '600',
-  },
-  webMapNote: {
-    fontSize: 14,
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  webMapCoords: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#0A0A0A',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  webMapCoordsLabel: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  webMapCoordsText: {
-    fontSize: 14,
-    color: '#00D4FF',
-    fontWeight: '600',
-    textAlign: 'center',
-    fontFamily: RNPlatform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
+    marginLeft: 12,
   },
   huntActions: {
     marginTop: 16,
@@ -1652,6 +1528,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     position: 'relative',
     marginRight: 12,
+    gap: 8,
   },
   connectButton: {
     backgroundColor: '#0A1A2A',
@@ -1671,6 +1548,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000',
     letterSpacing: 0.5,
+    marginLeft: 8,
   },
   distanceMeterButtonTextDisabled: {
     color: '#888',
@@ -1702,12 +1580,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: '#00D4FF',
+    gap: 8,
   },
   distanceResultText: {
     fontSize: 18,
     fontWeight: '900',
     color: '#00D4FF',
     letterSpacing: 1,
+    marginLeft: 8,
   },
   liveEventNotice: {
     backgroundColor: '#1A1A1A',
@@ -1728,6 +1608,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
+    gap: 8,
   },
   liveDot: {
     width: 10,
@@ -1740,6 +1621,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#FF6B6B',
     letterSpacing: 1.5,
+    marginLeft: 8,
   },
   liveEventTitle: {
     fontSize: 22,
@@ -1764,6 +1646,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#00D4FF',
+    gap: 12,
   },
   nextEventPromptText: {
     flex: 1,
@@ -1771,12 +1654,15 @@ const styles = StyleSheet.create({
     color: '#00D4FF',
     fontWeight: '600',
     lineHeight: 20,
+    marginLeft: 12,
+  },
+  firstEventBannerSeparate: {
+    marginBottom: 20,
   },
   firstEventBanner: {
     backgroundColor: '#1A2A1A',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 16,
     borderWidth: 2,
     borderColor: '#00FF88',
     alignItems: 'center',
