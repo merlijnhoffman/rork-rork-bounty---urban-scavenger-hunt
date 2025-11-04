@@ -46,31 +46,7 @@ interface ClueWithLocation extends Clue {
   };
 }
 
-const renderAmsterdamHouses = (side: 'left' | 'right') => {
-  const houses = [
-    { width: 40, height: 100, windows: 6 },
-    { width: 35, height: 90, windows: 4 },
-    { width: 45, height: 110, windows: 8 },
-    { width: 38, height: 95, windows: 5 },
-  ];
 
-  return (
-    <View style={styles.housesRow}>
-      {houses.map((house, index) => (
-        <View key={`${side}-${index}`} style={[styles.house, { width: house.width, height: house.height }]}>
-          <View style={styles.houseRoof} />
-          <View style={styles.houseBody}>
-            <View style={styles.windowsGrid}>
-              {Array.from({ length: house.windows }).map((_, i) => (
-                <View key={i} style={styles.window} />
-              ))}
-            </View>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-};
 
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
@@ -91,8 +67,6 @@ export default function HuntScreen() {
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   const slideUpAnim = useMemo(() => new Animated.Value(50), []);
   const opacityAnim = useMemo(() => new Animated.Value(0), []);
-  const housesAnimL = useMemo(() => new Animated.Value(-20), []);
-  const housesAnimR = useMemo(() => new Animated.Value(20), []);
   const [distanceMeterUsed, setDistanceMeterUsed] = useState<boolean>(false);
   const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
   const [isCalculatingDistance, setIsCalculatingDistance] = useState<boolean>(false);
@@ -117,18 +91,8 @@ export default function HuntScreen() {
         duration: 600,
         useNativeDriver: true,
       }),
-      Animated.timing(housesAnimL, {
-        toValue: 0,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(housesAnimR, {
-        toValue: 0,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
     ]).start();
-  }, [slideUpAnim, opacityAnim, housesAnimL, housesAnimR]);
+  }, [slideUpAnim, opacityAnim]);
   
   useEffect(() => {
     const requestNotificationPermissions = async () => {
@@ -805,22 +769,12 @@ export default function HuntScreen() {
                 }
               ]}
             >
-              <View style={styles.amsterdamBackground}>
-                <LinearGradient
-                  colors={['#FF6B35', '#F7931E', '#FDC830']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.sunsetGradient}
-                >
-                  <View style={styles.housesContainer}>
-                    <Animated.View style={[styles.housesLeft, { transform: [{ translateX: housesAnimL }] }]}>
-                      {renderAmsterdamHouses('left')}
-                    </Animated.View>
-                    <Animated.View style={[styles.housesRight, { transform: [{ translateX: housesAnimR }] }]}>
-                      {renderAmsterdamHouses('right')}
-                    </Animated.View>
-                  </View>
-
+              <LinearGradient
+                colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.eventGradient}
+              >
                   <View style={styles.eventHeader}>
                     <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
                     <View style={styles.prizeContainer}>
@@ -837,12 +791,12 @@ export default function HuntScreen() {
 
                   <View style={styles.eventDetails}>
                     <View style={styles.eventRow}>
-                      <Clock color="#000" size={20} />
+                      <Clock color="#FFF" size={20} />
                       <Text style={styles.eventDate}>Saturday, Jan 18, 2025 • 3:00 PM CET</Text>
                     </View>
                     
                     <View style={styles.eventRow}>
-                      <Users color="#000" size={20} />
+                      <Users color="#FFF" size={20} />
                       <Text style={styles.eventPlayers}>
                         189 hunters registered
                       </Text>
@@ -883,9 +837,7 @@ export default function HuntScreen() {
                     </TouchableOpacity>
                   </View>
                 )}
-
-                </LinearGradient>
-              </View>
+              </LinearGradient>
             </Animated.View>
           )}
           
@@ -1009,78 +961,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 20,
     overflow: 'hidden',
-    shadowColor: '#FF6B35',
+    shadowColor: '#3B82F6',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
   },
-  amsterdamBackground: {
-    width: '100%',
-  },
-  sunsetGradient: {
+  eventGradient: {
     padding: 24,
-    paddingTop: 140,
-  },
-  housesContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 140,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    overflow: 'hidden',
-  },
-  housesLeft: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  housesRight: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-  },
-  housesRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  house: {
-    alignItems: 'center',
-  },
-  houseRoof: {
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 20,
-    borderRightWidth: 20,
-    borderBottomWidth: 15,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  houseBody: {
-    width: '100%',
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  windowsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 4,
-    gap: 4,
-    justifyContent: 'center',
-  },
-  window: {
-    width: 6,
-    height: 8,
-    backgroundColor: 'rgba(255, 200, 100, 0.6)',
-    borderRadius: 1,
   },
   eventHeader: {
     flexDirection: 'row',
@@ -1091,7 +979,7 @@ const styles = StyleSheet.create({
   nextEventLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000',
+    color: '#FFF',
     letterSpacing: 1,
   },
   prizeContainer: {
@@ -1100,12 +988,12 @@ const styles = StyleSheet.create({
   prizeAmount: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#000',
+    color: '#FFF',
   },
   prizeLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#000',
+    color: '#FFF',
     opacity: 0.7,
   },
   eventDetails: {
@@ -1116,16 +1004,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  eventRowIcon: {
+    color: '#FFF',
+  },
   eventDate: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#FFF',
     marginLeft: 12,
   },
   eventPlayers: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000',
+    color: '#FFF',
     marginLeft: 12,
   },
   ticketButtonSeparate: {
@@ -1238,7 +1129,7 @@ const styles = StyleSheet.create({
   cityLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#000',
+    color: '#FFF',
     opacity: 0.7,
     letterSpacing: 1,
     marginBottom: 4,
@@ -1246,14 +1137,14 @@ const styles = StyleSheet.create({
   cityNameLarge: {
     fontSize: 36,
     fontWeight: '900',
-    color: '#000',
+    color: '#FFF',
     letterSpacing: 3,
     textAlign: 'center',
   },
   cityCountry: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#FFF',
     opacity: 0.8,
     marginTop: 2,
   },
