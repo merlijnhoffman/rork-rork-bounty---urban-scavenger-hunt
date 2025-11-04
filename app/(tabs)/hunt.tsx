@@ -212,6 +212,7 @@ export default function HuntScreen() {
     },
     enabled: !!user && !!currentEvent,
     refetchInterval: 30000,
+    staleTime: 0,
   });
   
   useEffect(() => {
@@ -377,10 +378,14 @@ export default function HuntScreen() {
   };
   
   useEffect(() => {
+    if (!user) {
+      setHasTicket(false);
+      return;
+    }
     if (ticketQuery.data) {
       setHasTicket(ticketQuery.data.hasTicket);
     }
-  }, [ticketQuery.data]);
+  }, [ticketQuery.data, user]);
   
 
   
