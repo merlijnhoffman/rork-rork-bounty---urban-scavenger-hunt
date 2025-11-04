@@ -1,24 +1,34 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ScrollView,
+  Modal,
+  TextInput,
+  Alert,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket } from 'lucide-react-native';
+import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Lock } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
+const ADMIN_PASSWORD = 'whereswally2003';
+
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { currentEvent } = useGameStore();
   const { user, signOut } = useAuth();
+  
+  const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>('');
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Fetch ticket data from Supabase
   const ticketQuery = useQuery({
@@ -49,6 +59,30 @@ export default function ProfileScreen() {
   
   const hasTicket = ticketQuery.data?.hasTicket || false;
   const verificationCode = ticketQuery.data?.ticket?.verification_code || null;
+  
+  const handleLongPressStart = () => {
+    longPressTimer.current = setTimeout(() => {
+      setShowPasswordModal(true);
+    }, 10000);
+  };
+  
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+  
+  const handlePasswordSubmit = () => {
+    if (password === ADMIN_PASSWORD) {
+      setShowPasswordModal(false);
+      setPassword('');
+      router.push('/admin');
+    } else {
+      Alert.alert('Access Denied', 'Incorrect password');
+      setPassword('');
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -123,9 +157,13 @@ export default function ProfileScreen() {
       >
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
           <View style={styles.profileHeader}>
-            <View style={styles.avatarContainer}>
+            <Pressable
+              style={styles.avatarContainer}
+              onPressIn={handleLongPressStart}
+              onPressOut={handleLongPressEnd}
+            >
               <User color="#00D4FF" size={32} />
-            </View>
+            </Pressable>
             <Text style={styles.welcomeText}>Welcome back!</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
           </View>
@@ -225,6 +263,54 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       </LinearGradient>
+      
+      <Modal
+        visible={showPasswordModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowPasswordModal(false);
+          setPassword('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Lock color="#FF6B6B" size={48} />
+            <Text style={styles.modalTitle}>Admin Access</Text>
+            <Text style={styles.modalSubtitle}>Enter password to continue</Text>
+            
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              placeholderTextColor="#666"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              autoFocus
+              onSubmitEditing={handlePasswordSubmit}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setPassword('');
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalSubmitButton}
+                onPress={handlePasswordSubmit}
+              >
+                <Text style={styles.modalSubmitText}>Enter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -583,5 +669,73 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFF',
   },
-
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    width: '85%',
+    maxWidth: 400,
+    borderWidth: 2,
+    borderColor: '#FF6B6B',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#FFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 24,
+  },
+  passwordInput: {
+    width: '100%',
+    backgroundColor: '#222',
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#FFF',
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    backgroundColor: '#2A2A2A',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#888',
+  },
+  modalSubmitButton: {
+    flex: 1,
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalSubmitText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFF',
+  },
 });
