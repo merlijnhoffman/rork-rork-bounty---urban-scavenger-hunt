@@ -148,10 +148,6 @@ export default function AdminPanel() {
                     <Text style={styles.eventStatLabel}>Prize</Text>
                     <Text style={styles.eventStatValue}>€{currentEvent.prize}</Text>
                   </View>
-                  <View style={styles.eventStat}>
-                    <Text style={styles.eventStatLabel}>Hunters</Text>
-                    <Text style={styles.eventStatValue}>{currentEvent.registeredPlayers}</Text>
-                  </View>
                 </View>
               </View>
 
