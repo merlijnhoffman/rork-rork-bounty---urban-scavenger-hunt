@@ -840,15 +840,15 @@ export default function HuntScreen() {
 
                   <View style={styles.eventDetails}>
                     <View style={styles.eventRow}>
+                      <Clock color="#FFF" size={20} />
+                      <Text style={styles.eventDate}>Saturday, Jan 18, 2026 • 12:00 PM CET</Text>
+                    </View>
+                    
+                    <View style={styles.eventRow}>
                       <Users color="#FFF" size={20} />
                       <Text style={styles.eventPlayers}>
                         189 hunters registered
                       </Text>
-                    </View>
-                    
-                    <View style={styles.eventRow}>
-                      <Clock color="#FFF" size={20} />
-                      <Text style={styles.eventDate}>Saturday, Jan 18, 2026 • 12:00 PM CET</Text>
                     </View>
                   </View>
 
