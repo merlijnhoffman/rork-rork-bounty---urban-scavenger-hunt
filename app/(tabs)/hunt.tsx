@@ -1070,7 +1070,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   eventDate: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFF',
     marginLeft: 12,
