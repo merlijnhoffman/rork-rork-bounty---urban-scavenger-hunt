@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Send, Radius, Target, AlertCircle, Clock } from 'lucide-react-native';
+import { Shield, Send, Radius, Target, AlertCircle, Clock, Lock, Smartphone } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useGameStore } from '@/store/game-store';
 import { supabase } from '@/lib/supabase';
@@ -20,10 +20,75 @@ export default function AdminPanel() {
   const insets = useSafeAreaInsets();
   const { currentEvent } = useGameStore();
   
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [userInput, setUserInput] = useState<string>('');
+  const [sentCode, setSentCode] = useState<string>('');
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  
   const [clueText, setClueText] = useState<string>('');
   const [clueHint, setClueHint] = useState<string>('');
   const [nextClueOrder, setNextClueOrder] = useState<number>(1);
   const [zoneSize, setZoneSize] = useState<string>('500');
+
+  useEffect(() => {
+    if (expiresAt) {
+      const interval = setInterval(() => {
+        const now = new Date();
+        const diff = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
+        setTimeLeft(diff);
+        
+        if (diff === 0) {
+          setSentCode('');
+          setExpiresAt(null);
+        }
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [expiresAt]);
+
+  const sendSMSMutation = useMutation({
+    mutationFn: async () => {
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-admin-sms`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'send' }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to send SMS');
+      }
+      
+      const data = await response.json();
+      return data;
+    },
+    onSuccess: (data) => {
+      setSentCode(data.code);
+      setExpiresAt(new Date(data.expiresAt));
+      Alert.alert('Success', 'Verification code sent to +31 614829395');
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.message || 'Failed to send verification code');
+    },
+  });
+
+  const handleSendCode = () => {
+    sendSMSMutation.mutate();
+  };
+
+  const handleVerifyCode = () => {
+    if (userInput.trim() === sentCode) {
+      setIsAuthenticated(true);
+      Alert.alert('Success', 'Admin access granted!');
+    } else {
+      Alert.alert('Error', 'Invalid verification code');
+      setUserInput('');
+    }
+  };
 
   const cluesQuery = useQuery({
     queryKey: ['admin-clues', currentEvent?.id],
@@ -113,6 +178,108 @@ export default function AdminPanel() {
   };
 
   const recentClues = cluesQuery.data?.slice(0, 5) || [];
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 60 }]}>
+            <View style={styles.authContainer}>
+              <Lock color="#FF6B6B" size={48} />
+              <Text style={styles.authTitle}>Admin Authentication</Text>
+              <Text style={styles.authSubtitle}>Verify your identity to access the admin panel</Text>
+              
+              <View style={styles.authCard}>
+                <View style={styles.phoneSection}>
+                  <Smartphone color="#00D4FF" size={24} />
+                  <Text style={styles.phoneText}>+31 614829395</Text>
+                </View>
+                
+                {!sentCode ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.sendCodeButton,
+                      sendSMSMutation.isPending && styles.sendCodeButtonDisabled
+                    ]}
+                    onPress={handleSendCode}
+                    disabled={sendSMSMutation.isPending}
+                  >
+                    <Send color="#000" size={20} />
+                    <Text style={styles.sendCodeButtonText}>
+                      {sendSMSMutation.isPending ? 'Sending...' : 'Send Verification Code'}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <>
+                    <View style={styles.timerSection}>
+                      <Clock color="#00D4FF" size={20} />
+                      <Text style={styles.timerText}>
+                        Code expires in {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Enter 6-digit code</Text>
+                      <TextInput
+                        style={styles.codeInput}
+                        placeholder="000000"
+                        placeholderTextColor="#666"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        value={userInput}
+                        onChangeText={setUserInput}
+                        autoFocus
+                      />
+                    </View>
+                    
+                    <TouchableOpacity
+                      style={[
+                        styles.verifyButton,
+                        userInput.length !== 6 && styles.verifyButtonDisabled
+                      ]}
+                      onPress={handleVerifyCode}
+                      disabled={userInput.length !== 6}
+                    >
+                      <Shield color={userInput.length === 6 ? '#000' : '#666'} size={20} />
+                      <Text style={[
+                        styles.verifyButtonText,
+                        userInput.length !== 6 && styles.verifyButtonTextDisabled
+                      ]}>
+                        Verify & Access Admin
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.resendButton}
+                      onPress={handleSendCode}
+                      disabled={timeLeft > 240}
+                    >
+                      <Text style={[
+                        styles.resendButtonText,
+                        timeLeft > 240 && styles.resendButtonTextDisabled
+                      ]}>
+                        Resend Code
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+              
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <Text style={styles.backButtonText}>Go Back</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </LinearGradient>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -591,5 +758,126 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FF6B6B',
+  },
+  authContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  authTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFF',
+    marginTop: 24,
+    textAlign: 'center',
+  },
+  authSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  authCard: {
+    backgroundColor: '#222',
+    borderRadius: 16,
+    padding: 24,
+    marginTop: 40,
+    width: '100%',
+    maxWidth: 400,
+  },
+  phoneSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    gap: 12,
+  },
+  phoneText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#00D4FF',
+    letterSpacing: 1,
+  },
+  sendCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00D4FF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  sendCodeButtonDisabled: {
+    backgroundColor: '#333',
+    opacity: 0.6,
+  },
+  sendCodeButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+  },
+  timerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 24,
+  },
+  timerText: {
+    fontSize: 14,
+    color: '#00D4FF',
+    fontWeight: '600',
+  },
+  codeInput: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 2,
+    borderColor: '#00D4FF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 24,
+    color: '#FFF',
+    textAlign: 'center',
+    fontWeight: '700',
+    letterSpacing: 4,
+  },
+  verifyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00D4FF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 16,
+  },
+  verifyButtonDisabled: {
+    backgroundColor: '#333',
+  },
+  verifyButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+  },
+  verifyButtonTextDisabled: {
+    color: '#666',
+  },
+  resendButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  resendButtonText: {
+    fontSize: 14,
+    color: '#00D4FF',
+    fontWeight: '600',
+  },
+  resendButtonTextDisabled: {
+    color: '#666',
   },
 });
