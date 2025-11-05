@@ -113,7 +113,7 @@ export default function HuntScreen() {
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
       
       if (days > 0) {
-        setTimeUntilEvent(`${days}d ${hours}h ${minutes}m`);
+        setTimeUntilEvent(`${days}d ${hours}h ${minutes}m ${seconds}s`);
       } else if (hours > 0) {
         setTimeUntilEvent(`${hours}h ${minutes}m ${seconds}s`);
       } else {
