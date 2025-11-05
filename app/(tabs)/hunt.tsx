@@ -97,11 +97,9 @@ export default function HuntScreen() {
   }, [slideUpAnim, opacityAnim]);
   
   useEffect(() => {
-    if (!currentEvent) return;
-    
     const updateCountdown = () => {
       const now = new Date();
-      const eventStart = new Date(currentEvent.startTime);
+      const eventStart = new Date('2026-01-18T12:00:00');
       const diff = eventStart.getTime() - now.getTime();
       
       if (diff <= 0) {
@@ -127,7 +125,7 @@ export default function HuntScreen() {
     const interval = setInterval(updateCountdown, 1000);
     
     return () => clearInterval(interval);
-  }, [currentEvent]);
+  }, []);
   
   useEffect(() => {
     const requestNotificationPermissions = async () => {
@@ -836,7 +834,7 @@ export default function HuntScreen() {
                   <View style={styles.eventDetails}>
                     <View style={styles.eventRow}>
                       <Clock color="#FFF" size={20} />
-                      <Text style={styles.eventDate}>Saturday, Jan 18, 2025 • 3:00 PM CET</Text>
+                      <Text style={styles.eventDate}>Saturday, Jan 18, 2026 • 12:00 PM CET</Text>
                     </View>
                     
                     <View style={styles.eventRow}>
@@ -1640,6 +1638,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
+    marginBottom: 16,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#00D4FF',
