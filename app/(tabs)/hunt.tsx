@@ -8,6 +8,7 @@ import {
   Animated,
   Platform as RNPlatform,
   Alert,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -780,6 +781,10 @@ export default function HuntScreen() {
                 end={{ x: 1, y: 1 }}
                 style={styles.eventGradient}
               >
+                  <Image
+                    source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/bqrl5omw96w9h49ndmfvc' }}
+                    style={styles.backgroundImage}
+                  />
                   <View style={styles.eventHeader}>
                     <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
                     <View style={styles.prizeContainer}>
@@ -974,6 +979,18 @@ const styles = StyleSheet.create({
   },
   eventGradient: {
     padding: 24,
+    position: 'relative' as const,
+    overflow: 'hidden',
+  },
+  backgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.15,
   },
   eventHeader: {
     flexDirection: 'row',
