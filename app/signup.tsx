@@ -17,9 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Mail, Phone, Lock, Eye, EyeOff, CheckCircle, ChevronDown, Search } from 'lucide-react-native';
+import { Phone, ChevronDown, Search } from 'lucide-react-native';
 
-type SignupStep = 'email' | 'account';
+type SignupStep = 'phone' | 'verify';
 
 type CountryCode = {
   code: string;
@@ -70,24 +70,17 @@ const COUNTRY_CODES: CountryCode[] = [
 ];
 
 export default function SignupScreen() {
-  const [step, setStep] = useState<SignupStep>('email');
-  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(COUNTRY_CODES[5]);
+  const [step, setStep] = useState<SignupStep>('phone');
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(COUNTRY_CODES[0]);
   const [showCountryPicker, setShowCountryPicker] = useState<boolean>(false);
   const [countrySearch, setCountrySearch] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [verificationCode, setVerificationCode] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
-  const { signUp } = useAuth();
+  const { signUp, verifyPhone } = useAuth();
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+
 
   const formatPhoneNumber = (phone: string, dialCode: string): string => {
     const cleaned = phone.replace(/\D/g, '');
@@ -99,58 +92,11 @@ export default function SignupScreen() {
     return cleaned.length >= 10 && cleaned.length <= 15;
   };
 
-  const validateForm = () => {
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
-      return false;
-    }
 
-    if (!validateEmail(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return false;
-    }
 
-    if (!phoneNumber.trim()) {
-      Alert.alert('Error', 'Please enter your phone number');
-      return false;
-    }
-
-    if (!validatePhoneNumber(phoneNumber.trim())) {
-      Alert.alert('Error', 'Please enter a valid phone number (10-15 digits)');
-      return false;
-    }
-
-    if (!password.trim()) {
-      Alert.alert('Error', 'Please enter a password');
-      return false;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
-      return false;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleCheckEmailAndPhone = async () => {
-    console.log('Checking email and phone');
+  const handleSendCode = async () => {
+    console.log('Sending verification code');
     
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
-      return;
-    }
-
-    if (!validateEmail(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
-    }
-
     if (!phoneNumber.trim()) {
       Alert.alert('Error', 'Please enter your phone number');
       return;
@@ -165,45 +111,32 @@ export default function SignupScreen() {
       setLoading(true);
       const formattedPhone = formatPhoneNumber(phoneNumber.trim(), selectedCountry.dialCode);
       
-      console.log('Checking if phone number or email already exists');
+      console.log('Checking if phone number already exists');
 
       const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
-        .select('phone_number, email')
-        .or(`phone_number.eq.${formattedPhone},email.eq.${email.trim().toLowerCase()}`)
+        .select('phone_number')
+        .eq('phone_number', formattedPhone)
         .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking credentials:', JSON.stringify(checkError));
-        Alert.alert('Error', 'Unable to verify credentials. Please try again.');
+        console.error('Error checking phone:', JSON.stringify(checkError));
+        Alert.alert('Error', 'Unable to verify phone number. Please try again.');
         return;
       }
 
       if (existingProfile) {
-        console.log('Credentials already registered');
-        const isPhoneDuplicate = existingProfile.phone_number === formattedPhone;
-        const isEmailDuplicate = existingProfile.email === email.trim().toLowerCase();
-        
-        let message = 'This ';
-        if (isPhoneDuplicate && isEmailDuplicate) {
-          message += 'email and phone number are';
-        } else if (isPhoneDuplicate) {
-          message += 'phone number is';
-        } else {
-          message += 'email is';
-        }
-        message += ' already linked to an account. Please sign in instead or use different credentials.';
-        
+        console.log('Phone number already registered');
         Alert.alert(
-          'Credentials Already Registered',
-          message,
+          'Phone Already Registered',
+          'This phone number is already linked to an account. Please sign in instead.',
           [
             {
               text: 'Sign In',
               onPress: () => router.push('/login' as any),
             },
             {
-              text: 'Try Different Credentials',
+              text: 'Try Different Number',
               style: 'cancel',
             },
           ]
@@ -211,10 +144,17 @@ export default function SignupScreen() {
         return;
       }
       
-      console.log('Credentials available, proceeding to account setup');
-      setStep('account');
+      console.log('Sending OTP to:', formattedPhone);
+      const result = await signUp(formattedPhone);
+      
+      if (result.success) {
+        console.log('OTP sent successfully');
+        setStep('verify');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to send verification code');
+      }
     } catch (err) {
-      console.error('Unexpected error in handleCheckEmailAndPhone:', err);
+      console.error('Unexpected error in handleSendCode:', err);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -223,29 +163,35 @@ export default function SignupScreen() {
 
 
 
-  const handleSignup = async () => {
-    if (!validateForm()) {
+  const handleVerifyCode = async () => {
+    if (!verificationCode.trim()) {
+      Alert.alert('Error', 'Please enter the verification code');
+      return;
+    }
+
+    if (verificationCode.trim().length !== 6) {
+      Alert.alert('Error', 'Please enter a valid 6-digit code');
       return;
     }
 
     setLoading(true);
     const formattedPhone = formatPhoneNumber(phoneNumber.trim(), selectedCountry.dialCode);
-    const result = await signUp(email.trim().toLowerCase(), password, formattedPhone);
+    const result = await verifyPhone(formattedPhone, verificationCode.trim());
     setLoading(false);
 
     if (result.success) {
       Alert.alert(
         'Success',
-        'Account created successfully! Please check your email to verify your account.',
+        'Account created successfully!',
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/login' as any),
+            onPress: () => router.replace('/' as any),
           },
         ]
       );
     } else {
-      Alert.alert('Signup Failed', result.error || 'An error occurred');
+      Alert.alert('Verification Failed', result.error || 'Invalid verification code');
     }
   };
 
@@ -256,28 +202,14 @@ export default function SignupScreen() {
       country.code.toLowerCase().includes(countrySearch.toLowerCase())
   );
 
-  const renderEmailStep = () => (
+  const renderPhoneStep = () => (
     <>
       <View style={styles.header}>
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Enter your details to get started</Text>
+        <Text style={styles.subtitle}>Enter your phone number to get started</Text>
       </View>
 
       <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <Mail size={20} color="#666" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Email address"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            testID="email-input-step1"
-          />
-        </View>
-
         <View style={styles.phoneInputRow}>
           <TouchableOpacity
             style={styles.countrySelector}
@@ -305,20 +237,20 @@ export default function SignupScreen() {
 
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
-            We&apos;ll verify these details are not already in use.
+            We&apos;ll send you a 6-digit verification code via SMS.
           </Text>
         </View>
 
         <TouchableOpacity
           style={styles.signupButton}
-          onPress={handleCheckEmailAndPhone}
+          onPress={handleSendCode}
           disabled={loading}
-          testID="continue-button"
+          testID="send-code-button"
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.signupButtonText}>Continue</Text>
+            <Text style={styles.signupButtonText}>Send Verification Code</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -327,100 +259,52 @@ export default function SignupScreen() {
 
 
 
-  const renderAccountStep = () => (
+  const renderVerifyStep = () => (
     <>
       <View style={styles.header}>
-        <Text style={styles.title}>Set Your Password</Text>
-        <Text style={styles.subtitle}>Create a secure password for your account</Text>
+        <Text style={styles.title}>Verify Your Phone</Text>
+        <Text style={styles.subtitle}>Enter the 6-digit code sent to {selectedCountry.dialCode} {phoneNumber}</Text>
       </View>
 
       <View style={styles.form}>
         <View style={styles.inputContainer}>
-          <Mail size={20} color="#34C759" style={styles.inputIcon} />
           <TextInput
-            style={[styles.input, styles.disabledInput]}
-            value={email}
-            editable={false}
-            testID="email-display"
+            style={styles.verificationInput}
+            placeholder="000000"
+            value={verificationCode}
+            onChangeText={setVerificationCode}
+            keyboardType="number-pad"
+            maxLength={6}
+            testID="verification-code-input"
           />
-          <CheckCircle size={20} color="#34C759" />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Phone size={20} color="#34C759" style={styles.inputIcon} />
-          <TextInput
-            style={[styles.input, styles.disabledInput]}
-            value={`${selectedCountry.dialCode} ${phoneNumber}`}
-            editable={false}
-            testID="phone-display"
-          />
-          <CheckCircle size={20} color="#34C759" />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Lock size={20} color="#666" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            autoComplete="new-password"
-            testID="password-input"
-          />
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.eyeIcon}
-          >
-            {showPassword ? (
-              <EyeOff size={20} color="#666" />
-            ) : (
-              <Eye size={20} color="#666" />
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Lock size={20} color="#666" style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={!showConfirmPassword}
-            autoComplete="new-password"
-            testID="confirm-password-input"
-          />
-          <TouchableOpacity
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-            style={styles.eyeIcon}
-          >
-            {showConfirmPassword ? (
-              <EyeOff size={20} color="#666" />
-            ) : (
-              <Eye size={20} color="#666" />
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.termsContainer}>
-          <Text style={styles.termsText}>
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
-            Only one account per person is allowed.
-          </Text>
         </View>
 
         <TouchableOpacity
           style={styles.signupButton}
-          onPress={handleSignup}
+          onPress={handleVerifyCode}
           disabled={loading}
-          testID="signup-button"
+          testID="verify-button"
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.signupButtonText}>Create Account</Text>
+            <Text style={styles.signupButtonText}>Verify & Create Account</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.resendButton}
+          onPress={handleSendCode}
+          disabled={loading}
+        >
+          <Text style={styles.resendButtonText}>Resend Code</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setStep('phone')}
+        >
+          <Text style={styles.backButtonText}>Change Phone Number</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -433,8 +317,8 @@ export default function SignupScreen() {
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {step === 'email' && renderEmailStep()}
-          {step === 'account' && renderAccountStep()}
+          {step === 'phone' && renderPhoneStep()}
+          {step === 'verify' && renderVerifyStep()}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -633,6 +517,24 @@ const styles = StyleSheet.create({
   },
   disabledInput: {
     color: '#999',
+  },
+  verificationInput: {
+    flex: 1,
+    paddingVertical: 16,
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    textAlign: 'center',
+    letterSpacing: 8,
+  },
+  resendButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  resendButtonText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   phoneInputRow: {
     flexDirection: 'row',

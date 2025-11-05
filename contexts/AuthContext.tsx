@@ -9,10 +9,10 @@ export interface AuthState {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, phoneNumber: string) => Promise<{ success: boolean; error?: string }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>;
+  verifyPhone: (phoneNumber: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (phoneNumber: string, code: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState => {
@@ -49,101 +49,91 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
     };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, phoneNumber: string) => {
+  const signUp = useCallback(async (phoneNumber: string) => {
     try {
-      setLoading(true);
+      console.log('Sending OTP to:', phoneNumber);
       
-      console.log('Attempting signup with:', { email, phoneNumber });
-      
-      const { data, error } = await supabase.auth.signUp({
-        email: email.toLowerCase(),
-        password,
-        options: {
-          data: {
-            phone_number: phoneNumber,
-          },
-        },
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: phoneNumber,
       });
 
       if (error) {
-        console.error('Sign up error:', error);
+        console.error('OTP send error:', error);
         let errorMessage = error.message;
         
-        if (error.message.includes('User already registered')) {
-          errorMessage = 'An account with this email already exists. Please sign in instead.';
-        } else if (error.message.includes('phone')) {
+        if (error.message.includes('not a valid phone number')) {
           errorMessage = 'Invalid phone number format. Please use format: +1234567890';
+        } else if (error.message.includes('sms_send_failed')) {
+          errorMessage = 'Failed to send SMS. Please check your phone number and try again.';
+        }
+        
+        return { success: false, error: errorMessage };
+      }
+
+      console.log('OTP sent successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected OTP send error:', error);
+      return { success: false, error: 'An unexpected error occurred. Please try again.' };
+    }
+  }, []);
+
+  const verifyPhone = useCallback(async (phoneNumber: string, code: string) => {
+    try {
+      setLoading(true);
+      console.log('Verifying OTP for:', phoneNumber);
+      
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: phoneNumber,
+        token: code,
+        type: 'sms',
+      });
+
+      if (error) {
+        console.error('OTP verification error:', error);
+        let errorMessage = error.message;
+        
+        if (error.message.includes('expired')) {
+          errorMessage = 'Verification code has expired. Please request a new one.';
+        } else if (error.message.includes('invalid')) {
+          errorMessage = 'Invalid verification code. Please try again.';
         }
         
         return { success: false, error: errorMessage };
       }
 
       if (data.user) {
-        console.log('User created successfully:', data.user.id);
+        console.log('User verified successfully:', data.user.id);
         
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
+          .upsert({
             id: data.user.id,
-            email: email.toLowerCase(),
             phone_number: phoneNumber,
+          }, {
+            onConflict: 'id',
           });
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          
-          if (profileError.message.includes('duplicate key')) {
-            return { success: true };
-          }
-          
           return { success: false, error: 'Account created but profile setup failed. Please contact support.' };
         }
         
-        console.log('Profile created successfully');
+        console.log('Profile created/updated successfully');
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Unexpected sign up error:', error);
+      console.error('Unexpected verification error:', error);
       return { success: false, error: 'An unexpected error occurred. Please try again.' };
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase(),
-        password,
-      });
-
-      if (error) {
-        console.error('Sign in error:', error);
-        let errorMessage = error.message;
-        
-        if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
-        }
-        
-        return { success: false, error: errorMessage };
-      }
-
-      if (!data.user) {
-        return { success: false, error: 'Login failed. Please try again.' };
-      }
-
-      console.log('Sign in successful for user:', data.user.id);
-      return { success: true };
-    } catch (error) {
-      console.error('Unexpected sign in error:', error);
-      return { success: false, error: 'An unexpected error occurred' };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const signIn = useCallback(async (phoneNumber: string, code: string) => {
+    return verifyPhone(phoneNumber, code);
+  }, [verifyPhone]);
 
 
 
@@ -168,39 +158,17 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
     }
   }, []);
 
-  const resetPassword = useCallback(async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
-        redirectTo: 'https://your-app-url.com/reset-password',
-      });
-      
-      if (error) {
-        console.error('Password reset error:', error);
-        let errorMessage = error.message;
-        
-        if (error.message.includes('invalid format')) {
-          errorMessage = 'Please enter a valid email address.';
-        }
-        
-        return { success: false, error: errorMessage };
-      }
 
-      return { success: true };
-    } catch (error) {
-      console.error('Unexpected password reset error:', error);
-      return { success: false, error: 'An unexpected error occurred' };
-    }
-  }, []);
 
   return useMemo(() => ({
     user,
     session,
     loading,
     signUp,
+    verifyPhone,
     signIn,
     signOut,
-    resetPassword,
-  }), [user, session, loading, signUp, signIn, signOut, resetPassword]);
+  }), [user, session, loading, signUp, verifyPhone, signIn, signOut]);
 });
 
 // Safe wrapper hook that ensures the context is available
@@ -213,9 +181,9 @@ export function useAuth() {
       session: null,
       loading: false,
       signUp: async () => ({ success: false, error: 'Auth context not available' }),
+      verifyPhone: async () => ({ success: false, error: 'Auth context not available' }),
       signIn: async () => ({ success: false, error: 'Auth context not available' }),
       signOut: async () => {},
-      resetPassword: async () => ({ success: false, error: 'Auth context not available' }),
     };
   }
   return context;
