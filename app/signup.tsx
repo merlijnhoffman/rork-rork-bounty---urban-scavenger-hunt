@@ -38,7 +38,13 @@ export default function SignupScreen() {
   };
 
   const formatPhoneNumber = (phone: string): string => {
-    const cleaned = phone.replace(/\D/g, '');
+    const trimmed = phone.trim();
+    
+    if (trimmed.startsWith('+')) {
+      return trimmed;
+    }
+    
+    const cleaned = trimmed.replace(/\D/g, '');
     
     if (cleaned.startsWith('1') && cleaned.length === 11) {
       return `+${cleaned}`;
@@ -46,10 +52,6 @@ export default function SignupScreen() {
     
     if (cleaned.length === 10) {
       return `+1${cleaned}`;
-    }
-    
-    if (phone.startsWith('+')) {
-      return phone;
     }
     
     return `+${cleaned}`;
