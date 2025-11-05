@@ -122,7 +122,7 @@ export default function SignupScreen() {
       .maybeSingle();
 
     if (checkError) {
-      console.error('Error checking phone number:', checkError.message || checkError);
+      console.error('Error checking phone number:', checkError);
       setLoading(false);
       Alert.alert('Error', checkError.message || 'Unable to verify phone number. Please try again.');
       return;
