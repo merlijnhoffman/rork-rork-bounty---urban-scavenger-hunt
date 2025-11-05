@@ -140,6 +140,8 @@ export default function SignupScreen() {
   };
 
   const handleSendOTP = async () => {
+    console.log('handleSendOTP called');
+    
     if (!phoneNumber.trim()) {
       Alert.alert('Error', 'Please enter your phone number');
       return;
@@ -150,60 +152,64 @@ export default function SignupScreen() {
       return;
     }
 
-    setLoading(true);
-    const formattedPhone = formatPhoneNumber(phoneNumber.trim(), selectedCountry.dialCode);
-    
-    console.log('Checking if phone number already exists:', formattedPhone);
+    try {
+      setLoading(true);
+      const formattedPhone = formatPhoneNumber(phoneNumber.trim(), selectedCountry.dialCode);
+      
+      console.log('Checking if phone number already exists:', formattedPhone);
 
-    const { data: existingProfile, error: checkError } = await supabase
-      .from('profiles')
-      .select('phone_number')
-      .eq('phone_number', formattedPhone)
-      .maybeSingle();
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('phone_number')
+        .eq('phone_number', formattedPhone)
+        .maybeSingle();
 
-    if (checkError) {
-      console.error('Error checking phone number:', checkError.message || checkError);
+      if (checkError) {
+        console.error('Error checking phone number:', JSON.stringify(checkError));
+        Alert.alert('Error', checkError.message || 'Unable to verify phone number. Please try again.');
+        return;
+      }
+
+      if (existingProfile) {
+        console.log('Phone number already registered');
+        Alert.alert(
+          'Phone Number Already Registered',
+          'This phone number is already linked to an account. Please sign in instead or use a different phone number.',
+          [
+            {
+              text: 'Sign In',
+              onPress: () => router.push('/login' as any),
+            },
+            {
+              text: 'Try Different Number',
+              style: 'cancel',
+            },
+          ]
+        );
+        return;
+      }
+      
+      console.log('Sending OTP to:', formattedPhone);
+
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: formattedPhone,
+      });
+
+      if (error) {
+        console.error('OTP send error:', JSON.stringify(error));
+        Alert.alert('Error', error.message || 'Failed to send verification code');
+        return;
+      }
+
+      console.log('OTP sent successfully');
+      Alert.alert('Success', 'Verification code sent to your phone!');
+      setStep('verify');
+    } catch (err) {
+      console.error('Unexpected error in handleSendOTP:', err);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
       setLoading(false);
-      Alert.alert('Error', checkError.message || 'Unable to verify phone number. Please try again.');
-      return;
     }
-
-    if (existingProfile) {
-      console.log('Phone number already registered');
-      setLoading(false);
-      Alert.alert(
-        'Phone Number Already Registered',
-        'This phone number is already linked to an account. Please sign in instead or use a different phone number.',
-        [
-          {
-            text: 'Sign In',
-            onPress: () => router.push('/login' as any),
-          },
-          {
-            text: 'Try Different Number',
-            style: 'cancel',
-          },
-        ]
-      );
-      return;
-    }
-    
-    console.log('Sending OTP to:', formattedPhone);
-
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: formattedPhone,
-    });
-
-    setLoading(false);
-
-    if (error) {
-      console.error('OTP send error:', error);
-      Alert.alert('Error', error.message || 'Failed to send verification code');
-      return;
-    }
-
-    Alert.alert('Success', 'Verification code sent to your phone!');
-    setStep('verify');
   };
 
   const handleVerifyOTP = async () => {
