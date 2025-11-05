@@ -782,7 +782,7 @@ export default function HuntScreen() {
                 style={styles.eventGradient}
               >
                   <Image
-                    source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/bqrl5omw96w9h49ndmfvc' }}
+                    source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/qsqldepkdx2ld5bwrcdk' }}
                     style={styles.backgroundImage}
                   />
                   <View style={styles.eventHeader}>
