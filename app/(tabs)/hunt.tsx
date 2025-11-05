@@ -1651,7 +1651,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   countdownTime: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: '900',
     color: '#FFF',
     letterSpacing: 1,
