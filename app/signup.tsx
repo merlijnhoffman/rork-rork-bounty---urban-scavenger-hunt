@@ -91,7 +91,18 @@ export default function SignupScreen() {
           });
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
+          console.error('Profile creation error:', JSON.stringify(profileError, null, 2));
+          Alert.alert(
+            'Warning',
+            'Account created but profile setup encountered an issue. You may need to update your profile.',
+            [
+              {
+                text: 'OK',
+                onPress: () => router.replace('/' as any),
+              },
+            ]
+          );
+          return;
         }
 
         Alert.alert(
