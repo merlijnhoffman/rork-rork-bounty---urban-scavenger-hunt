@@ -831,6 +831,13 @@ export default function HuntScreen() {
                     <Text style={styles.cityCountry}>Netherlands</Text>
                   </View>
 
+                  {timeUntilEvent && (
+                    <View style={styles.countdownContainer}>
+                      <Text style={styles.countdownLabel}>STARTS IN</Text>
+                      <Text style={styles.countdownTime}>{timeUntilEvent}</Text>
+                    </View>
+                  )}
+
                   <View style={styles.eventDetails}>
                     <View style={styles.eventRow}>
                       <Clock color="#FFF" size={20} />
@@ -844,13 +851,6 @@ export default function HuntScreen() {
                       </Text>
                     </View>
                   </View>
-                  
-                  {timeUntilEvent && (
-                    <View style={styles.countdownContainer}>
-                      <Text style={styles.countdownLabel}>STARTS IN</Text>
-                      <Text style={styles.countdownTime}>{timeUntilEvent}</Text>
-                    </View>
-                  )}
 
                 {!isLoggedIn && (
                   <TouchableOpacity 
@@ -1059,6 +1059,7 @@ const styles = StyleSheet.create({
   },
   eventDetails: {
     marginBottom: 24,
+    marginTop: 8,
   },
   eventRow: {
     flexDirection: 'row',
@@ -1638,7 +1639,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
-    marginBottom: 16,
+    marginBottom: 0,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#00D4FF',
