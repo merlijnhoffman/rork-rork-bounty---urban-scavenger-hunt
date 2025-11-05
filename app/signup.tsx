@@ -113,6 +113,41 @@ export default function SignupScreen() {
     setLoading(true);
     const formattedPhone = formatPhoneNumber(phoneNumber.trim());
     
+    console.log('Checking if phone number already exists:', formattedPhone);
+
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('phone_number')
+      .eq('phone_number', formattedPhone)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking phone number:', checkError);
+      setLoading(false);
+      Alert.alert('Error', 'Unable to verify phone number. Please try again.');
+      return;
+    }
+
+    if (existingProfile) {
+      console.log('Phone number already registered');
+      setLoading(false);
+      Alert.alert(
+        'Phone Number Already Registered',
+        'This phone number is already linked to an account. Please sign in instead or use a different phone number.',
+        [
+          {
+            text: 'Sign In',
+            onPress: () => router.push('/login' as any),
+          },
+          {
+            text: 'Try Different Number',
+            style: 'cancel',
+          },
+        ]
+      );
+      return;
+    }
+    
     console.log('Sending OTP to:', formattedPhone);
 
     const { error } = await supabase.auth.signInWithOtp({
