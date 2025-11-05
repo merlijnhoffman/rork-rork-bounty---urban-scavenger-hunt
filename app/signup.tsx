@@ -10,151 +10,103 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Modal,
-  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Phone, ChevronDown, Search } from 'lucide-react-native';
-
-type SignupStep = 'phone' | 'verify';
-
-type CountryCode = {
-  code: string;
-  name: string;
-  flag: string;
-  dialCode: string;
-};
-
-const COUNTRY_CODES: CountryCode[] = [
-  { code: 'US', name: 'United States', flag: '🇺🇸', dialCode: '+1' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', dialCode: '+44' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', dialCode: '+1' },
-  { code: 'AU', name: 'Australia', flag: '🇦🇺', dialCode: '+61' },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿', dialCode: '+64' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱', dialCode: '+31' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪', dialCode: '+49' },
-  { code: 'FR', name: 'France', flag: '🇫🇷', dialCode: '+33' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸', dialCode: '+34' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹', dialCode: '+39' },
-  { code: 'PT', name: 'Portugal', flag: '🇵🇹', dialCode: '+351' },
-  { code: 'BE', name: 'Belgium', flag: '🇧🇪', dialCode: '+32' },
-  { code: 'CH', name: 'Switzerland', flag: '🇨🇭', dialCode: '+41' },
-  { code: 'AT', name: 'Austria', flag: '🇦🇹', dialCode: '+43' },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪', dialCode: '+46' },
-  { code: 'NO', name: 'Norway', flag: '🇳🇴', dialCode: '+47' },
-  { code: 'DK', name: 'Denmark', flag: '🇩🇰', dialCode: '+45' },
-  { code: 'FI', name: 'Finland', flag: '🇫🇮', dialCode: '+358' },
-  { code: 'PL', name: 'Poland', flag: '🇵🇱', dialCode: '+48' },
-  { code: 'IE', name: 'Ireland', flag: '🇮🇪', dialCode: '+353' },
-  { code: 'IN', name: 'India', flag: '🇮🇳', dialCode: '+91' },
-  { code: 'CN', name: 'China', flag: '🇨🇳', dialCode: '+86' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵', dialCode: '+81' },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷', dialCode: '+82' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬', dialCode: '+65' },
-  { code: 'MY', name: 'Malaysia', flag: '🇲🇾', dialCode: '+60' },
-  { code: 'TH', name: 'Thailand', flag: '🇹🇭', dialCode: '+66' },
-  { code: 'ID', name: 'Indonesia', flag: '🇮🇩', dialCode: '+62' },
-  { code: 'PH', name: 'Philippines', flag: '🇵🇭', dialCode: '+63' },
-  { code: 'VN', name: 'Vietnam', flag: '🇻🇳', dialCode: '+84' },
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', dialCode: '+971' },
-  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦', dialCode: '+966' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦', dialCode: '+27' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷', dialCode: '+55' },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽', dialCode: '+52' },
-  { code: 'AR', name: 'Argentina', flag: '🇦🇷', dialCode: '+54' },
-  { code: 'CL', name: 'Chile', flag: '🇨🇱', dialCode: '+56' },
-  { code: 'CO', name: 'Colombia', flag: '🇨🇴', dialCode: '+57' },
-];
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 
 export default function SignupScreen() {
-  const [step, setStep] = useState<SignupStep>('phone');
-  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(COUNTRY_CODES[0]);
-  const [showCountryPicker, setShowCountryPicker] = useState<boolean>(false);
-  const [countrySearch, setCountrySearch] = useState<string>('');
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const [verificationCode, setVerificationCode] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const { signUp, verifyPhone } = useAuth();
 
 
-
-  const formatPhoneNumber = (phone: string, dialCode: string): string => {
-    const cleaned = phone.replace(/\D/g, '');
-    return `${dialCode}${cleaned}`;
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
-  const validatePhoneNumber = (phone: string): boolean => {
-    const cleaned = phone.replace(/\D/g, '');
-    return cleaned.length >= 10 && cleaned.length <= 15;
-  };
-
-
-
-  const handleSendCode = async () => {
-    console.log('Sending verification code');
-    
-    if (!phoneNumber.trim()) {
-      Alert.alert('Error', 'Please enter your phone number');
+  const handleSignUp = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email');
       return;
     }
 
-    if (!validatePhoneNumber(phoneNumber.trim())) {
-      Alert.alert('Error', 'Please enter a valid phone number (10-15 digits)');
+    if (!validateEmail(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    if (!password.trim()) {
+      Alert.alert('Error', 'Please enter a password');
+      return;
+    }
+
+    if (password.trim().length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
     try {
       setLoading(true);
-      const formattedPhone = formatPhoneNumber(phoneNumber.trim(), selectedCountry.dialCode);
-      
-      console.log('Checking if phone number already exists');
+      console.log('Signing up with email:', email);
 
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('profiles')
-        .select('phone_number')
-        .eq('phone_number', formattedPhone)
-        .maybeSingle();
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: password.trim(),
+      });
 
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error('Error checking phone:', JSON.stringify(checkError));
-        Alert.alert('Error', 'Unable to verify phone number. Please try again.');
+      if (error) {
+        console.error('Sign up error:', error);
+        let errorMessage = error.message;
+        
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'This email is already registered. Please sign in instead.';
+        }
+        
+        Alert.alert('Sign Up Failed', errorMessage);
         return;
       }
 
-      if (existingProfile) {
-        console.log('Phone number already registered');
+      if (data.user) {
+        console.log('User created successfully:', data.user.id);
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: email.trim(),
+          }, {
+            onConflict: 'id',
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+        }
+
         Alert.alert(
-          'Phone Already Registered',
-          'This phone number is already linked to an account. Please sign in instead.',
+          'Success',
+          'Account created successfully!',
           [
             {
-              text: 'Sign In',
-              onPress: () => router.push('/login' as any),
-            },
-            {
-              text: 'Try Different Number',
-              style: 'cancel',
+              text: 'OK',
+              onPress: () => router.replace('/' as any),
             },
           ]
         );
-        return;
       }
-      
-      console.log('Sending OTP to:', formattedPhone);
-      const result = await signUp(formattedPhone);
-      
-      if (result.success) {
-        console.log('OTP sent successfully');
-        setStep('verify');
-      } else {
-        Alert.alert('Error', result.error || 'Failed to send verification code');
-      }
-    } catch (err) {
-      console.error('Unexpected error in handleSendCode:', err);
+    } catch (error) {
+      console.error('Unexpected sign up error:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -163,153 +115,6 @@ export default function SignupScreen() {
 
 
 
-  const handleVerifyCode = async () => {
-    if (!verificationCode.trim()) {
-      Alert.alert('Error', 'Please enter the verification code');
-      return;
-    }
-
-    if (verificationCode.trim().length !== 6) {
-      Alert.alert('Error', 'Please enter a valid 6-digit code');
-      return;
-    }
-
-    setLoading(true);
-    const formattedPhone = formatPhoneNumber(phoneNumber.trim(), selectedCountry.dialCode);
-    const result = await verifyPhone(formattedPhone, verificationCode.trim());
-    setLoading(false);
-
-    if (result.success) {
-      Alert.alert(
-        'Success',
-        'Account created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/' as any),
-          },
-        ]
-      );
-    } else {
-      Alert.alert('Verification Failed', result.error || 'Invalid verification code');
-    }
-  };
-
-  const filteredCountries = COUNTRY_CODES.filter(
-    (country) =>
-      country.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
-      country.dialCode.includes(countrySearch) ||
-      country.code.toLowerCase().includes(countrySearch.toLowerCase())
-  );
-
-  const renderPhoneStep = () => (
-    <>
-      <View style={styles.header}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Enter your phone number to get started</Text>
-      </View>
-
-      <View style={styles.form}>
-        <View style={styles.phoneInputRow}>
-          <TouchableOpacity
-            style={styles.countrySelector}
-            onPress={() => setShowCountryPicker(true)}
-            testID="country-selector"
-          >
-            <Text style={styles.flagText}>{selectedCountry.flag}</Text>
-            <Text style={styles.dialCodeText}>{selectedCountry.dialCode}</Text>
-            <ChevronDown size={16} color="#666" />
-          </TouchableOpacity>
-
-          <View style={styles.phoneInputContainer}>
-            <Phone size={20} color="#666" style={styles.inputIcon} />
-            <TextInput
-              style={styles.phoneInput}
-              placeholder="Phone number"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              testID="phone-input"
-            />
-          </View>
-        </View>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            We&apos;ll send you a 6-digit verification code via SMS.
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.signupButton}
-          onPress={handleSendCode}
-          disabled={loading}
-          testID="send-code-button"
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.signupButtonText}>Send Verification Code</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </>
-  );
-
-
-
-  const renderVerifyStep = () => (
-    <>
-      <View style={styles.header}>
-        <Text style={styles.title}>Verify Your Phone</Text>
-        <Text style={styles.subtitle}>Enter the 6-digit code sent to {selectedCountry.dialCode} {phoneNumber}</Text>
-      </View>
-
-      <View style={styles.form}>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.verificationInput}
-            placeholder="000000"
-            value={verificationCode}
-            onChangeText={setVerificationCode}
-            keyboardType="number-pad"
-            maxLength={6}
-            testID="verification-code-input"
-          />
-        </View>
-
-        <TouchableOpacity
-          style={styles.signupButton}
-          onPress={handleVerifyCode}
-          disabled={loading}
-          testID="verify-button"
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.signupButtonText}>Verify & Create Account</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.resendButton}
-          onPress={handleSendCode}
-          disabled={loading}
-        >
-          <Text style={styles.resendButtonText}>Resend Code</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setStep('phone')}
-        >
-          <Text style={styles.backButtonText}>Change Phone Number</Text>
-        </TouchableOpacity>
-      </View>
-    </>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -317,8 +122,89 @@ export default function SignupScreen() {
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {step === 'phone' && renderPhoneStep()}
-          {step === 'verify' && renderVerifyStep()}
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Enter your details to get started</Text>
+          </View>
+
+          <View style={styles.form}>
+            <View style={styles.inputContainer}>
+              <Mail size={20} color="#666" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                testID="email-input"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Lock size={20} color="#666" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                testID="password-input"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+                testID="toggle-password"
+              >
+                {showPassword ? (
+                  <Eye size={20} color="#666" />
+                ) : (
+                  <EyeOff size={20} color="#666" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Lock size={20} color="#666" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                testID="confirm-password-input"
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.eyeIcon}
+                testID="toggle-confirm-password"
+              >
+                {showConfirmPassword ? (
+                  <Eye size={20} color="#666" />
+                ) : (
+                  <EyeOff size={20} color="#666" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.signupButton}
+              onPress={handleSignUp}
+              disabled={loading}
+              testID="signup-button"
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.signupButtonText}>Sign Up</Text>
+              )}
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -328,64 +214,6 @@ export default function SignupScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <Modal
-        visible={showCountryPicker}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowCountryPicker(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Country</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowCountryPicker(false);
-                  setCountrySearch('');
-                }}
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>Done</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.searchContainer}>
-              <Search size={18} color="#666" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search country or code"
-                value={countrySearch}
-                onChangeText={setCountrySearch}
-                autoCapitalize="none"
-              />
-            </View>
-
-            <FlatList
-              data={filteredCountries}
-              keyExtractor={(item) => item.code}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.countryItem,
-                    selectedCountry.code === item.code && styles.selectedCountryItem,
-                  ]}
-                  onPress={() => {
-                    setSelectedCountry(item);
-                    setShowCountryPicker(false);
-                    setCountrySearch('');
-                  }}
-                >
-                  <Text style={styles.countryFlag}>{item.flag}</Text>
-                  <Text style={styles.countryName}>{item.name}</Text>
-                  <Text style={styles.countryDialCode}>{item.dialCode}</Text>
-                </TouchableOpacity>
-              )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -442,6 +270,7 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 4,
+    marginLeft: 8,
   },
   termsContainer: {
     marginBottom: 24,
@@ -477,185 +306,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '600',
-  },
-  infoBox: {
-    backgroundColor: '#F0F8FF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  backButton: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 16,
-    backgroundColor: '#E8F8EC',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  verifiedText: {
-    fontSize: 14,
-    color: '#34C759',
-    fontWeight: '600',
-  },
-  disabledInput: {
-    color: '#999',
-  },
-  verificationInput: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    textAlign: 'center',
-    letterSpacing: 8,
-  },
-  resendButton: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  resendButtonText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  phoneInputRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  countrySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  flagText: {
-    fontSize: 24,
-  },
-  dialCodeText: {
-    fontSize: 16,
-    color: '#1a1a1a',
-    fontWeight: '600',
-  },
-  phoneInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  phoneInput: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#1a1a1a',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    paddingTop: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1a1a1a',
-  },
-  countryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  selectedCountryItem: {
-    backgroundColor: '#F0F8FF',
-  },
-  countryFlag: {
-    fontSize: 24,
-    width: 32,
-  },
-  countryName: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1a1a1a',
-  },
-  countryDialCode: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#f0f0f0',
-    marginLeft: 64,
   },
 });
