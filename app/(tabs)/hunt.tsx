@@ -74,6 +74,7 @@ export default function HuntScreen() {
   const [notificationPermission, setNotificationPermission] = useState<boolean>(false);
   const [showConnectionModal, setShowConnectionModal] = useState<boolean>(false);
   const { extraDistanceMeterUses, useExtraDistanceMeter, resetForNewHunt } = useConnection();
+  const [timeUntilEvent, setTimeUntilEvent] = useState<string>('');
   
   const bountyLocation = useMemo(() => ({
     latitude: 52.3752,
@@ -94,6 +95,39 @@ export default function HuntScreen() {
       }),
     ]).start();
   }, [slideUpAnim, opacityAnim]);
+  
+  useEffect(() => {
+    if (!currentEvent) return;
+    
+    const updateCountdown = () => {
+      const now = new Date();
+      const eventStart = new Date(currentEvent.startTime);
+      const diff = eventStart.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        setTimeUntilEvent('Event is live!');
+        return;
+      }
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      if (days > 0) {
+        setTimeUntilEvent(`${days}d ${hours}h ${minutes}m`);
+      } else if (hours > 0) {
+        setTimeUntilEvent(`${hours}h ${minutes}m ${seconds}s`);
+      } else {
+        setTimeUntilEvent(`${minutes}m ${seconds}s`);
+      }
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    
+    return () => clearInterval(interval);
+  }, [currentEvent]);
   
   useEffect(() => {
     const requestNotificationPermissions = async () => {
@@ -812,6 +846,13 @@ export default function HuntScreen() {
                       </Text>
                     </View>
                   </View>
+                  
+                  {timeUntilEvent && (
+                    <View style={styles.countdownContainer}>
+                      <Text style={styles.countdownLabel}>STARTS IN</Text>
+                      <Text style={styles.countdownTime}>{timeUntilEvent}</Text>
+                    </View>
+                  )}
 
                 {!isLoggedIn && (
                   <TouchableOpacity 
@@ -1593,5 +1634,27 @@ const styles = StyleSheet.create({
     color: '#CCC',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  countdownContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#00D4FF',
+  },
+  countdownLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#00D4FF',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  countdownTime: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 2,
   },
 });
