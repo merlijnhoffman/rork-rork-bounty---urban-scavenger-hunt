@@ -600,12 +600,13 @@ export default function SignupScreen() {
                   <TouchableOpacity
                     style={styles.countrySelector}
                     onPress={() => setShowCountryPicker(true)}
+                    disabled={codeSent}
                   >
-                    <Text style={styles.dialCode}>{selectedCountry.dialCode}</Text>
-                    <ChevronDown size={16} color="#666" />
+                    <Text style={[styles.dialCode, codeSent && styles.disabledText]}>{selectedCountry.dialCode}</Text>
+                    <ChevronDown size={16} color={codeSent ? "#ccc" : "#666"} />
                   </TouchableOpacity>
-                  <View style={styles.phoneInputWrapper}>
-                    <Phone size={20} color="#666" style={styles.inputIcon} />
+                  <View style={[styles.phoneInputWrapper, codeSent && styles.disabledInput]}>
+                    <Phone size={20} color={codeSent ? "#ccc" : "#666"} style={styles.inputIcon} />
                     <TextInput
                       style={styles.input}
                       placeholder="Phone Number"
@@ -661,13 +662,27 @@ export default function SignupScreen() {
                         <Text style={styles.signupButtonText}>Verify & Complete Signup</Text>
                       )}
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.resendButton}
-                      onPress={handleSendCode}
-                      disabled={loading}
-                    >
-                      <Text style={styles.resendButtonText}>Resend Code</Text>
-                    </TouchableOpacity>
+                    <View style={styles.actionButtonsContainer}>
+                      <TouchableOpacity
+                        style={styles.secondaryButton}
+                        onPress={() => {
+                          setCodeSent(false);
+                          setVerificationCode('');
+                        }}
+                        disabled={loading}
+                        testID="change-number-button"
+                      >
+                        <Text style={styles.secondaryButtonText}>Change Number</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.secondaryButton}
+                        onPress={handleSendCode}
+                        disabled={loading}
+                        testID="resend-code-button"
+                      >
+                        <Text style={styles.secondaryButtonText}>Resend Code</Text>
+                      </TouchableOpacity>
+                    </View>
                   </>
                 )}
 
@@ -861,6 +876,31 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  secondaryButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  disabledInput: {
+    backgroundColor: '#f5f5f5',
+  },
+  disabledText: {
+    color: '#999',
   },
   backButton: {
     alignItems: 'center',
