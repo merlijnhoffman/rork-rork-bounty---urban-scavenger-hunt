@@ -81,30 +81,6 @@ export default function SignupScreen() {
       if (data.user) {
         console.log('User created successfully:', data.user.id);
         
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            email: email.trim(),
-          }, {
-            onConflict: 'id',
-          });
-
-        if (profileError) {
-          console.error('Profile creation error:', JSON.stringify(profileError, null, 2));
-          Alert.alert(
-            'Warning',
-            'Account created but profile setup encountered an issue. You may need to update your profile.',
-            [
-              {
-                text: 'OK',
-                onPress: () => router.replace('/' as any),
-              },
-            ]
-          );
-          return;
-        }
-
         Alert.alert(
           'Success',
           'Account created successfully!',
