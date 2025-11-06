@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '70%',
+    height: 500,
   },
   modalHeader: {
     flexDirection: 'row',
