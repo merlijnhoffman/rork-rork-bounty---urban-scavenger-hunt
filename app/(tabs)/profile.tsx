@@ -31,6 +31,27 @@ export default function ProfileScreen() {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Fetch ticket data from Supabase
+  const profileQuery = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error.message || 'Unknown error');
+        return null;
+      }
+
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const ticketQuery = useQuery({
     queryKey: ['user-ticket', user?.id, currentEvent?.id],
     queryFn: async () => {
@@ -54,7 +75,7 @@ export default function ProfileScreen() {
       return { hasTicket: !!data, ticket: data };
     },
     enabled: !!user && !!currentEvent,
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 10000,
   });
   
   const hasTicket = ticketQuery.data?.hasTicket || false;
@@ -183,7 +204,9 @@ export default function ProfileScreen() {
               <Phone color="#888" size={20} />
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Phone</Text>
-                <Text style={styles.detailValue}>{user.user_metadata?.phone_number || 'Not provided'}</Text>
+                <Text style={styles.detailValue}>
+                  {profileQuery.data?.phone_number || user.phone || user.user_metadata?.phone_number || 'Not provided'}
+                </Text>
               </View>
             </View>
 

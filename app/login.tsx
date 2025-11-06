@@ -63,8 +63,6 @@ export default function LoginScreen() {
         
         if (error.message.includes('Invalid login credentials')) {
           errorMessage = 'Invalid email or password. Please try again.';
-        } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'Please verify your email before signing in.';
         }
         
         Alert.alert('Sign In Failed', errorMessage);
