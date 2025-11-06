@@ -360,7 +360,9 @@ export default function SignupScreen() {
 
     try {
       setLoading(true);
-      console.log('Verifying phone number:', fullPhoneNumber);
+      console.log('=== STEP 1: Verifying phone number ===');
+      console.log('Phone:', fullPhoneNumber);
+      console.log('Code:', verificationCode.trim());
 
       const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         phone: fullPhoneNumber,
@@ -387,13 +389,12 @@ export default function SignupScreen() {
         return;
       }
 
-      console.log('Phone verified successfully');
-      console.log('Temporary phone-only user ID:', verifyData.user.id);
+      console.log('Phone verified successfully!');
+      console.log('Phone user ID:', verifyData.user.id);
 
-      await supabase.auth.signOut();
-      console.log('Signed out phone-only user');
-
-      console.log('Creating permanent account with email/password');
+      console.log('=== STEP 2: Creating email/password account ===');
+      console.log('Email:', email.trim());
+      
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password: password.trim(),
@@ -401,30 +402,45 @@ export default function SignupScreen() {
           data: {
             phone_number: fullPhoneNumber,
           },
-          emailRedirectTo: undefined,
         },
       });
 
       if (signUpError) {
-        console.error('Error creating account:', signUpError);
+        console.error('Sign up error:', signUpError);
         
         if (signUpError.message.includes('User already registered')) {
-          Alert.alert('Sign Up Failed', 'This email is already registered. Please use a different email or sign in.');
+          Alert.alert(
+            'Email Already Registered',
+            'This email is already in use. Please try signing in or use a different email.',
+            [
+              {
+                text: 'OK',
+                onPress: async () => {
+                  await supabase.auth.signOut();
+                  router.replace('/login' as any);
+                },
+              },
+            ]
+          );
           return;
         }
         
         Alert.alert('Sign Up Failed', signUpError.message);
+        await supabase.auth.signOut();
         return;
       }
 
       if (!signUpData.user) {
         Alert.alert('Error', 'Failed to create account. Please try again.');
+        await supabase.auth.signOut();
         return;
       }
 
-      console.log('Account created successfully with email/password');
-      console.log('New user ID:', signUpData.user.id);
+      console.log('Email account created!');
+      console.log('Email user ID:', signUpData.user.id);
+      console.log('Email user email:', signUpData.user.email);
 
+      console.log('=== STEP 3: Creating/updating profile ===');
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -436,14 +452,14 @@ export default function SignupScreen() {
         });
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
+        console.error('Profile error:', profileError);
         console.error('Profile error details:', JSON.stringify(profileError, null, 2));
       } else {
-        console.log('Profile created successfully');
+        console.log('Profile created/updated successfully');
       }
 
+      console.log('=== STEP 4: Signing out and redirecting to login ===');
       await supabase.auth.signOut();
-      console.log('Signed out - user needs to login');
 
       Alert.alert(
         'Account Created Successfully!',
@@ -457,7 +473,13 @@ export default function SignupScreen() {
       );
     } catch (error) {
       console.error('Unexpected verification error:', error);
+      console.error('Error stack:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.error('Error signing out after failure:', signOutError);
+      }
     } finally {
       setLoading(false);
     }
