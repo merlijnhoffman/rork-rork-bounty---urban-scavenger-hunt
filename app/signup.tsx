@@ -360,48 +360,14 @@ export default function SignupScreen() {
 
     try {
       setLoading(true);
-      console.log('=== STEP 1: Verifying phone number ===');
-      console.log('Phone:', fullPhoneNumber);
-      console.log('Code:', verificationCode.trim());
-
-      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-        phone: fullPhoneNumber,
-        token: verificationCode.trim(),
-        type: 'sms',
-      });
-
-      if (verifyError) {
-        console.error('Verification error:', verifyError);
-        let errorMessage = verifyError.message;
-        
-        if (verifyError.message.includes('expired')) {
-          errorMessage = 'Verification code has expired. Please request a new one.';
-        } else if (verifyError.message.includes('invalid')) {
-          errorMessage = 'Invalid verification code. Please try again.';
-        }
-        
-        Alert.alert('Verification Failed', errorMessage);
-        return;
-      }
-
-      if (!verifyData.user) {
-        Alert.alert('Error', 'Failed to verify phone number. Please try again.');
-        return;
-      }
-
-      console.log('Phone verified successfully!');
-      console.log('Phone user ID:', verifyData.user.id);
-
-      console.log('=== STEP 2: Creating email/password account ===');
+      console.log('=== STEP 1: Creating email/password account (without signing in) ===');
       console.log('Email:', email.trim());
       
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password: password.trim(),
         options: {
-          data: {
-            phone_number: fullPhoneNumber,
-          },
+          emailRedirectTo: undefined,
         },
       });
 
@@ -411,40 +377,80 @@ export default function SignupScreen() {
         if (signUpError.message.includes('User already registered')) {
           Alert.alert(
             'Email Already Registered',
-            'This email is already in use. Please try signing in or use a different email.',
-            [
-              {
-                text: 'OK',
-                onPress: async () => {
-                  await supabase.auth.signOut();
-                  router.replace('/login' as any);
-                },
-              },
-            ]
+            'This email is already in use. Please try signing in or use a different email.'
           );
           return;
         }
         
         Alert.alert('Sign Up Failed', signUpError.message);
-        await supabase.auth.signOut();
         return;
       }
 
       if (!signUpData.user) {
         Alert.alert('Error', 'Failed to create account. Please try again.');
-        await supabase.auth.signOut();
         return;
       }
 
       console.log('Email account created!');
-      console.log('Email user ID:', signUpData.user.id);
-      console.log('Email user email:', signUpData.user.email);
+      console.log('User ID:', signUpData.user.id);
+      console.log('User email:', signUpData.user.email);
 
-      console.log('=== STEP 3: Creating/updating profile ===');
+      console.log('=== STEP 2: Signing out to link phone ===');
+      await supabase.auth.signOut();
+
+      console.log('=== STEP 3: Signing in with phone verification ===');
+      console.log('Phone:', fullPhoneNumber);
+      console.log('Code:', verificationCode.trim());
+
+      const { data: phoneData, error: phoneError } = await supabase.auth.verifyOtp({
+        phone: fullPhoneNumber,
+        token: verificationCode.trim(),
+        type: 'sms',
+      });
+
+      if (phoneError) {
+        console.error('Phone verification error:', phoneError);
+        let errorMessage = phoneError.message;
+        
+        if (phoneError.message.includes('expired')) {
+          errorMessage = 'Verification code has expired. Please request a new one.';
+        } else if (phoneError.message.includes('invalid')) {
+          errorMessage = 'Invalid verification code. Please try again.';
+        }
+        
+        Alert.alert('Verification Failed', errorMessage);
+        return;
+      }
+
+      if (!phoneData.user) {
+        Alert.alert('Error', 'Failed to verify phone number. Please try again.');
+        return;
+      }
+
+      console.log('Phone verified successfully!');
+      console.log('Phone user ID:', phoneData.user.id);
+
+      console.log('=== STEP 4: Linking email account with phone ===');
+      
+      const { error: updateError } = await supabase.auth.updateUser({
+        email: email.trim(),
+        password: password.trim(),
+        data: {
+          phone_number: fullPhoneNumber,
+        },
+      });
+
+      if (updateError) {
+        console.error('Update user error:', updateError);
+        Alert.alert('Error', 'Failed to link email with phone number. Please try again.');
+        return;
+      }
+
+      console.log('=== STEP 5: Creating/updating profile ===');
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: signUpData.user.id,
+          id: phoneData.user.id,
           email: email.trim(),
           phone_number: fullPhoneNumber,
         }, {
@@ -458,7 +464,7 @@ export default function SignupScreen() {
         console.log('Profile created/updated successfully');
       }
 
-      console.log('=== STEP 4: Signing out and redirecting to login ===');
+      console.log('=== STEP 6: Signing out and redirecting to login ===');
       await supabase.auth.signOut();
 
       Alert.alert(
