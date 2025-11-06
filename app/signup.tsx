@@ -302,23 +302,43 @@ export default function SignupScreen() {
 
     try {
       setLoading(true);
-      console.log('Sending verification code to:', fullPhoneNumber);
+      console.log('=== SENDING OTP ===');
+      console.log('Phone number:', fullPhoneNumber);
+      console.log('Supabase URL:', process.env.EXPO_PUBLIC_SUPABASE_URL);
 
-      const { error } = await supabase.auth.signInWithOtp({
+      const { data, error } = await supabase.auth.signInWithOtp({
         phone: fullPhoneNumber,
       });
 
+      console.log('OTP Response data:', JSON.stringify(data, null, 2));
+      console.log('OTP Response error:', JSON.stringify(error, null, 2));
+
       if (error) {
         console.error('OTP send error:', error);
-        Alert.alert('Error', error.message || 'Failed to send verification code');
+        console.error('Error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        });
+        
+        let errorMsg = error.message || 'Failed to send verification code';
+        if (error.message?.includes('Phone provider not configured')) {
+          errorMsg = 'Phone authentication is not configured in Supabase. Please configure Twilio in your Supabase Dashboard under Authentication > Providers > Phone.';
+        } else if (error.message?.includes('rate limit')) {
+          errorMsg = 'Too many attempts. Please wait a few minutes before trying again.';
+        }
+        
+        Alert.alert('Error', errorMsg);
         return;
       }
 
       console.log('Verification code sent successfully');
       setCodeSent(true);
-      Alert.alert('Success', 'Verification code sent to your phone!');
+      Alert.alert('Success', 'Verification code sent to your phone! Check your SMS.');
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.error('Unexpected error sending OTP:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       Alert.alert('Error', 'Failed to send verification code. Please try again.');
     } finally {
       setLoading(false);
