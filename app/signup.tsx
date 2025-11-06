@@ -387,35 +387,48 @@ export default function SignupScreen() {
         return;
       }
 
-      console.log('Phone verified successfully, user is authenticated via phone');
-      console.log('User ID:', verifyData.user.id);
+      console.log('Phone verified successfully');
+      console.log('Temporary phone-only user ID:', verifyData.user.id);
 
-      const { error: updateError } = await supabase.auth.updateUser({
+      await supabase.auth.signOut();
+      console.log('Signed out phone-only user');
+
+      console.log('Creating permanent account with email/password');
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password: password.trim(),
-        data: {
-          phone_number: fullPhoneNumber,
+        options: {
+          data: {
+            phone_number: fullPhoneNumber,
+          },
+          emailRedirectTo: undefined,
         },
       });
 
-      if (updateError) {
-        console.error('Error updating user with email/password:', updateError);
+      if (signUpError) {
+        console.error('Error creating account:', signUpError);
         
-        if (updateError.message.includes('User already registered')) {
-          Alert.alert('Sign Up Failed', 'This email is already registered. Please use a different email.');
+        if (signUpError.message.includes('User already registered')) {
+          Alert.alert('Sign Up Failed', 'This email is already registered. Please use a different email or sign in.');
           return;
         }
         
-        Alert.alert('Sign Up Failed', updateError.message);
+        Alert.alert('Sign Up Failed', signUpError.message);
         return;
       }
 
-      console.log('Email and password set successfully');
+      if (!signUpData.user) {
+        Alert.alert('Error', 'Failed to create account. Please try again.');
+        return;
+      }
+
+      console.log('Account created successfully with email/password');
+      console.log('New user ID:', signUpData.user.id);
 
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: verifyData.user.id,
+          id: signUpData.user.id,
           email: email.trim(),
           phone_number: fullPhoneNumber,
         }, {
@@ -424,14 +437,17 @@ export default function SignupScreen() {
 
       if (profileError) {
         console.error('Profile creation error:', profileError);
-        Alert.alert('Warning', 'Account created but profile setup failed. Please contact support.');
+        console.error('Profile error details:', JSON.stringify(profileError, null, 2));
+      } else {
+        console.log('Profile created successfully');
       }
 
       await supabase.auth.signOut();
+      console.log('Signed out - user needs to login');
 
       Alert.alert(
         'Account Created Successfully!',
-        'Your account has been created. Please sign in with your email and password.',
+        'Your phone number has been verified and your account is ready. Please sign in with your email and password.',
         [
           {
             text: 'Sign In',
