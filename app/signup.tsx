@@ -390,21 +390,45 @@ export default function SignupScreen() {
       }
 
       console.log('Phone verified successfully!');
-      console.log('User ID:', otpData.user.id);
+      console.log('Phone User ID:', otpData.user.id);
       console.log('Phone:', otpData.user.phone);
 
-      console.log('=== STEP 2: Updating user with email and password ===');
+      const phoneUserId = otpData.user.id;
+
+      console.log('=== STEP 2: Creating profile for phone user ===');
+      const { error: phoneProfileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: phoneUserId,
+          phone_number: fullPhoneNumber,
+        }, {
+          onConflict: 'id',
+        });
+
+      if (phoneProfileError) {
+        console.error('Phone profile error:', phoneProfileError);
+      } else {
+        console.log('Phone profile created successfully');
+      }
+
+      console.log('=== STEP 3: Signing out phone user ===');
+      await supabase.auth.signOut();
+
+      console.log('=== STEP 4: Creating email user ===');
       console.log('Email:', email.trim());
       
-      const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+      const { data: emailData, error: emailError } = await supabase.auth.signUp({
         email: email.trim(),
         password: password.trim(),
+        options: {
+          emailRedirectTo: undefined,
+        },
       });
 
-      if (updateError) {
-        console.error('Update user error:', updateError);
+      if (emailError) {
+        console.error('Email signup error:', emailError);
         
-        if (updateError.message.includes('Email already registered') || updateError.message.includes('already been registered')) {
+        if (emailError.message.includes('already registered') || emailError.message.includes('already been registered')) {
           Alert.alert(
             'Email Already Registered',
             'This email is already in use. Please try signing in or use a different email.'
@@ -412,39 +436,37 @@ export default function SignupScreen() {
           return;
         }
         
-        Alert.alert('Update Failed', updateError.message);
+        Alert.alert('Signup Failed', emailError.message);
         return;
       }
 
-      if (!updateData.user) {
-        Alert.alert('Error', 'Failed to update account. Please try again.');
+      if (!emailData.user) {
+        Alert.alert('Error', 'Failed to create email account. Please try again.');
         return;
       }
 
-      console.log('Account updated with email and password!');
-      console.log('User ID:', updateData.user.id);
-      console.log('Email:', updateData.user.email);
-      console.log('Phone:', updateData.user.phone);
+      console.log('Email user created successfully!');
+      console.log('Email User ID:', emailData.user.id);
+      console.log('Email:', emailData.user.email);
 
-      console.log('=== STEP 3: Creating/updating profile ===');
-      const { error: profileError } = await supabase
+      console.log('=== STEP 5: Creating profile for email user ===');
+      const { error: emailProfileError } = await supabase
         .from('profiles')
         .upsert({
-          id: updateData.user.id,
+          id: emailData.user.id,
           email: email.trim(),
           phone_number: fullPhoneNumber,
         }, {
           onConflict: 'id',
         });
 
-      if (profileError) {
-        console.error('Profile error:', profileError);
-        console.error('Profile error details:', JSON.stringify(profileError, null, 2));
+      if (emailProfileError) {
+        console.error('Email profile error:', emailProfileError);
       } else {
-        console.log('Profile created/updated successfully');
+        console.log('Email profile created successfully');
       }
 
-      console.log('=== STEP 4: Signing out and redirecting to login ===');
+      console.log('=== STEP 6: Signing out and redirecting to login ===');
       await supabase.auth.signOut();
 
       Alert.alert(
