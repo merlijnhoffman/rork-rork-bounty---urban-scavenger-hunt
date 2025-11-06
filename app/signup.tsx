@@ -248,7 +248,6 @@ export default function SignupScreen() {
   const [verificationCode, setVerificationCode] = useState<string>('');
   const [showCountryPicker, setShowCountryPicker] = useState<boolean>(false);
   const [codeSent, setCodeSent] = useState<boolean>(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
 
@@ -258,7 +257,7 @@ export default function SignupScreen() {
     return emailRegex.test(email);
   };
 
-  const handleStep1Continue = async () => {
+  const handleStep1Continue = () => {
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter your email');
       return;
@@ -284,61 +283,8 @@ export default function SignupScreen() {
       return;
     }
 
-    try {
-      setLoading(true);
-      console.log('Creating account with email:', email);
-
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password.trim(),
-        options: {
-          emailRedirectTo: undefined,
-        },
-      });
-
-      if (error) {
-        console.error('Sign up error:', error);
-        let errorMessage = error.message;
-        
-        if (error.message.includes('User already registered')) {
-          errorMessage = 'This email is already registered. Please sign in instead.';
-        }
-        
-        Alert.alert('Sign Up Failed', errorMessage);
-        return;
-      }
-
-      if (data.user && data.session) {
-        console.log('User created and signed in successfully:', data.user.id);
-        setUserId(data.user.id);
-        setStep(2);
-      } else if (data.user) {
-        console.log('User created, attempting sign in:', data.user.id);
-        
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password.trim(),
-        });
-        
-        if (signInError) {
-          console.error('Auto sign-in error:', signInError);
-          Alert.alert('Error', 'Account created but auto-login failed. Please sign in manually.');
-          router.replace('/login' as any);
-          return;
-        }
-        
-        if (signInData.user) {
-          console.log('User signed in successfully:', signInData.user.id);
-          setUserId(signInData.user.id);
-          setStep(2);
-        }
-      }
-    } catch (error) {
-      console.error('Unexpected sign up error:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    console.log('Email and password validated, moving to step 2');
+    setStep(2);
   };
 
   const handleSendCode = async () => {
@@ -358,21 +304,12 @@ export default function SignupScreen() {
       setLoading(true);
       console.log('Sending verification code to:', fullPhoneNumber);
 
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !sessionData.session) {
-        console.error('No active session:', sessionError);
-        Alert.alert('Error', 'Session expired. Please sign in again.');
-        router.replace('/login' as any);
-        return;
-      }
-
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await supabase.auth.signInWithOtp({
         phone: fullPhoneNumber,
       });
 
       if (error) {
-        console.error('Phone update error:', error);
+        console.error('OTP send error:', error);
         Alert.alert('Error', error.message || 'Failed to send verification code');
         return;
       }
@@ -405,19 +342,19 @@ export default function SignupScreen() {
       setLoading(true);
       console.log('Verifying phone number:', fullPhoneNumber);
 
-      const { error } = await supabase.auth.verifyOtp({
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         phone: fullPhoneNumber,
         token: verificationCode.trim(),
         type: 'sms',
       });
 
-      if (error) {
-        console.error('Verification error:', error);
-        let errorMessage = error.message;
+      if (verifyError) {
+        console.error('Verification error:', verifyError);
+        let errorMessage = verifyError.message;
         
-        if (error.message.includes('expired')) {
+        if (verifyError.message.includes('expired')) {
           errorMessage = 'Verification code has expired. Please request a new one.';
-        } else if (error.message.includes('invalid')) {
+        } else if (verifyError.message.includes('invalid')) {
           errorMessage = 'Invalid verification code. Please try again.';
         }
         
@@ -425,13 +362,40 @@ export default function SignupScreen() {
         return;
       }
 
-      if (userId) {
-        console.log('Phone verified successfully');
+      if (!verifyData.user) {
+        Alert.alert('Error', 'Failed to verify phone number. Please try again.');
+        return;
+      }
+
+      console.log('Phone verified successfully, creating account with email and password');
+
+      await supabase.auth.signOut();
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: password.trim(),
+        phone: fullPhoneNumber,
+      });
+
+      if (signUpError) {
+        console.error('Sign up error:', signUpError);
+        let errorMessage = signUpError.message;
+        
+        if (signUpError.message.includes('User already registered')) {
+          errorMessage = 'This email is already registered. Please sign in instead.';
+        }
+        
+        Alert.alert('Sign Up Failed', errorMessage);
+        return;
+      }
+
+      if (signUpData.user) {
+        console.log('Account created successfully:', signUpData.user.id);
         
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
-            id: userId,
+            id: signUpData.user.id,
             email: email.trim(),
             phone_number: fullPhoneNumber,
           }, {
@@ -439,17 +403,17 @@ export default function SignupScreen() {
           });
 
         if (profileError) {
-          console.error('Profile update error:', profileError);
+          console.error('Profile creation error:', profileError);
         }
       }
 
       Alert.alert(
         'Success',
-        'Account created and phone verified successfully!',
+        'Account created successfully! Please sign in.',
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/' as any),
+            onPress: () => router.replace('/login' as any),
           },
         ]
       );
