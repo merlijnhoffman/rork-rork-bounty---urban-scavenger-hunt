@@ -291,6 +291,9 @@ export default function SignupScreen() {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: password.trim(),
+        options: {
+          emailRedirectTo: undefined,
+        },
       });
 
       if (error) {
@@ -305,10 +308,30 @@ export default function SignupScreen() {
         return;
       }
 
-      if (data.user) {
-        console.log('User created successfully:', data.user.id);
+      if (data.user && data.session) {
+        console.log('User created and signed in successfully:', data.user.id);
         setUserId(data.user.id);
         setStep(2);
+      } else if (data.user) {
+        console.log('User created, attempting sign in:', data.user.id);
+        
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password.trim(),
+        });
+        
+        if (signInError) {
+          console.error('Auto sign-in error:', signInError);
+          Alert.alert('Error', 'Account created but auto-login failed. Please sign in manually.');
+          router.replace('/login' as any);
+          return;
+        }
+        
+        if (signInData.user) {
+          console.log('User signed in successfully:', signInData.user.id);
+          setUserId(signInData.user.id);
+          setStep(2);
+        }
       }
     } catch (error) {
       console.error('Unexpected sign up error:', error);
@@ -334,6 +357,15 @@ export default function SignupScreen() {
     try {
       setLoading(true);
       console.log('Sending verification code to:', fullPhoneNumber);
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData.session) {
+        console.error('No active session:', sessionError);
+        Alert.alert('Error', 'Session expired. Please sign in again.');
+        router.replace('/login' as any);
+        return;
+      }
 
       const { error } = await supabase.auth.updateUser({
         phone: fullPhoneNumber,
