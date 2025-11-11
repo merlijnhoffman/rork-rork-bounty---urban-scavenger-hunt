@@ -429,10 +429,10 @@ export default function SignupScreen() {
 
       Alert.alert(
         'Account Created Successfully!',
-        'Your phone number has been verified and your account is ready. Please sign in with your email and password.',
+        'Your phone number has been verified. Please check your email inbox and confirm your email address before signing in. After confirming your email, you can sign in with your email and password.',
         [
           {
-            text: 'Sign In',
+            text: 'OK',
             onPress: () => router.replace('/login' as any),
           },
         ]
