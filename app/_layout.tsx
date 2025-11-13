@@ -13,7 +13,6 @@ import { LocationProvider } from '@/contexts/LocationContext';
 import { ConnectionProvider } from '@/contexts/ConnectionContext';
 import { ErrorBoundary } from 'react-error-boundary';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
