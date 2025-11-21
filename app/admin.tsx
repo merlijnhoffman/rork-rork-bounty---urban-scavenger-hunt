@@ -15,15 +15,38 @@ import { router } from 'expo-router';
 import { useGameStore } from '@/store/game-store';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminPanel() {
   const insets = useSafeAreaInsets();
   const { currentEvent } = useGameStore();
+  const { user, loading: authLoading } = useAuth();
   
   const [clueText, setClueText] = useState<string>('');
   const [clueHint, setClueHint] = useState<string>('');
   const [nextClueOrder, setNextClueOrder] = useState<number>(1);
   const [zoneSize, setZoneSize] = useState<string>('500');
+
+  const adminCheckQuery = useQuery({
+    queryKey: ['admin-check', user?.id],
+    queryFn: async () => {
+      if (!user) return { isAdmin: false };
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error checking admin status:', error);
+        return { isAdmin: false };
+      }
+      
+      return { isAdmin: data?.is_admin === true };
+    },
+    enabled: !!user,
+  });
 
   const cluesQuery = useQuery({
     queryKey: ['admin-clues', currentEvent?.id],
@@ -113,6 +136,47 @@ export default function AdminPanel() {
   };
 
   const recentClues = cluesQuery.data?.slice(0, 5) || [];
+
+  if (authLoading || adminCheckQuery.isLoading) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <View style={[styles.centerContent, { paddingTop: insets.top }]}>
+            <Shield color="#00D4FF" size={48} />
+            <Text style={styles.loadingText}>Verifying access...</Text>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  }
+
+  if (!user || !adminCheckQuery.data?.isAdmin) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <View style={[styles.centerContent, { paddingTop: insets.top }]}>
+            <AlertCircle color="#FF6B6B" size={64} />
+            <Text style={styles.accessDeniedTitle}>ACCESS DENIED</Text>
+            <Text style={styles.accessDeniedText}>
+              You do not have permission to access the admin panel.
+            </Text>
+            <TouchableOpacity
+              style={styles.backToAppButton}
+              onPress={() => router.replace('/(tabs)/hunt')}
+            >
+              <Text style={styles.backToAppButtonText}>Return to App</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -587,5 +651,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FF6B6B',
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#888',
+    marginTop: 16,
+  },
+  accessDeniedTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FF6B6B',
+    letterSpacing: 2,
+    marginTop: 24,
+    textAlign: 'center',
+  },
+  accessDeniedText: {
+    fontSize: 16,
+    color: '#888',
+    marginTop: 12,
+    textAlign: 'center',
+    lineHeight: 24,
+    maxWidth: 300,
+  },
+  backToAppButton: {
+    backgroundColor: '#00D4FF',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    marginTop: 32,
+  },
+  backToAppButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
   },
 });
