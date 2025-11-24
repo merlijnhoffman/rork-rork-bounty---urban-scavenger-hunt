@@ -6,7 +6,6 @@ interface LocationContextType {
   hasPermission: boolean;
   permissionStatus: Location.PermissionStatus | null;
   requestPermission: () => Promise<boolean>;
-  isLoading: boolean;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -14,7 +13,6 @@ const LocationContext = createContext<LocationContextType | undefined>(undefined
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [hasPermission, setHasPermission] = useState<boolean>(false);
   const [permissionStatus, setPermissionStatus] = useState<Location.PermissionStatus | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const requestPermission = async (): Promise<boolean> => {
     try {
@@ -55,7 +53,6 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializePermission = async () => {
       const status = await checkPermission();
-      setIsLoading(false);
       
       if (status === Location.PermissionStatus.UNDETERMINED && !hasAskedRef.current && Platform.OS === 'web') {
         hasAskedRef.current = true;
@@ -72,9 +69,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       hasPermission,
       permissionStatus,
       requestPermission,
-      isLoading,
     }),
-    [hasPermission, permissionStatus, isLoading]
+    [hasPermission, permissionStatus]
   );
 
   return (

@@ -23,15 +23,18 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
   useEffect(() => {
     let isMounted = true;
     
-    // Get initial session - non-blocking
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (isMounted) {
-        setSession(session);
-        setUser(session?.user ?? null);
+    // Get initial session asynchronously - don't block render
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (isMounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
       }
-    }).catch((error) => {
-      console.error('Error getting session:', error);
-    });
+    };
 
     // Listen for auth changes
     const {
@@ -43,6 +46,9 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
         setLoading(false);
       }
     });
+
+    // Initialize session after setting up listener
+    initSession();
 
     return () => {
       isMounted = false;
