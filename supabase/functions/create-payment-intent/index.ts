@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2025-09-30.clover',
     });
 
     const body = await req.json();
@@ -62,8 +62,9 @@ Deno.serve(async (req: Request) => {
         };
       } catch (priceError) {
         console.error('Error retrieving price:', priceError);
+        const errorMessage = priceError instanceof Error ? priceError.message : 'Unknown error';
         return new Response(
-          JSON.stringify({ error: `Failed to retrieve price: ${priceError.message}` }),
+          JSON.stringify({ error: `Failed to retrieve price: ${errorMessage}` }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 400,
