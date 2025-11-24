@@ -156,12 +156,6 @@ export default function AdminPanel() {
   const recentClues = cluesQuery.data?.slice(0, 5) || [];
 
   const handlePasswordSubmit = () => {
-    if (!isAdmin) {
-      setShowPasswordError(true);
-      Alert.alert('Access Denied', 'You do not have admin privileges.');
-      return;
-    }
-
     if (passwordInput === ADMIN_PASSWORD) {
       setIsAuthenticated(true);
       setShowPasswordError(false);
@@ -187,7 +181,30 @@ export default function AdminPanel() {
     );
   }
 
-
+  if (!isAdmin) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <View style={[styles.centerContent, { paddingTop: insets.top }]}>
+            <Shield color="#FF6B6B" size={64} />
+            <Text style={styles.accessDeniedTitle}>ACCESS DENIED</Text>
+            <Text style={styles.accessDeniedText}>
+              You do not have admin privileges
+            </Text>
+            <TouchableOpacity
+              style={styles.backToAppButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.backToAppButtonText}>Back to App</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
