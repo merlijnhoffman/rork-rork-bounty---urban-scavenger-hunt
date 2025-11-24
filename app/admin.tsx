@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,22 +16,58 @@ import { router } from 'expo-router';
 import { useGameStore } from '@/store/game-store';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 
 
-const ADMIN_PASSWORD = 'hunt2025';
+const ADMIN_PASSWORD = 'whereswally2003';
 
 export default function AdminPanel() {
   const insets = useSafeAreaInsets();
   const { currentEvent } = useGameStore();
+  const { user } = useAuth();
   
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [showPasswordError, setShowPasswordError] = useState<boolean>(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState<boolean>(true);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   
   const [clueText, setClueText] = useState<string>('');
   const [clueHint, setClueHint] = useState<string>('');
   const [nextClueOrder, setNextClueOrder] = useState<number>(1);
   const [zoneSize, setZoneSize] = useState<string>('500');
+
+  useEffect(() => {
+    async function checkAdminStatus() {
+      if (!user) {
+        setIsCheckingAdmin(false);
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('admin')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(data?.admin === true);
+        }
+      } catch (error) {
+        console.error('Unexpected error checking admin status:', error);
+        setIsAdmin(false);
+      } finally {
+        setIsCheckingAdmin(false);
+      }
+    }
+
+    checkAdminStatus();
+  }, [user]);
 
   const cluesQuery = useQuery({
     queryKey: ['admin-clues', currentEvent?.id],
@@ -122,6 +159,12 @@ export default function AdminPanel() {
   const recentClues = cluesQuery.data?.slice(0, 5) || [];
 
   const handlePasswordSubmit = () => {
+    if (!isAdmin) {
+      setShowPasswordError(true);
+      Alert.alert('Access Denied', 'You do not have admin privileges.');
+      return;
+    }
+
     if (passwordInput === ADMIN_PASSWORD) {
       setIsAuthenticated(true);
       setShowPasswordError(false);
@@ -130,6 +173,50 @@ export default function AdminPanel() {
       setShowPasswordError(true);
     }
   };
+
+  if (isCheckingAdmin) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <View style={[styles.centerContent, { paddingTop: insets.top }]}>
+            <ActivityIndicator size="large" color="#00D4FF" />
+            <Text style={styles.loadingText}>Checking admin access...</Text>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <View style={[styles.centerContent, { paddingTop: insets.top }]}>
+            <Shield color="#FF6B6B" size={64} />
+            <Text style={styles.accessDeniedTitle}>ACCESS DENIED</Text>
+            <Text style={styles.accessDeniedText}>
+              {!user 
+                ? 'You must be logged in to access the admin panel'
+                : 'You do not have admin privileges'}
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.backToAppButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.backToAppButtonText}>Back to App</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
