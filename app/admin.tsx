@@ -89,7 +89,6 @@ export default function AdminPanel() {
         .insert({
           event_id: currentEvent.id,
           text: params.text,
-          hint: null,
           order_number: params.order,
           release_time: new Date().toISOString(),
         })
