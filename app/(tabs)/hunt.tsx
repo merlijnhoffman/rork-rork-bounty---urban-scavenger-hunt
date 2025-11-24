@@ -490,7 +490,7 @@ export default function HuntScreen() {
 
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
-      router.push('/(tabs)/profile');
+      router.push('/signup');
       return;
     }
     
