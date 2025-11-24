@@ -48,7 +48,7 @@ export default function AdminPanel() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('admin')
+          .select('is_admin')
           .eq('id', user.id)
           .single();
 
@@ -56,7 +56,7 @@ export default function AdminPanel() {
           console.error('Error checking admin status:', error);
           setIsAdmin(false);
         } else {
-          setIsAdmin(data?.admin === true);
+          setIsAdmin(data?.is_admin === true);
         }
       } catch (error) {
         console.error('Unexpected error checking admin status:', error);
