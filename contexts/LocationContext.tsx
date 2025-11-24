@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import * as Location from 'expo-location';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 
 interface LocationContextType {
   hasPermission: boolean;
@@ -54,44 +54,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initializePermission = async () => {
-      setIsLoading(true);
-      
       const status = await checkPermission();
+      setIsLoading(false);
       
-      if (status === Location.PermissionStatus.UNDETERMINED && !hasAskedRef.current) {
+      if (status === Location.PermissionStatus.UNDETERMINED && !hasAskedRef.current && Platform.OS === 'web') {
         hasAskedRef.current = true;
-        
-        if (Platform.OS === 'web') {
-          const granted = await requestPermission();
-          console.log('Web location permission granted:', granted);
-        } else {
-          setTimeout(async () => {
-            Alert.alert(
-              'Location Permission',
-              'This app needs access to your location to show your distance from the bounty during hunts.',
-              [
-                {
-                  text: 'Not Now',
-                  style: 'cancel',
-                  onPress: () => {
-                    console.log('User declined location permission');
-                    setIsLoading(false);
-                  },
-                },
-                {
-                  text: 'Allow',
-                  onPress: async () => {
-                    const granted = await requestPermission();
-                    console.log('Location permission granted:', granted);
-                    setIsLoading(false);
-                  },
-                },
-              ]
-            );
-          }, 1000);
-        }
-      } else {
-        setIsLoading(false);
+        const granted = await requestPermission();
+        console.log('Web location permission granted:', granted);
       }
     };
 
