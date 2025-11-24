@@ -28,7 +28,6 @@ export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   
   const [clueText, setClueText] = useState<string>('');
-  const [nextClueOrder, setNextClueOrder] = useState<number>(1);
   const [zoneSize, setZoneSize] = useState<string>('500');
 
   useEffect(() => {
@@ -72,7 +71,7 @@ export default function AdminPanel() {
         .from('clues')
         .select('*')
         .eq('event_id', currentEvent.id)
-        .order('order_number', { ascending: false });
+        .order('release_time', { ascending: false });
       
       if (error) throw error;
       return data || [];
@@ -81,7 +80,7 @@ export default function AdminPanel() {
   });
 
   const sendClueMutation = useMutation({
-    mutationFn: async (params: { text: string; order: number }) => {
+    mutationFn: async (params: { text: string }) => {
       if (!currentEvent) throw new Error('No event selected');
       
       const { data, error } = await supabase
@@ -89,7 +88,6 @@ export default function AdminPanel() {
         .insert({
           event_id: currentEvent.id,
           text: params.text,
-          order_number: params.order,
           release_time: new Date().toISOString(),
         })
         .select()
@@ -101,7 +99,6 @@ export default function AdminPanel() {
     onSuccess: () => {
       Alert.alert('Success', 'Clue sent to all hunters!');
       setClueText('');
-      setNextClueOrder(prev => prev + 1);
       cluesQuery.refetch();
     },
     onError: (error: any) => {
@@ -117,7 +114,7 @@ export default function AdminPanel() {
 
     Alert.alert(
       'Confirm Send',
-      `Send clue #${nextClueOrder} to all hunters?`,
+      'Send clue to all hunters?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -125,7 +122,6 @@ export default function AdminPanel() {
           onPress: () => {
             sendClueMutation.mutate({
               text: clueText.trim(),
-              order: nextClueOrder,
             });
           },
         },
@@ -236,27 +232,6 @@ export default function AdminPanel() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Clue Order Number</Text>
-                  <View style={styles.orderControl}>
-                    <TouchableOpacity
-                      style={styles.orderButton}
-                      onPress={() => setNextClueOrder(Math.max(1, nextClueOrder - 1))}
-                    >
-                      <Text style={styles.orderButtonText}>-</Text>
-                    </TouchableOpacity>
-                    <View style={styles.orderDisplay}>
-                      <Text style={styles.orderText}>{nextClueOrder}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.orderButton}
-                      onPress={() => setNextClueOrder(nextClueOrder + 1)}
-                    >
-                      <Text style={styles.orderButtonText}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Clue Text (Required)</Text>
                   <TextInput
                     style={styles.textArea}
@@ -330,9 +305,6 @@ export default function AdminPanel() {
                   {recentClues.map((clue) => (
                     <View key={clue.id} style={styles.clueHistoryCard}>
                       <View style={styles.clueHistoryHeader}>
-                        <View style={styles.clueHistoryOrder}>
-                          <Text style={styles.clueHistoryOrderText}>#{clue.order_number}</Text>
-                        </View>
                         <Text style={styles.clueHistoryTime}>
                           {new Date(clue.release_time).toLocaleTimeString('en-US', {
                             hour: '2-digit',
