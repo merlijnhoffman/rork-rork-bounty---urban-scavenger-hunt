@@ -18,18 +18,19 @@ export interface AuthState {
 const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
     
-    // Get initial session
+    // Get initial session - non-blocking
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (isMounted) {
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
       }
+    }).catch((error) => {
+      console.error('Error getting session:', error);
     });
 
     // Listen for auth changes

@@ -76,7 +76,10 @@ function ErrorFallback({ error }: { error: Error }) {
 
 export default function RootLayout() {
   useEffect(() => {
-    SplashScreen.hideAsync();
+    // Hide splash screen immediately for faster perceived load time
+    setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 0);
   }, []);
 
   return (
