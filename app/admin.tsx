@@ -17,9 +17,15 @@ import { supabase } from '@/lib/supabase';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 
+const ADMIN_PASSWORD = 'hunt2025';
+
 export default function AdminPanel() {
   const insets = useSafeAreaInsets();
   const { currentEvent } = useGameStore();
+  
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [showPasswordError, setShowPasswordError] = useState<boolean>(false);
   
   const [clueText, setClueText] = useState<string>('');
   const [clueHint, setClueHint] = useState<string>('');
@@ -114,6 +120,73 @@ export default function AdminPanel() {
   };
 
   const recentClues = cluesQuery.data?.slice(0, 5) || [];
+
+  const handlePasswordSubmit = () => {
+    if (passwordInput === ADMIN_PASSWORD) {
+      setIsAuthenticated(true);
+      setShowPasswordError(false);
+      setPasswordInput('');
+    } else {
+      setShowPasswordError(true);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#0A0A0A', '#1A1A1A']}
+          style={styles.gradient}
+        >
+          <View style={[styles.centerContent, { paddingTop: insets.top }]}>
+            <Shield color="#FF6B6B" size={64} />
+            <Text style={styles.accessDeniedTitle}>ADMIN ACCESS</Text>
+            <Text style={styles.accessDeniedText}>
+              Enter password to access the admin panel
+            </Text>
+            
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[
+                  styles.passwordInput,
+                  showPasswordError && styles.passwordInputError
+                ]}
+                placeholder="Enter admin password"
+                placeholderTextColor="#666"
+                secureTextEntry
+                value={passwordInput}
+                onChangeText={(text) => {
+                  setPasswordInput(text);
+                  setShowPasswordError(false);
+                }}
+                onSubmitEditing={handlePasswordSubmit}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              
+              {showPasswordError && (
+                <Text style={styles.passwordError}>Incorrect password</Text>
+              )}
+              
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handlePasswordSubmit}
+              >
+                <Text style={styles.loginButtonText}>Access Panel</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.backToAppButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.backToAppButtonText}>Back to App</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -627,5 +700,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#000',
+  },
+  passwordContainer: {
+    width: '100%',
+    maxWidth: 320,
+    marginTop: 32,
+    gap: 12,
+  },
+  passwordInput: {
+    backgroundColor: '#1A1A1A',
+    borderWidth: 2,
+    borderColor: '#333',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    fontSize: 16,
+    color: '#FFF',
+    textAlign: 'center',
+  },
+  passwordInputError: {
+    borderColor: '#FF6B6B',
+  },
+  passwordError: {
+    fontSize: 14,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginTop: -8,
+  },
+  loginButton: {
+    backgroundColor: '#00D4FF',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  loginButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000',
+    letterSpacing: 0.5,
   },
 });
