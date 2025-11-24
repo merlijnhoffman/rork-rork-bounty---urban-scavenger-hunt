@@ -33,7 +33,6 @@ export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   
   const [clueText, setClueText] = useState<string>('');
-  const [clueHint, setClueHint] = useState<string>('');
   const [nextClueOrder, setNextClueOrder] = useState<number>(1);
   const [zoneSize, setZoneSize] = useState<string>('500');
 
@@ -87,7 +86,7 @@ export default function AdminPanel() {
   });
 
   const sendClueMutation = useMutation({
-    mutationFn: async (params: { text: string; hint?: string; order: number }) => {
+    mutationFn: async (params: { text: string; order: number }) => {
       if (!currentEvent) throw new Error('No event selected');
       
       const { data, error } = await supabase
@@ -95,7 +94,7 @@ export default function AdminPanel() {
         .insert({
           event_id: currentEvent.id,
           text: params.text,
-          hint: params.hint || null,
+          hint: null,
           order_number: params.order,
           release_time: new Date().toISOString(),
         })
@@ -108,7 +107,6 @@ export default function AdminPanel() {
     onSuccess: () => {
       Alert.alert('Success', 'Clue sent to all hunters!');
       setClueText('');
-      setClueHint('');
       setNextClueOrder(prev => prev + 1);
       cluesQuery.refetch();
     },
@@ -133,7 +131,6 @@ export default function AdminPanel() {
           onPress: () => {
             sendClueMutation.mutate({
               text: clueText.trim(),
-              hint: clueHint.trim() || undefined,
               order: nextClueOrder,
             });
           },
@@ -323,17 +320,6 @@ export default function AdminPanel() {
                     numberOfLines={4}
                     value={clueText}
                     onChangeText={setClueText}
-                  />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Hint (Optional)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Brief hint if needed..."
-                    placeholderTextColor="#666"
-                    value={clueHint}
-                    onChangeText={setClueHint}
                   />
                 </View>
 
