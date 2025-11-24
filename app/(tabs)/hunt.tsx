@@ -855,7 +855,7 @@ export default function HuntScreen() {
                 {!isLoggedIn && (
                   <TouchableOpacity 
                     style={styles.authRequiredContainer}
-                    onPress={() => router.push('/login')}
+                    onPress={() => router.push('/signup')}
                   >
                     <LogIn color="#00D4FF" size={20} />
                     <Text style={styles.authRequiredText}>
