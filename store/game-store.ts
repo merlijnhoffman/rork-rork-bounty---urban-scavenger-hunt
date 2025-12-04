@@ -55,7 +55,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
           .maybeSingle();
 
         if (error) {
-          console.error('Error fetching event:', error);
+          console.error('Error fetching event:', error.message || JSON.stringify(error));
           setCurrentEvent(null);
           return;
         }
@@ -78,8 +78,8 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         } else {
           setCurrentEvent(null);
         }
-      } catch (error) {
-        console.error('Unexpected error fetching event:', error);
+      } catch (error: any) {
+        console.error('Unexpected error fetching event:', error.message || error);
         setCurrentEvent(null);
       } finally {
         setEventLoading(false);
