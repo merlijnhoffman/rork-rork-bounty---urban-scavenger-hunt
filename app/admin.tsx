@@ -83,17 +83,26 @@ export default function AdminPanel() {
     mutationFn: async (params: { text: string }) => {
       if (!currentEvent) throw new Error('No event selected');
       
+      const existingClues = cluesQuery.data || [];
+      const nextOrderNumber = existingClues.length > 0 
+        ? Math.max(...existingClues.map(c => c.order_number || 0)) + 1 
+        : 1;
+      
       const { data, error } = await supabase
         .from('clues')
         .insert({
           event_id: currentEvent.id,
           text: params.text,
+          order_number: nextOrderNumber,
           release_time: new Date().toISOString(),
         })
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting clue:', error);
+        throw new Error(error.message || 'Failed to insert clue');
+      }
       return data;
     },
     onSuccess: () => {
@@ -102,6 +111,7 @@ export default function AdminPanel() {
       cluesQuery.refetch();
     },
     onError: (error: any) => {
+      console.error('Mutation error:', error);
       Alert.alert('Error', error.message || 'Failed to send clue');
     },
   });
