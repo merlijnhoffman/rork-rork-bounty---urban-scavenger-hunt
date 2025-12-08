@@ -71,9 +71,9 @@
           "isIosBackgroundLocationEnabled": true,
           "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
         }
-      ],
-      
-    "experiments": {
+]
+],
+"experiments": {
       "typedRoutes": true
     }
   }
