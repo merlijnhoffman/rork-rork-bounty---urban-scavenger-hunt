@@ -120,7 +120,7 @@ export default function ProfileScreen() {
           <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
             <View style={styles.authHeader}>
               <View style={styles.avatarContainer}>
-                <User color="#00D4FF" size={32} />
+                <User color="#1E40AF" size={32} />
               </View>
               <Text style={styles.authTitle}>Join the Hunt</Text>
               <Text style={styles.authSubtitle}>
@@ -141,7 +141,7 @@ export default function ProfileScreen() {
                 style={styles.secondaryAuthButton}
                 onPress={() => router.push('/login')}
               >
-                <LogIn color="#00D4FF" size={20} />
+                <LogIn color="#1E40AF" size={20} />
                 <Text style={styles.secondaryAuthButtonText}>Sign In</Text>
               </TouchableOpacity>
             </View>
@@ -150,17 +150,17 @@ export default function ProfileScreen() {
               <Text style={styles.benefitsTitle}>Why Create an Account?</Text>
               
               <View style={styles.benefitItem}>
-                <Shield color="#00D4FF" size={20} />
+                <Shield color="#1E40AF" size={20} />
                 <Text style={styles.benefitText}>Secure ticket purchases</Text>
               </View>
               
               <View style={styles.benefitItem}>
-                <QrCode color="#00D4FF" size={20} />
+                <QrCode color="#1E40AF" size={20} />
                 <Text style={styles.benefitText}>Unique verification codes</Text>
               </View>
               
               <View style={styles.benefitItem}>
-                <Clock color="#00D4FF" size={20} />
+                <Clock color="#1E40AF" size={20} />
                 <Text style={styles.benefitText}>Real-time hunt updates</Text>
               </View>
             </View>
@@ -183,7 +183,7 @@ export default function ProfileScreen() {
               onPressIn={handleLongPressStart}
               onPressOut={handleLongPressEnd}
             >
-              <User color="#00D4FF" size={32} />
+              <User color="#1E40AF" size={32} />
             </Pressable>
             <Text style={styles.welcomeText}>Welcome back!</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
@@ -234,7 +234,7 @@ export default function ProfileScreen() {
           {hasTicket && verificationCode && (
             <View style={styles.verificationCard}>
               <LinearGradient
-                colors={['#00D4FF', '#0099CC']}
+                colors={['#1E40AF', '#1E3A8A']}
                 style={styles.verificationGradient}
               >
                 <View style={styles.verificationHeader}>
@@ -262,7 +262,7 @@ export default function ProfileScreen() {
 
           {hasTicket && !verificationCode && (
             <View style={styles.waitingCard}>
-              <Clock color="#00D4FF" size={32} />
+              <Clock color="#1E40AF" size={32} />
               <Text style={styles.waitingTitle}>Loading Ticket...</Text>
               <Text style={styles.waitingText}>
                 Your verification code is being retrieved
@@ -278,7 +278,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <View style={styles.securityInfo}>
-            <Shield color="#00D4FF" size={24} />
+            <Shield color="#1E40AF" size={24} />
             <Text style={styles.securityTitle}>Security Features</Text>
             <Text style={styles.securityDescription}>
               {`• Account verification required\n• Secure authentication\n• Screenshot protection enabled\n• Unique verification codes\n• Anti-sharing technology`}
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00D4FF',
+    backgroundColor: '#1E40AF',
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 16,
@@ -379,14 +379,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#00D4FF',
+    borderColor: '#1E40AF',
     paddingVertical: 16,
     borderRadius: 12,
   },
   secondaryAuthButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#00D4FF',
+    color: '#1E40AF',
     marginLeft: 8,
   },
   benefitsContainer: {
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     paddingLeft: 12,
   },
   authButton: {
-    backgroundColor: '#00D4FF',
+    backgroundColor: '#1E40AF',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   },
   switchButtonText: {
     fontSize: 14,
-    color: '#00D4FF',
+    color: '#1E40AF',
   },
   securityNote: {
     flexDirection: 'row',
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   verificationCode: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#00D4FF',
+    color: '#1E40AF',
     letterSpacing: 4,
     textAlign: 'center',
   },
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   },
   startTime: {
     fontSize: 16,
-    color: '#00D4FF',
+    color: '#1E40AF',
     fontWeight: '600',
   },
   securityInfo: {
@@ -644,12 +644,12 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#00D4FF',
+    color: '#1E40AF',
     marginLeft: 8,
     fontWeight: '600',
   },
   phoneNumber: {
-    color: '#00D4FF',
+    color: '#1E40AF',
     fontWeight: '600',
   },
   verificationContainer: {

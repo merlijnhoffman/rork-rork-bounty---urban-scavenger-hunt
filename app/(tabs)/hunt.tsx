@@ -568,7 +568,7 @@ export default function HuntScreen() {
         >
           <View style={[styles.huntHeader, { paddingTop: insets.top + 20 }]}>
             <View style={styles.huntTitleContainer}>
-              <Target color="#00D4FF" size={24} />
+              <Target color="#1E40AF" size={24} />
               <Text style={styles.huntTitle}>LIVE HUNT</Text>
               <View style={styles.huntStatus}>
                 <View style={styles.statusDot} />
@@ -611,7 +611,7 @@ export default function HuntScreen() {
             
             {measuredDistance !== null && (
                 <View style={styles.distanceResult}>
-                  <Target color="#00D4FF" size={16} />
+                  <Target color="#1E40AF" size={16} />
                   <Text style={styles.distanceResultText}>
                     {measuredDistance}m away
                   </Text>
@@ -633,7 +633,7 @@ export default function HuntScreen() {
           <ScrollView style={styles.cluesContainer}>
             {liveClues.length === 0 ? (
               <View style={styles.waitingContainer}>
-                <Clock color="#00D4FF" size={48} />
+                <Clock color="#1E40AF" size={48} />
                 <Text style={styles.waitingTitle}>Waiting for clues...</Text>
                 <Text style={styles.waitingText}>
                   The hunt has started! Clues will appear here as they are released.
@@ -675,7 +675,7 @@ export default function HuntScreen() {
                       style={styles.mapButton}
                       onPress={() => setSelectedClueForMap(clue as ClueWithLocation)}
                     >
-                      <Crosshair color="#00D4FF" size={16} />
+                      <Crosshair color="#1E40AF" size={16} />
                       <Text style={styles.mapButtonText}>View Hunt Zone</Text>
                     </TouchableOpacity>
                     
@@ -718,7 +718,7 @@ export default function HuntScreen() {
               }
             ]}
           >
-            <Target color="#00D4FF" size={20} />
+            <Target color="#1E40AF" size={20} />
             <Text style={styles.notificationText}>New clue received!</Text>
           </Animated.View>
         </LinearGradient>
@@ -761,7 +761,7 @@ export default function HuntScreen() {
                 Ticket sales are closed for this event. Hunters are currently tracking the bounty in real-time.
               </Text>
               <View style={styles.nextEventPrompt}>
-                <AlertCircle color="#00D4FF" size={20} />
+                <AlertCircle color="#1E40AF" size={20} />
                 <Text style={styles.nextEventPromptText}>
                   Stay alert for the next upcoming event announcement!
                 </Text>
@@ -829,7 +829,7 @@ export default function HuntScreen() {
                     style={styles.authRequiredContainer}
                     onPress={() => router.push('/signup')}
                   >
-                    <LogIn color="#00D4FF" size={20} />
+                    <LogIn color="#1E40AF" size={20} />
                     <Text style={styles.authRequiredText}>
                       Sign in to purchase tickets
                     </Text>
@@ -853,7 +853,7 @@ export default function HuntScreen() {
                       style={styles.simulationButton}
                       onPress={startSimulation}
                     >
-                      <Play color="#00D4FF" size={16} />
+                      <Play color="#1E40AF" size={16} />
                       <Text style={styles.simulationButtonText}>Preview Hunt Experience</Text>
                     </TouchableOpacity>
                   </View>
@@ -882,7 +882,7 @@ export default function HuntScreen() {
                 disabled={!canPurchaseTicket || isLoading || isEventLive}
               >
                 <View style={styles.ticketButtonContent}>
-                  <CreditCard color={hasTicket || isEventLive ? '#888' : '#00D4FF'} size={20} />
+                  <CreditCard color={hasTicket || isEventLive ? '#888' : '#1E40AF'} size={20} />
                   <Text style={[
                     styles.ticketButtonTextSeparate,
                     (hasTicket || isEventLive) && styles.ticketButtonTextDisabled
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 48,
     fontWeight: '900',
-    color: '#00D4FF',
+    color: '#1E40AF',
     letterSpacing: 4,
     textAlign: 'center',
   },
@@ -1061,7 +1061,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: '#00D4FF',
+    borderColor: '#1E40AF',
   },
   ticketButtonDisabled: {
     backgroundColor: '#1A1A1A',
@@ -1073,7 +1073,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ticketButtonTextSeparate: {
-    color: '#00D4FF',
+    color: '#1E40AF',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1,
@@ -1104,7 +1104,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#00D4FF',
+    backgroundColor: '#1E40AF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -1129,12 +1129,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
     borderLeftWidth: 3,
-    borderLeftColor: '#00D4FF',
+    borderLeftColor: '#1E40AF',
   },
   authRequiredText: {
     flex: 1,
     fontSize: 14,
-    color: '#00D4FF',
+    color: '#1E40AF',
     marginLeft: 8,
     fontWeight: '500',
   },
@@ -1188,12 +1188,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#00D4FF',
+    borderLeftColor: '#1E40AF',
   },
   ticketInfoTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#00D4FF',
+    color: '#1E40AF',
     marginBottom: 8,
     letterSpacing: 1,
   },
@@ -1215,7 +1215,7 @@ const styles = StyleSheet.create({
   },
   simulationButtonText: {
     fontSize: 14,
-    color: '#00D4FF',
+    color: '#1E40AF',
     fontWeight: '600',
   },
   huntHeader: {
@@ -1233,7 +1233,7 @@ const styles = StyleSheet.create({
   huntTitle: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#00D4FF',
+    color: '#1E40AF',
     letterSpacing: 2,
     marginLeft: 8,
   },
@@ -1317,7 +1317,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#00D4FF',
+    borderLeftColor: '#1E40AF',
   },
   clueHeader: {
     flexDirection: 'row',
@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#00D4FF',
+    backgroundColor: '#1E40AF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1368,12 +1368,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#00D4FF',
+    borderColor: '#1E40AF',
     gap: 6,
   },
   mapButtonText: {
     fontSize: 13,
-    color: '#00D4FF',
+    color: '#1E40AF',
     fontWeight: '700',
     marginLeft: 6,
   },
@@ -1421,8 +1421,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#00D4FF',
-    shadowColor: '#00D4FF',
+    borderColor: '#1E40AF',
+    shadowColor: '#1E40AF',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1432,7 +1432,7 @@ const styles = StyleSheet.create({
   notificationText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#00D4FF',
+    color: '#1E40AF',
     marginLeft: 12,
   },
   huntActions: {
@@ -1442,7 +1442,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00D4FF',
+    backgroundColor: '#1E40AF',
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -1489,13 +1489,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#00D4FF',
+    borderColor: '#1E40AF',
     gap: 8,
   },
   distanceResultText: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#00D4FF',
+    color: '#1E40AF',
     letterSpacing: 1,
     marginLeft: 8,
   },
@@ -1555,13 +1555,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#00D4FF',
+    borderColor: '#1E40AF',
     gap: 12,
   },
   nextEventPromptText: {
     flex: 1,
     fontSize: 14,
-    color: '#00D4FF',
+    color: '#1E40AF',
     fontWeight: '600',
     lineHeight: 20,
     marginLeft: 12,
@@ -1599,12 +1599,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#00D4FF',
+    borderColor: '#1E40AF',
   },
   countdownLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00D4FF',
+    color: '#1E40AF',
     letterSpacing: 1.5,
     marginBottom: 8,
   },
