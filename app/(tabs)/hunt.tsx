@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-
+  Modal,
   Alert,
   Image,
 } from 'react-native';
@@ -72,6 +72,7 @@ export default function HuntScreen() {
   const [isCalculatingDistance, setIsCalculatingDistance] = useState<boolean>(false);
   const [notificationPermission, setNotificationPermission] = useState<boolean>(false);
   const [timeUntilEvent, setTimeUntilEvent] = useState<string>('');
+  const [showPrizeModal, setShowPrizeModal] = useState<boolean>(false);
   
   const bountyLocation = useMemo(() => ({
     latitude: 52.3752,
@@ -791,10 +792,14 @@ export default function HuntScreen() {
                   />
                   <View style={styles.eventHeader}>
                     <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
-                    <View style={styles.prizeContainer}>
+                    <TouchableOpacity 
+                      style={styles.prizeContainer}
+                      onPress={() => setShowPrizeModal(true)}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.prizeAmount}>€{currentEvent.prize}</Text>
-                      <Text style={styles.prizeLabel}>PRIZE</Text>
-                    </View>
+                      <Text style={styles.prizeLabel}>PRIZE - TAP FOR DETAILS</Text>
+                    </TouchableOpacity>
                   </View>
 
                   <View style={styles.citySection}>
@@ -942,6 +947,84 @@ export default function HuntScreen() {
           currency={TICKET.currency.toLowerCase()}
           description={TICKET.name}
         />
+
+        <Modal
+          visible={showPrizeModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowPrizeModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Prize Details</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowPrizeModal(false)}
+                  style={styles.modalCloseButton}
+                >
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                <View style={styles.modalPrizeSection}>
+                  <Text style={styles.modalPrizeAmount}>€{currentEvent?.prize || '1000'}</Text>
+                  <Text style={styles.modalPrizeSubtitle}>Cash Prize</Text>
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Prize Description</Text>
+                  <Text style={styles.modalSectionText}>
+                    The winner will receive €1,000 in cash, paid via bank transfer within 7 business days of verification. 
+                    The prize is awarded to the first verified hunter who successfully locates and identifies the target during the live event.
+                  </Text>
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>How to Win</Text>
+                  <Text style={styles.modalSectionText}>
+                    • Be the first to find the target person in the designated area{"\n"}
+                    • Take a photo or video as proof of discovery{"\n"}
+                    • Submit your verification through the app{"\n"}
+                    • Our team will verify your submission{"\n"}
+                    • Winner announced within 1 hour of hunt completion
+                  </Text>
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Legal Terms</Text>
+                  <Text style={styles.modalSectionText}>
+                    • Participants must be 18 years or older{"\n"}
+                    • One prize per event, awarded to first verified winner{"\n"}
+                    • Prize cannot be transferred or exchanged for other goods{"\n"}
+                    • Winner must provide valid identification for verification{"\n"}
+                    • Tax obligations are the responsibility of the winner{"\n"}
+                    • Bounty reserves the right to disqualify any participant for rule violations{"\n"}
+                    • All participants must comply with local laws and regulations{"\n"}
+                    • Harassment or aggressive behavior will result in immediate disqualification{"\n"}
+                    • Prize payment subject to identity verification and fraud prevention checks
+                  </Text>
+                </View>
+
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Important Notice</Text>
+                  <Text style={styles.modalSectionText}>
+                    By participating in this hunt, you agree to our Terms of Service and Privacy Policy. 
+                    All decisions made by Bounty regarding winner verification are final. 
+                    The hunt may be cancelled or postponed due to unforeseen circumstances, in which case full refunds will be provided.
+                  </Text>
+                </View>
+              </ScrollView>
+
+              <TouchableOpacity 
+                style={styles.modalButton}
+                onPress={() => setShowPrizeModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Got It</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </LinearGradient>
     </View>
   );
@@ -1611,6 +1694,102 @@ const styles = StyleSheet.create({
   countdownTime: {
     fontSize: 25,
     fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+    borderWidth: 2,
+    borderColor: '#1E40AF',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 1,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseText: {
+    fontSize: 20,
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  modalPrizeSection: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  modalPrizeAmount: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: '#1E40AF',
+    letterSpacing: 2,
+  },
+  modalPrizeSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#888',
+    marginTop: 8,
+    letterSpacing: 1,
+  },
+  modalSection: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  modalSectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  modalSectionText: {
+    fontSize: 14,
+    color: '#CCC',
+    lineHeight: 22,
+  },
+  modalButton: {
+    backgroundColor: '#1E40AF',
+    paddingVertical: 16,
+    marginHorizontal: 20,
+    marginVertical: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#FFF',
     letterSpacing: 1,
   },
