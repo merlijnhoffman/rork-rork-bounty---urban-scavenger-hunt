@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   },
   zoneStatLabel: {
     fontSize: 12,
-    color: '#888',
+    color: '#FFF',
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   webPlaceholderSubtext: {
     fontSize: 13,
-    color: '#888',
+    color: '#FFF',
     textAlign: 'center',
     marginTop: 8,
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   coordinatesLabel: {
     fontSize: 12,
-    color: '#888',
+    color: '#FFF',
     marginBottom: 4,
     textAlign: 'center',
   },

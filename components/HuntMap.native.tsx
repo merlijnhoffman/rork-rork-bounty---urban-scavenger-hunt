@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
-    color: '#888',
+    color: '#FFF',
     fontWeight: '500',
     marginBottom: 4,
     textTransform: 'uppercase',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   },
   zoneProgressText: {
     fontSize: 12,
-    color: '#888',
+    color: '#FFF',
     textAlign: 'center',
   },
   infoHint: {

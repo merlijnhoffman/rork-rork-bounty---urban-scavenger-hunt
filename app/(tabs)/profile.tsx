@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: 16,
-    color: '#CCC',
+    color: '#FFF',
     marginLeft: 12,
     flex: 1,
   },
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   },
   authSubtitle: {
     fontSize: 16,
-    color: '#888',
+    color: '#FFF',
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   securityText: {
     flex: 1,
     fontSize: 14,
-    color: '#CCC',
+    color: '#FFF',
     marginLeft: 12,
     lineHeight: 20,
   },
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 16,
-    color: '#888',
+    color: '#FFF',
   },
   profileCard: {
     backgroundColor: '#222',
@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: '#888',
+    color: '#FFF',
     marginBottom: 2,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   },
   waitingText: {
     fontSize: 14,
-    color: '#888',
+    color: '#FFF',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 12,
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
   },
   securityDescription: {
     fontSize: 14,
-    color: '#888',
+    color: '#FFF',
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   verificationNoteText: {
     flex: 1,
     fontSize: 14,
-    color: '#CCC',
+    color: '#FFF',
     marginLeft: 12,
     lineHeight: 20,
   },
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#888',
+    color: '#FFF',
     marginBottom: 24,
   },
   passwordInput: {

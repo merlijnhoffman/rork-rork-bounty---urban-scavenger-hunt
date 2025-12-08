@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: 16,
-    color: '#888',
+    color: '#FFF',
     marginTop: 8,
     letterSpacing: 2,
     textTransform: 'uppercase',
@@ -1117,7 +1117,7 @@ const styles = StyleSheet.create({
   stepText: {
     flex: 1,
     fontSize: 16,
-    color: '#CCC',
+    color: '#FFF',
     lineHeight: 22,
   },
 
@@ -1268,7 +1268,7 @@ const styles = StyleSheet.create({
   },
   huntTime: {
     fontSize: 14,
-    color: '#888',
+    color: '#FFF',
     marginTop: 4,
   },
   simulationControls: {
@@ -1306,7 +1306,7 @@ const styles = StyleSheet.create({
   },
   waitingText: {
     fontSize: 16,
-    color: '#888',
+    color: '#FFF',
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 280,
@@ -1345,7 +1345,7 @@ const styles = StyleSheet.create({
   },
   timestampText: {
     fontSize: 12,
-    color: '#888',
+    color: '#FFF',
     fontWeight: '500',
     marginLeft: 6,
   },
@@ -1388,7 +1388,7 @@ const styles = StyleSheet.create({
   },
   radiusText: {
     fontSize: 11,
-    color: '#888',
+    color: '#FFF',
     fontWeight: '600',
     marginLeft: 6,
   },
@@ -1407,7 +1407,7 @@ const styles = StyleSheet.create({
   },
   progressSubtext: {
     fontSize: 14,
-    color: '#888',
+    color: '#FFF',
     textAlign: 'center',
   },
   newClueNotification: {
@@ -1543,7 +1543,7 @@ const styles = StyleSheet.create({
   },
   liveEventMessage: {
     fontSize: 16,
-    color: '#CCC',
+    color: '#FFF',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 20,
@@ -1587,7 +1587,7 @@ const styles = StyleSheet.create({
   },
   firstEventSubtext: {
     fontSize: 13,
-    color: '#CCC',
+    color: '#FFF',
     textAlign: 'center',
     lineHeight: 18,
   },
