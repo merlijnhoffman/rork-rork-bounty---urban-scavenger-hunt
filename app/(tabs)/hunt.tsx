@@ -6,20 +6,19 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  Platform as RNPlatform,
+
   Alert,
   Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause, Crosshair, Navigation, UserPlus } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause, Crosshair, Navigation } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import HuntMap from '@/components/HuntMap';
 import { useGameStore, Clue } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
-import { useConnection } from '@/contexts/ConnectionContext';
-import PlayerConnection from '@/components/PlayerConnection';
+
 import { supabase } from '@/lib/supabase';
 
 import StripePayment from '@/components/StripePayment';
@@ -72,8 +71,6 @@ export default function HuntScreen() {
   const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
   const [isCalculatingDistance, setIsCalculatingDistance] = useState<boolean>(false);
   const [notificationPermission, setNotificationPermission] = useState<boolean>(false);
-  const [showConnectionModal, setShowConnectionModal] = useState<boolean>(false);
-  const { extraDistanceMeterUses, useExtraDistanceMeter, resetForNewHunt } = useConnection();
   const [timeUntilEvent, setTimeUntilEvent] = useState<string>('');
   
   const bountyLocation = useMemo(() => ({
@@ -335,7 +332,6 @@ export default function HuntScreen() {
     setLiveClues([]);
     setDistanceMeterUsed(false);
     setMeasuredDistance(null);
-    resetForNewHunt();
   };
   
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -354,12 +350,10 @@ export default function HuntScreen() {
   };
   
   const handleDistanceMeter = async () => {
-    if (distanceMeterUsed && extraDistanceMeterUses === 0) {
+    if (distanceMeterUsed) {
       Alert.alert('Already Used', 'You have already used your distance meter for this hunt.');
       return;
     }
-    
-    const usingExtraUse = distanceMeterUsed && extraDistanceMeterUses > 0;
     
     setIsCalculatingDistance(true);
     
@@ -387,16 +381,11 @@ export default function HuntScreen() {
       );
       
       setMeasuredDistance(Math.round(distance));
-      
-      if (usingExtraUse) {
-        useExtraDistanceMeter();
-      } else {
-        setDistanceMeterUsed(true);
-      }
+      setDistanceMeterUsed(true);
       
       Alert.alert(
         '📍 Distance Measured',
-        `You are ${Math.round(distance)} meters away from the Bounty!${usingExtraUse ? '\n\n(Used bonus distance meter)' : ''}`,
+        `You are ${Math.round(distance)} meters away from the Bounty!`,
         [{ text: 'OK' }]
       );
     } catch (error) {
@@ -593,45 +582,34 @@ export default function HuntScreen() {
             </View>
             
             <View style={styles.huntActions}>
-              <View style={styles.actionRow}>
-                <TouchableOpacity 
-                  style={[
-                    styles.distanceMeterButton,
-                    (distanceMeterUsed && extraDistanceMeterUses === 0 || isCalculatingDistance) && styles.distanceMeterButtonDisabled
-                  ]}
-                  onPress={handleDistanceMeter}
-                  disabled={(distanceMeterUsed && extraDistanceMeterUses === 0) || isCalculatingDistance}
-                >
-                  <Navigation 
-                    color={(distanceMeterUsed && extraDistanceMeterUses === 0) ? '#888' : '#FFF'} 
-                    size={18} 
-                  />
-                  <Text style={[
-                    styles.distanceMeterButtonText,
-                    (distanceMeterUsed && extraDistanceMeterUses === 0) && styles.distanceMeterButtonTextDisabled
-                  ]}>
-                    {isCalculatingDistance ? 'Calculating...' : 
-                     (distanceMeterUsed && extraDistanceMeterUses === 0) ? 'Distance Meter Used' : 
-                     'Use Distance Meter'}
-                  </Text>
-                  {(!distanceMeterUsed || extraDistanceMeterUses > 0) && (
-                    <View style={styles.oneTimeUse}>
-                      <Text style={styles.oneTimeUseText}>
-                        {distanceMeterUsed ? extraDistanceMeterUses : 1}x
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.connectButton}
-                  onPress={() => setShowConnectionModal(true)}
-                >
-                  <UserPlus color="#00D4FF" size={20} />
-                </TouchableOpacity>
-              </View>
-              
-              {measuredDistance !== null && (
+              <TouchableOpacity 
+                style={[
+                  styles.distanceMeterButton,
+                  (distanceMeterUsed || isCalculatingDistance) && styles.distanceMeterButtonDisabled
+                ]}
+                onPress={handleDistanceMeter}
+                disabled={distanceMeterUsed || isCalculatingDistance}
+              >
+                <Navigation 
+                  color={distanceMeterUsed ? '#888' : '#FFF'} 
+                  size={18} 
+                />
+                <Text style={[
+                  styles.distanceMeterButtonText,
+                  distanceMeterUsed && styles.distanceMeterButtonTextDisabled
+                ]}>
+                  {isCalculatingDistance ? 'Calculating...' : 
+                   distanceMeterUsed ? 'Distance Meter Used' : 
+                   'Use Distance Meter'}
+                </Text>
+                {!distanceMeterUsed && (
+                  <View style={styles.oneTimeUse}>
+                    <Text style={styles.oneTimeUseText}>1x</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            
+            {measuredDistance !== null && (
                 <View style={styles.distanceResult}>
                   <Target color="#00D4FF" size={16} />
                   <Text style={styles.distanceResultText}>
@@ -639,7 +617,7 @@ export default function HuntScreen() {
                   </Text>
                 </View>
               )}
-            </View>
+          </View>
             
             {isSimulating && (
               <TouchableOpacity 
@@ -754,12 +732,6 @@ export default function HuntScreen() {
             targetLocation={selectedClueForMap.location}
           />
         )}
-        
-        <PlayerConnection
-          visible={showConnectionModal}
-          onClose={() => setShowConnectionModal(false)}
-          eventId={currentEvent?.id || ''}
-        />
       </View>
     );
   }
@@ -1466,12 +1438,7 @@ const styles = StyleSheet.create({
   huntActions: {
     marginTop: 16,
   },
-  actionRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
   distanceMeterButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1480,18 +1447,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     position: 'relative',
-    marginRight: 12,
     gap: 8,
-  },
-  connectButton: {
-    backgroundColor: '#0A1A2A',
-    borderWidth: 2,
-    borderColor: '#00D4FF',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 12,
   },
   distanceMeterButtonDisabled: {
     backgroundColor: '#333',
