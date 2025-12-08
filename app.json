@@ -27,9 +27,6 @@
         "UIBackgroundModes": [
           "location"
         ],
-        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera",
-        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone"
-      },
       "config": {
         "googleMapsApiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
       }
