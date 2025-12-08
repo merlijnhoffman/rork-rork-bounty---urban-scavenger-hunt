@@ -238,7 +238,7 @@ export default function ProfileScreen() {
                 style={styles.verificationGradient}
               >
                 <View style={styles.verificationHeader}>
-                  <QrCode color="#000" size={24} />
+                  <QrCode color="#FFF" size={24} />
                   <Text style={styles.verificationTitle}>Your Ticket Verification Code</Text>
                 </View>
                 
@@ -251,7 +251,7 @@ export default function ProfileScreen() {
                 </Text>
                 
                 <View style={styles.ticketDetails}>
-                  <Shield color="#000" size={16} />
+                  <Shield color="#FFF" size={16} />
                   <Text style={styles.ticketDetailsText}>
                     Keep this code secure and don&apos;t share it
                   </Text>
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   verificationTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
+    color: '#FFF',
     marginLeft: 8,
   },
   codeContainer: {
@@ -572,9 +572,8 @@ const styles = StyleSheet.create({
   },
   verificationNote: {
     fontSize: 14,
-    color: '#000',
+    color: '#FFF',
     textAlign: 'center',
-    opacity: 0.8,
     marginBottom: 16,
   },
   ticketDetails: {
@@ -588,7 +587,7 @@ const styles = StyleSheet.create({
   },
   ticketDetailsText: {
     fontSize: 12,
-    color: '#000',
+    color: '#FFF',
     marginLeft: 8,
     fontWeight: '600',
   },
