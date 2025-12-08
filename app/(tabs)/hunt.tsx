@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
   ticketInfoTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E40AF',
+    color: '#FFF',
     marginBottom: 8,
     letterSpacing: 1,
   },
@@ -1604,7 +1604,7 @@ const styles = StyleSheet.create({
   countdownLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1E40AF',
+    color: '#FFF',
     letterSpacing: 1.5,
     marginBottom: 8,
   },
