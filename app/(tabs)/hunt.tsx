@@ -1373,7 +1373,7 @@ const styles = StyleSheet.create({
   },
   mapButtonText: {
     fontSize: 13,
-    color: '#1E40AF',
+    color: '#FFF',
     fontWeight: '700',
     marginLeft: 6,
   },
