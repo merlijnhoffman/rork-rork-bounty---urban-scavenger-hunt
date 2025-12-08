@@ -63,13 +63,6 @@
         }
       ],
       [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "string | string[]",
-          "enableGooglePay": "boolean"
-        }
-      ],
-      [
         "expo-location",
         {
           "isAndroidForegroundServiceEnabled": true,
