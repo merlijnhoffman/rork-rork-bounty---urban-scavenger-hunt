@@ -1456,7 +1456,7 @@ const styles = StyleSheet.create({
   distanceMeterButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000',
+    color: '#FFF',
     letterSpacing: 0.5,
     marginLeft: 8,
   },
