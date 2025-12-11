@@ -834,7 +834,7 @@ export default function HuntScreen() {
                     style={styles.authRequiredContainer}
                     onPress={() => router.push('/signup')}
                   >
-                    <LogIn color="#1E40AF" size={20} />
+                    <LogIn color="#FFF" size={20} />
                     <Text style={styles.authRequiredText}>
                       Sign in to purchase tickets
                     </Text>
@@ -1217,7 +1217,7 @@ const styles = StyleSheet.create({
   authRequiredText: {
     flex: 1,
     fontSize: 14,
-    color: '#1E40AF',
+    color: '#FFF',
     marginLeft: 8,
     fontWeight: '500',
   },
