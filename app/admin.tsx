@@ -95,7 +95,7 @@ export default function AdminPanel() {
         .update({ status: newStatus })
         .eq('id', currentEvent.id)
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
