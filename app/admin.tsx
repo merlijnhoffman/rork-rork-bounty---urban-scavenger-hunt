@@ -101,6 +101,10 @@ export default function AdminPanel() {
       return data;
     },
     onSuccess: (data) => {
+      if (!data) {
+        Alert.alert('Error', 'No data returned from update');
+        return;
+      }
       setEventStatus(data.status);
       Alert.alert('Success', `Event status updated to ${data.status.toUpperCase()}`);
     },
