@@ -460,7 +460,7 @@ export default function HuntScreen() {
         [
           {
             text: 'View Profile',
-            onPress: () => router.push('/(tabs)/profile'),
+            onPress: () => router.push('/profile'),
           },
           {
             text: 'OK',
@@ -530,7 +530,7 @@ export default function HuntScreen() {
             text: 'View Profile',
             onPress: () => {
               setShowPayment(false);
-              router.push('/(tabs)/profile');
+              router.push('/profile');
             },
           },
           {

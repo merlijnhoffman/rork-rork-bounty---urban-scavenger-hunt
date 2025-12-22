@@ -156,7 +156,7 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
       }
       
       // Redirect to home screen after successful sign out
-      router.replace('/(tabs)/hunt');
+      router.replace('/hunt');
     } catch (error) {
       console.error('Unexpected sign out error:', error);
       Alert.alert('Error', 'An unexpected error occurred');
