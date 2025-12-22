@@ -220,7 +220,7 @@ export default function HuntScreen() {
   ];
   
   const ticketQuery = useQuery({
-    queryKey: ['ticket-status', user?.id, currentEvent?.id],
+    queryKey: ['ticket-status', user?.id, currentEvent?.id, user, currentEvent],
     queryFn: async () => {
       if (!user || !currentEvent) {
         return { hasTicket: false };
@@ -417,10 +417,7 @@ export default function HuntScreen() {
   
   const isEventLive = useMemo(() => {
     if (!currentEvent) return false;
-    const now = new Date();
-    const eventStart = new Date(currentEvent.startTime);
-    const eventEnd = new Date(eventStart.getTime() + 3 * 60 * 60 * 1000);
-    return now >= eventStart && now <= eventEnd;
+    return currentEvent.status === 'live';
   }, [currentEvent]);
   
   const shouldShowHunt = hasTicket && (isHuntActive || isSimulating);

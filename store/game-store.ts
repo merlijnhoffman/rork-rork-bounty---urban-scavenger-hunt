@@ -11,6 +11,7 @@ export interface GameEvent {
   prize: number;
   registeredPlayers: number;
   startTime: string;
+  status: 'scheduled' | 'live' | 'completed';
 }
 
 export interface UserTicket {
@@ -74,6 +75,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
             prize: data.prize_amount || 1000,
             registeredPlayers: 189,
             startTime: data.start_time,
+            status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
           });
         } else {
           setCurrentEvent(null);

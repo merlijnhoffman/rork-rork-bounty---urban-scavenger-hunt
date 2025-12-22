@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Shield, Send, Radius, Target, AlertCircle, Clock } from 'lucide-react-native';
+import { Shield, Send, Radius, Target, AlertCircle, Clock, Play } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useGameStore } from '@/store/game-store';
 import { supabase } from '@/lib/supabase';
@@ -29,6 +29,13 @@ export default function AdminPanel() {
   
   const [clueText, setClueText] = useState<string>('');
   const [zoneSize, setZoneSize] = useState<string>('500');
+  const [eventStatus, setEventStatus] = useState<'scheduled' | 'live' | 'completed'>('scheduled');
+
+  useEffect(() => {
+    if (currentEvent) {
+      setEventStatus(currentEvent.status);
+    }
+  }, [currentEvent]);
 
   useEffect(() => {
     async function checkAdminStatus() {
@@ -63,7 +70,7 @@ export default function AdminPanel() {
   }, [user]);
 
   const cluesQuery = useQuery({
-    queryKey: ['admin-clues', currentEvent?.id],
+    queryKey: ['admin-clues', currentEvent?.id, currentEvent],
     queryFn: async () => {
       if (!currentEvent) return [];
       
@@ -77,6 +84,29 @@ export default function AdminPanel() {
       return data || [];
     },
     enabled: !!currentEvent,
+  });
+
+  const updateEventStatusMutation = useMutation({
+    mutationFn: async (newStatus: 'scheduled' | 'live' | 'completed') => {
+      if (!currentEvent) throw new Error('No event selected');
+      
+      const { data, error } = await supabase
+        .from('events')
+        .update({ status: newStatus })
+        .eq('id', currentEvent.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setEventStatus(data.status);
+      Alert.alert('Success', `Event status updated to ${data.status.toUpperCase()}`);
+    },
+    onError: (error: any) => {
+      Alert.alert('Error', error.message || 'Failed to update event status');
+    },
   });
 
   const sendClueMutation = useMutation({
@@ -116,9 +146,44 @@ export default function AdminPanel() {
     },
   });
 
+  const handleStartEvent = () => {
+    Alert.alert(
+      'Start Event',
+      'This will make the hunt LIVE for all hunters. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start Hunt',
+          onPress: () => updateEventStatusMutation.mutate('live'),
+          style: 'default',
+        },
+      ]
+    );
+  };
+
+  const handleEndEvent = () => {
+    Alert.alert(
+      'End Event',
+      'This will mark the hunt as completed. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'End Hunt',
+          onPress: () => updateEventStatusMutation.mutate('completed'),
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
   const handleSendClue = () => {
     if (!clueText.trim()) {
       Alert.alert('Error', 'Please enter clue text');
+      return;
+    }
+
+    if (eventStatus !== 'live') {
+      Alert.alert('Error', 'Event must be LIVE to send clues');
       return;
     }
 
@@ -232,7 +297,66 @@ export default function AdminPanel() {
                     <Text style={styles.eventStatLabel}>Prize</Text>
                     <Text style={styles.eventStatValue}>€{currentEvent.prize}</Text>
                   </View>
+                  <View style={styles.eventStat}>
+                    <Text style={styles.eventStatLabel}>Status</Text>
+                    <View style={styles.statusBadge}>
+                      <View style={[
+                        styles.statusDot,
+                        eventStatus === 'live' && styles.statusDotLive,
+                        eventStatus === 'completed' && styles.statusDotCompleted,
+                      ]} />
+                      <Text style={[
+                        styles.statusText,
+                        eventStatus === 'live' && styles.statusTextLive,
+                        eventStatus === 'completed' && styles.statusTextCompleted,
+                      ]}>{eventStatus.toUpperCase()}</Text>
+                    </View>
+                  </View>
                 </View>
+              </View>
+
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Target color="#00D4FF" size={24} />
+                  <Text style={styles.sectionTitle}>Event Control</Text>
+                </View>
+
+                {eventStatus === 'scheduled' && (
+                  <TouchableOpacity
+                    style={styles.startEventButton}
+                    onPress={handleStartEvent}
+                    disabled={updateEventStatusMutation.isPending}
+                  >
+                    <Play color="#000" size={20} />
+                    <Text style={styles.startEventButtonText}>
+                      {updateEventStatusMutation.isPending ? 'Starting...' : 'START HUNT NOW'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {eventStatus === 'live' && (
+                  <View>
+                    <View style={styles.liveEventBanner}>
+                      <View style={styles.livePulse} />
+                      <Text style={styles.liveEventText}>EVENT IS LIVE</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.endEventButton}
+                      onPress={handleEndEvent}
+                      disabled={updateEventStatusMutation.isPending}
+                    >
+                      <Text style={styles.endEventButtonText}>
+                        {updateEventStatusMutation.isPending ? 'Ending...' : 'End Hunt'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {eventStatus === 'completed' && (
+                  <View style={styles.completedBanner}>
+                    <Text style={styles.completedText}>Hunt has ended</Text>
+                  </View>
+                )}
               </View>
 
               <View style={styles.section}>
@@ -257,17 +381,19 @@ export default function AdminPanel() {
                 <TouchableOpacity
                   style={[
                     styles.sendButton,
-                    (sendClueMutation.isPending || !clueText.trim()) && styles.sendButtonDisabled
+                    (sendClueMutation.isPending || !clueText.trim() || eventStatus !== 'live') && styles.sendButtonDisabled
                   ]}
                   onPress={handleSendClue}
-                  disabled={sendClueMutation.isPending || !clueText.trim()}
+                  disabled={sendClueMutation.isPending || !clueText.trim() || eventStatus !== 'live'}
                 >
-                  <Send color={!clueText.trim() ? '#666' : '#000'} size={20} />
+                  <Send color={(!clueText.trim() || eventStatus !== 'live') ? '#666' : '#000'} size={20} />
                   <Text style={[
                     styles.sendButtonText,
-                    !clueText.trim() && styles.sendButtonTextDisabled
+                    (!clueText.trim() || eventStatus !== 'live') && styles.sendButtonTextDisabled
                   ]}>
-                    {sendClueMutation.isPending ? 'Sending...' : 'Send Clue to All Hunters'}
+                    {sendClueMutation.isPending ? 'Sending...' : 
+                     eventStatus !== 'live' ? 'Event Must Be Live' : 
+                     'Send Clue to All Hunters'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -676,5 +802,94 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000',
   },
-
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFA500',
+  },
+  statusDotLive: {
+    backgroundColor: '#00FF88',
+  },
+  statusDotCompleted: {
+    backgroundColor: '#888',
+  },
+  statusText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFA500',
+  },
+  statusTextLive: {
+    color: '#00FF88',
+  },
+  statusTextCompleted: {
+    color: '#888',
+  },
+  startEventButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00FF88',
+    paddingVertical: 18,
+    borderRadius: 12,
+    gap: 8,
+  },
+  startEventButtonText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#000',
+    letterSpacing: 1,
+  },
+  liveEventBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00FF88',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  livePulse: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#000',
+  },
+  liveEventText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#000',
+    letterSpacing: 2,
+  },
+  endEventButton: {
+    backgroundColor: '#2A1A1A',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FF6B6B',
+  },
+  endEventButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF6B6B',
+  },
+  completedBanner: {
+    backgroundColor: '#2A2A2A',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  completedText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#888',
+    letterSpacing: 1,
+  },
 });

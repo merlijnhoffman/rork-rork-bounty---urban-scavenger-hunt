@@ -46,7 +46,6 @@
     "hono": "^4.9.9",
     "lucide-react-native": "^0.475.0",
     "mapbox-gl": "^3.16.0",
-    "nativewind": "^4.1.23",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-error-boundary": "^6.0.0",
@@ -63,7 +62,8 @@
     "stripe": "^19.0.0",
     "superjson": "^2.2.2",
     "zod": "^4.1.12",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "@rork-ai/toolkit-sdk": "0.2.51"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
