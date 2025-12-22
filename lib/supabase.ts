@@ -186,6 +186,7 @@ export type Database = {
           start_time: string;
           price: number;
           is_active: boolean;
+          status: 'scheduled' | 'live' | 'completed';
           created_at: string;
         };
         Insert: {
@@ -195,6 +196,7 @@ export type Database = {
           start_time: string;
           price: number;
           is_active?: boolean;
+          status?: 'scheduled' | 'live' | 'completed';
           created_at?: string;
         };
         Update: {
@@ -204,6 +206,7 @@ export type Database = {
           start_time?: string;
           price?: number;
           is_active?: boolean;
+          status?: 'scheduled' | 'live' | 'completed';
           created_at?: string;
         };
       };
