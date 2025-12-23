@@ -156,7 +156,7 @@ export default function HuntScreen() {
         content: {
           title: '🎯 New Clue Received!',
           body: `Clue #${clue.order}: ${clue.text.substring(0, 100)}${clue.text.length > 100 ? '...' : ''}`,
-          sound: true,
+          sound: 'notification_sound.wav',
           priority: Notifications.AndroidNotificationPriority.HIGH,
           data: { clueId: clue.id, order: clue.order },
         },
