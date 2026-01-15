@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import { TicketTier } from '@/types/payment';
 
@@ -10,10 +10,10 @@ interface PaymentContextType {
 const [PaymentProviderInternal, usePaymentInternal] = createContextHook((): PaymentContextType => {
   const [selectedTier, setSelectedTier] = useState<TicketTier | null>(null);
 
-  return useMemo(() => ({
+  return {
     selectedTier,
     setSelectedTier,
-  }), [selectedTier]);
+  };
 });
 
 export function usePayment() {
