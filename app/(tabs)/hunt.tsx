@@ -21,7 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 import { supabase } from '@/lib/supabase';
 
-import StripePayment from '@/components/StripePayment';
+
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { TICKET } from '@/constants/payment';
@@ -58,7 +58,7 @@ export default function HuntScreen() {
     purchaseError
   } = useGameStore();
   
-  const [showPayment, setShowPayment] = useState<boolean>(false);
+
   const [hasTicket, setHasTicket] = useState<boolean>(false);
   const [isHuntActive, setIsHuntActive] = useState<boolean>(false);
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
@@ -481,77 +481,12 @@ export default function HuntScreen() {
       return;
     }
     
-    if (TICKET.isFree) {
-      handleClaimFreeTicket();
-    } else {
-      setShowPayment(true);
-    }
+    handleClaimFreeTicket();
   };
 
-  const handlePaymentSuccess = async (paymentIntentId: string) => {
-    console.log('Payment successful:', paymentIntentId);
-    
-    if (!user || !currentEvent) {
-      console.error('Missing user or event data');
-      Alert.alert('Error', 'Session expired. Please try again.');
-      return;
-    }
 
-    try {
-      const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-      
-      const { data: ticket, error } = await supabase
-        .from('tickets')
-        .insert({
-          user_id: user.id,
-          event_id: currentEvent.id,
-          status: 'active',
-          verification_code: verificationCode,
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        const errorMessage = error.message || error.toString() || 'Unknown error occurred';
-        console.error('Error creating ticket:', errorMessage);
-        Alert.alert('Error', `Failed to create ticket: ${errorMessage}. Please contact support with payment ID: ${paymentIntentId}`);
-        return;
-      }
-      
-      console.log('Ticket created successfully:', ticket.id);
-      
-      await ticketQuery.refetch();
-      
-      Alert.alert(
-        '🎉 Ticket Purchased!',
-        'Your ticket has been purchased successfully. Check your profile for your verification code.',
-        [
-          {
-            text: 'View Profile',
-            onPress: () => {
-              setShowPayment(false);
-              router.push('/profile');
-            },
-          },
-          {
-            text: 'OK',
-            onPress: () => setShowPayment(false),
-          },
-        ]
-      );
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Error creating ticket:', errorMessage);
-      Alert.alert('Error', `Failed to create ticket: ${errorMessage}`);
-    }
-  };
   
 
-
-  const handlePaymentClose = () => {
-    setShowPayment(false);
-  };
   
 
 
@@ -935,16 +870,6 @@ export default function HuntScreen() {
           </View>
         </ScrollView>
         
-        <StripePayment
-          visible={showPayment}
-          onClose={handlePaymentClose}
-          onSuccess={handlePaymentSuccess}
-          priceId={TICKET.stripePriceId || process.env.EXPO_PUBLIC_STRIPE_PRICE_ID || ''}
-          amount={Math.round(TICKET.price * 100)}
-          currency={TICKET.currency.toLowerCase()}
-          description={TICKET.name}
-        />
-
         <Modal
           visible={showPrizeModal}
           transparent={true}
