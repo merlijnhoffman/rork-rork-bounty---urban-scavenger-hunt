@@ -73,6 +73,13 @@
         }
       ],
       [
+        "expo-maps",
+        {
+          "requestLocationPermission": true,
+          "locationPermission": "Allow $(PRODUCT_NAME) to use your location"
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./local/assets/notification_icon.png",
@@ -83,7 +90,8 @@
           ],
           "enableBackgroundRemoteNotifications": false
         }
-      ]
+      ],
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true
