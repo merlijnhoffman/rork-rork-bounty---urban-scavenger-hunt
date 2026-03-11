@@ -207,7 +207,10 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     disableTicketChecking,
     currentUserId,
     ticketCheckEnabled,
-  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, eventQuery.isLoading, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled]);
+    eventError: eventQuery.error ? (eventQuery.error as Error).message || 'Failed to load event' : null,
+    refetchEvent: eventQuery.refetch,
+    isEventFetching: eventQuery.isFetching,
+  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, eventQuery.isLoading, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled, eventQuery.error, eventQuery.refetch, eventQuery.isFetching]);
 });
 
 // Safe wrapper hook that ensures the context is available
@@ -231,6 +234,9 @@ export function useGameStore() {
       disableTicketChecking: () => {},
       currentUserId: null,
       ticketCheckEnabled: false,
+      eventError: null,
+      refetchEvent: async () => ({ data: null, error: null, isError: false, isSuccess: false, failureCount: 0, failureReason: null, errorUpdateCount: 0, status: 'success' as const, fetchStatus: 'idle' as const, dataUpdatedAt: 0, errorUpdatedAt: 0, isLoading: false, isFetching: false, isFetched: false, isFetchedAfterMount: false, isPaused: false, isPending: false, isPlaceholderData: false, isRefetchError: false, isRefetching: false, isStale: false, isInitialLoading: false }),
+      isEventFetching: false,
     };
   }
   return context;

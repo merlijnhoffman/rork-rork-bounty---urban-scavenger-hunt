@@ -52,7 +52,10 @@ export default function HuntScreen() {
   const { 
     currentEvent, 
     isLoading: gameLoading,
-    purchaseError
+    purchaseError,
+    eventError,
+    refetchEvent,
+    isEventFetching,
   } = useGameStore();
 
   const [hasTicket, setHasTicket] = useState<boolean>(false);
@@ -138,7 +141,7 @@ export default function HuntScreen() {
       }
     };
     
-    requestNotificationPermissions();
+    void requestNotificationPermissions();
   }, []);
   
   const sendClueNotification = useCallback(async (clue: Clue) => {
@@ -271,7 +274,7 @@ export default function HuntScreen() {
             return [...prev, newClue].sort((a, b) => a.order - b.order);
           });
           
-          sendClueNotification(newClue);
+          void sendClueNotification(newClue);
           
           Animated.sequence([
             Animated.timing(fadeAnim, {
@@ -291,7 +294,7 @@ export default function HuntScreen() {
       .subscribe();
     
     return () => {
-      subscription.unsubscribe();
+      void subscription.unsubscribe();
     };
   }, [hasTicket, currentEvent, user, fadeAnim, sendClueNotification]);
   
@@ -304,7 +307,7 @@ export default function HuntScreen() {
       setTimeout(() => {
         setLiveClues(prev => [...prev, clue]);
         
-        sendClueNotification(clue);
+        void sendClueNotification(clue);
         
         Animated.sequence([
           Animated.timing(fadeAnim, {
@@ -438,7 +441,7 @@ export default function HuntScreen() {
         .single();
       
       if (error) {
-        const errorMessage = error.message || error.toString() || 'Unknown error occurred';
+        const errorMessage = error.message || 'Unknown error occurred';
         console.error('Error creating ticket:', errorMessage);
         Alert.alert('Error', `Failed to claim ticket: ${errorMessage}`);
         return;
@@ -475,7 +478,7 @@ export default function HuntScreen() {
       return;
     }
     
-    handleClaimFreeTicket();
+    void handleClaimFreeTicket();
   };
 
   if (shouldShowHunt) {
@@ -685,6 +688,37 @@ export default function HuntScreen() {
             <Text style={styles.appTitle}>BOUNTY</Text>
             <Text style={styles.tagline}>Urban Scavenger Hunt</Text>
           </View>
+
+          {!currentEvent && !gameLoading && eventError && (
+            <View style={styles.errorCard}>
+              <View style={styles.errorCardIcon}>
+                <AlertCircle color={Colors.status.danger} size={28} />
+              </View>
+              <Text style={styles.errorCardTitle}>Unable to Load Event</Text>
+              <Text style={styles.errorCardMessage}>
+                {eventError === 'Load failed' || eventError === 'Network request failed' || eventError === 'Failed to fetch'
+                  ? 'Could not connect to the server. Check your internet connection and try again.'
+                  : `Something went wrong: ${eventError}`}
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => refetchEvent()}
+                disabled={isEventFetching}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.retryButtonText}>
+                  {isEventFetching ? 'Retrying...' : 'Try Again'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!currentEvent && gameLoading && (
+            <View style={styles.loadingCard}>
+              <View style={styles.loadingPulse} />
+              <Text style={styles.loadingText}>Loading event details...</Text>
+            </View>
+          )}
 
           {isEventLive && !hasTicket && (
             <View style={styles.liveEventNotice}>
@@ -1745,5 +1779,71 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: '#000',
     letterSpacing: 0.5,
+  },
+  errorCard: {
+    backgroundColor: C.dark.card,
+    borderRadius: 20,
+    padding: 28,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.2)',
+  },
+  errorCardIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: C.status.dangerMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  errorCardTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorCardMessage: {
+    fontSize: 14,
+    color: C.dark.textSecondary,
+    textAlign: 'center',
+    lineHeight: 21,
+    marginBottom: 20,
+    maxWidth: 300,
+  },
+  retryButton: {
+    backgroundColor: C.accent.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#000',
+    letterSpacing: 0.5,
+  },
+  loadingCard: {
+    backgroundColor: C.dark.card,
+    borderRadius: 20,
+    padding: 40,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  loadingPulse: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.accent.primaryMuted,
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontSize: 15,
+    color: C.dark.textSecondary,
+    fontWeight: '500' as const,
   },
 });
