@@ -48,45 +48,56 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     queryKey: ['current-event'],
     queryFn: async () => {
       console.log('Fetching current event from Supabase...');
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('start_time', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .order('start_time', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching event:', error.message || JSON.stringify(error));
-        throw new Error(error.message || 'Failed to fetch event');
+        if (error) {
+          console.error('Error fetching event:', error.message || JSON.stringify(error));
+          throw new Error(error.message || 'Failed to fetch event');
+        }
+
+        if (!data) {
+          console.log('No events found in database');
+          return null;
+        }
+
+        console.log('Event fetched successfully:', data.id);
+        const event: GameEvent = {
+          id: data.id,
+          city: data.city || 'Amsterdam',
+          date: new Date(data.start_time).toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          }),
+          ticketPrice: (data as any).ticket_price ?? (data as any).price ?? 25,
+          prize: (data as any).prize_amount ?? (data as any).prize ?? 1000,
+          registeredPlayers: 189,
+          startTime: data.start_time,
+          status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
+        };
+        return event;
+      } catch (err: any) {
+        const message = err?.message || 'Unknown error';
+        console.error('Error fetching event:', message);
+        if (message === 'Load failed' || message === 'Network request failed' || message === 'Failed to fetch') {
+          console.warn('Network error fetching event - will retry automatically');
+        }
+        throw err;
       }
-
-      if (!data) {
-        console.log('No events found in database');
-        return null;
-      }
-
-      console.log('Event fetched successfully:', data.id);
-      const event: GameEvent = {
-        id: data.id,
-        city: data.city || 'Amsterdam',
-        date: new Date(data.start_time).toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-        ticketPrice: (data as any).ticket_price ?? (data as any).price ?? 25,
-        prize: (data as any).prize_amount ?? (data as any).prize ?? 1000,
-        registeredPlayers: 189,
-        startTime: data.start_time,
-        status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
-      };
-      return event;
     },
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    retry: 5,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 15000),
     staleTime: 60000,
+    gcTime: 300000,
     refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   useEffect(() => {
