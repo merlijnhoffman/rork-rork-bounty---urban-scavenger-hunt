@@ -101,7 +101,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         ])
       ).start();
 
-      getUserLocation();
+      void getUserLocation();
     }
   }, [visible, pulseAnim, targetLocation.name, getUserLocation]);
 
@@ -215,7 +215,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
 
         <View style={styles.zoneProgressBar}>
           <View style={styles.zoneProgressBarBg}>
-            <View style={[styles.zoneProgressBarFill, { width: `${zoneProgress}%` }]} />
+            <View style={[styles.zoneProgressBarFill, { width: `${zoneProgress}%` as unknown as import('react-native').DimensionValue }]} />
           </View>
           <Text style={styles.zoneProgressText}>Zone narrowed by {zoneProgress}%</Text>
         </View>
