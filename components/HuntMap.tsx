@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Target } from 'lucide-react-native';
+import { X, Target, MapPin } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 interface HuntMapProps {
@@ -24,40 +24,16 @@ interface HuntMapProps {
   };
 }
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoicmVlZGJhcm5hcmQiLCJhIjoiY2t2b3YzYTNrMjE0NjJvcDJndHN4cXJiYSJ9.2lGv2LUrC8pNpFvNBBQ3dQ';
 const AMBER = Colors.accent.primary;
-
-
-let MapboxMap: any = null;
-let MapboxMarker: any = null;
-let MapboxLayer: any = null;
-let MapboxSource: any = null;
-
-if (Platform.OS === 'web') {
-  try {
-    const mapboxgl = require('react-map-gl');
-    MapboxMap = mapboxgl.default || mapboxgl.Map;
-    MapboxMarker = mapboxgl.Marker;
-    MapboxLayer = mapboxgl.Layer;
-    MapboxSource = mapboxgl.Source;
-    
-    require('mapbox-gl/dist/mapbox-gl.css');
-  } catch (error) {
-    console.warn('Mapbox GL not available:', error);
-  }
-}
 
 export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation }: HuntMapProps) {
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const mapRef = useRef<any>(null);
 
   useEffect(() => {
     if (!visible) return;
-    
-    setMapLoaded(true);
-    
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLocation({
@@ -72,33 +48,79 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
     }
   }, [visible]);
 
-  const createCircleGeoJSON = () => {
-    const points = 64;
-    const coords = [];
-    const distanceX = targetLocation.radius / (111.32 * 1000 * Math.cos((targetLocation.latitude * Math.PI) / 180));
-    const distanceY = targetLocation.radius / (111.32 * 1000);
-
-    for (let i = 0; i < points; i++) {
-      const angle = (i / points) * 2 * Math.PI;
-      const dx = distanceX * Math.cos(angle);
-      const dy = distanceY * Math.sin(angle);
-      coords.push([targetLocation.longitude + dx, targetLocation.latitude + dy]);
-    }
-    coords.push(coords[0]);
-
-    return {
-      type: 'Feature',
-      geometry: {
-        type: 'Polygon',
-        coordinates: [coords],
-      },
-    };
-  };
+  useEffect(() => {
+    if (!visible) return;
+    const timer = setTimeout(() => setMapLoaded(true), 300);
+    return () => clearTimeout(timer);
+  }, [visible]);
 
   if (!visible) return null;
 
   const zoneProgress = ((clueOrder / totalClues) * 100).toFixed(0);
   const remainingClues = totalClues - clueOrder;
+
+  const buildMapHtml = () => {
+    const userMarkerHtml = userLocation
+      ? `
+        var userIcon = L.divIcon({
+          className: 'user-marker',
+          html: '<div style="width:16px;height:16px;border-radius:50%;background:#10B981;border:3px solid #FFF;box-shadow:0 0 8px rgba(16,185,129,0.6);"></div>',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        });
+        L.marker([${userLocation.latitude}, ${userLocation.longitude}], { icon: userIcon }).addTo(map).bindPopup('You are here');
+      `
+      : '';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <style>
+          body { margin: 0; padding: 0; }
+          #map { width: 100%; height: 100vh; }
+          .leaflet-control-attribution { display: none !important; }
+        </style>
+      </head>
+      <body>
+        <div id="map"></div>
+        <script>
+          var map = L.map('map', {
+            zoomControl: true,
+            attributionControl: false,
+          }).setView([${targetLocation.latitude}, ${targetLocation.longitude}], 14);
+
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+          }).addTo(map);
+
+          L.circle([${targetLocation.latitude}, ${targetLocation.longitude}], {
+            radius: ${targetLocation.radius},
+            color: '${AMBER}',
+            weight: 3,
+            fillColor: '${AMBER}',
+            fillOpacity: 0.15,
+          }).addTo(map);
+
+          var targetIcon = L.divIcon({
+            className: 'target-marker',
+            html: '<div style="width:32px;height:32px;border-radius:50%;background:rgba(245,158,11,0.25);border:2px solid ${AMBER};display:flex;align-items:center;justify-content:center;"><div style="width:12px;height:12px;border-radius:50%;background:${AMBER};"></div></div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          });
+          L.marker([${targetLocation.latitude}, ${targetLocation.longitude}], { icon: targetIcon }).addTo(map).bindPopup('${targetLocation.name}');
+
+          ${userMarkerHtml}
+        </script>
+      </body>
+      </html>
+    `;
+  };
+
+  const mapDataUri = `data:text/html;charset=utf-8,${encodeURIComponent(buildMapHtml())}`;
 
   return (
     <View style={styles.webContainer}>
@@ -113,70 +135,25 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-      
-      <View style={styles.webMapPlaceholder}>
+
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.mapTemplate}>
-          {!mapLoaded || !MapboxMap ? (
+          {!mapLoaded ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={AMBER} />
-              <Text style={styles.loadingText}>{!MapboxMap ? 'Map unavailable' : 'Loading map...'}</Text>
+              <Text style={styles.loadingText}>Loading map...</Text>
             </View>
           ) : (
-            <MapboxMap
-              ref={mapRef}
-              mapboxAccessToken={MAPBOX_TOKEN}
-              initialViewState={{
-                longitude: targetLocation.longitude,
-                latitude: targetLocation.latitude,
-                zoom: 14,
-              }}
-              style={{ width: '100%', height: '100%', borderRadius: 16 }}
-              mapStyle="mapbox://styles/mapbox/dark-v11"
-            >
-              <MapboxSource id="hunt-zone" type="geojson" data={createCircleGeoJSON() as any}>
-                <MapboxLayer
-                  id="hunt-zone-fill"
-                  type="fill"
-                  paint={{
-                    'fill-color': AMBER,
-                    'fill-opacity': 0.15,
-                  }}
-                />
-                <MapboxLayer
-                  id="hunt-zone-outline"
-                  type="line"
-                  paint={{
-                    'line-color': AMBER,
-                    'line-width': 3,
-                  }}
-                />
-              </MapboxSource>
-              
-              <MapboxMarker
-                longitude={targetLocation.longitude}
-                latitude={targetLocation.latitude}
-              >
-                <View style={styles.targetMarker}>
-                  <Target color={AMBER} size={24} />
-                </View>
-              </MapboxMarker>
-              
-              {userLocation && (
-                <MapboxMarker
-                  longitude={userLocation.longitude}
-                  latitude={userLocation.latitude}
-                >
-                  <View style={styles.userMarker}>
-                    <View style={styles.userMarkerInner} />
-                  </View>
-                </MapboxMarker>
-              )}
-            </MapboxMap>
+            <iframe
+              src={mapDataUri}
+              style={{ width: '100%', height: '100%', border: 'none', borderRadius: 16 } as any}
+              title="Hunt Zone Map"
+            />
           )}
         </View>
-        
+
         <Text style={styles.webPlaceholderTitle}>{targetLocation.name}</Text>
-        
+
         <View style={styles.zoneStats}>
           <View style={styles.zoneStat}>
             <Text style={styles.zoneStatLabel}>Search Zone</Text>
@@ -202,17 +179,18 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
             </Text>
           </View>
         )}
-        
+
         <Text style={styles.webPlaceholderSubtext}>
           This is a preview of the hunt zone
         </Text>
         <View style={styles.coordinatesContainer}>
-          <Text style={styles.coordinatesLabel}>Zone Center:</Text>
+          <MapPin color={Colors.dark.textMuted} size={14} />
           <Text style={styles.coordinatesText}>
             {targetLocation.latitude.toFixed(6)}, {targetLocation.longitude.toFixed(6)}
           </Text>
         </View>
-      </View>
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </View>
   );
 }
@@ -252,10 +230,11 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: C.dark.text,
   },
-  webMapPlaceholder: {
+  scrollContainer: {
     flex: 1,
+  },
+  scrollContent: {
     alignItems: 'center',
-    justifyContent: 'flex-start',
     padding: 20,
     paddingTop: 24,
     gap: 14,
@@ -268,7 +247,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: C.accent.primary,
-    position: 'relative' as const,
     overflow: 'hidden',
     marginBottom: 8,
     shadowColor: C.accent.primary,
@@ -287,16 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.accent.primary,
     fontWeight: '600' as const,
-  },
-  targetMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: C.accent.primary,
   },
   webPlaceholderTitle: {
     fontSize: 22,
@@ -381,21 +349,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: C.dark.border,
-  },
-  coordinatesLabel: {
-    fontSize: 11,
-    color: C.dark.textMuted,
-    marginBottom: 4,
-    textAlign: 'center',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   coordinatesText: {
     fontSize: 14,
     color: C.accent.primary,
     fontWeight: '600' as const,
     textAlign: 'center',
-    fontFamily: 'monospace' as const,
   },
   closeButton: {
     width: 36,
@@ -404,25 +367,5 @@ const styles = StyleSheet.create({
     backgroundColor: C.dark.card,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  userMarker: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#FFF',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  userMarkerInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFF',
   },
 });

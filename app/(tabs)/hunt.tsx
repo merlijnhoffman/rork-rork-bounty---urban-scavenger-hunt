@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   Image,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,15 +27,17 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { TICKET } from '@/constants/payment';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 interface ClueWithLocation extends Clue {
   location?: {
@@ -126,6 +129,11 @@ export default function HuntScreen() {
   
   useEffect(() => {
     const requestNotificationPermissions = async () => {
+      if (Platform.OS === 'web') {
+        console.log('Notifications not supported on web');
+        setNotificationPermission(false);
+        return;
+      }
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
       
@@ -145,6 +153,10 @@ export default function HuntScreen() {
   }, []);
   
   const sendClueNotification = useCallback(async (clue: Clue) => {
+    if (Platform.OS === 'web') {
+      console.log('Notifications not supported on web, skipping for clue:', clue.id);
+      return;
+    }
     if (!notificationPermission) {
       console.log('Notification permission not granted');
       return;
