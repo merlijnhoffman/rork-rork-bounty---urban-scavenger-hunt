@@ -858,29 +858,23 @@ export default function HuntScreen() {
             </Animated.View>
           )}
           
-          {currentEvent && (
+          {currentEvent && isLoggedIn && !hasTicket && !isEventLive && (
             <Animated.View style={{ opacity: opacityAnim }}>
               <TouchableOpacity
                 style={[
                   styles.ticketButton,
-                  (!canPurchaseTicket || isLoading || isEventLive) && styles.ticketButtonDisabled
+                  (!canPurchaseTicket || isLoading) && styles.ticketButtonDisabled
                 ]}
                 onPress={handlePurchaseTicket}
-                disabled={!canPurchaseTicket || isLoading || isEventLive}
+                disabled={!canPurchaseTicket || isLoading}
                 activeOpacity={0.8}
               >
-                <Text style={[
-                  styles.ticketButtonText,
-                  (hasTicket || isEventLive) && styles.ticketButtonTextDisabled
-                ]}>
+                <Text style={styles.ticketButtonText}>
                   {isLoading ? 'PROCESSING...' : 
-                   isEventLive ? 'EVENT LIVE - SALES CLOSED' :
-                   hasTicket ? 'TICKET CLAIMED' : 
-                   !isLoggedIn ? 'SIGN IN TO CLAIM FREE TICKET' :
                    TICKET.isFree ? 'CLAIM FREE TICKET' : 'PURCHASE TICKET'}
                 </Text>
-                {!hasTicket && !isEventLive && !isLoading && (
-                  <ChevronRight color={canPurchaseTicket ? '#000' : Colors.dark.textMuted} size={18} />
+                {!isLoading && (
+                  <ChevronRight color={'#000'} size={18} />
                 )}
               </TouchableOpacity>
             </Animated.View>
