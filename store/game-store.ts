@@ -48,27 +48,14 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     queryKey: ['current-event'],
     queryFn: async () => {
       console.log('Fetching current event from Supabase...');
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       try {
-        const query = supabase
+        const { data, error } = await supabase
           .from('events')
           .select('*')
-          .order('start_time', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-
-        const { data, error } = await Promise.race([
-          query,
-          new Promise<never>((_, reject) => {
-            controller.signal.addEventListener('abort', () => {
-              reject(new Error('Request timeout'));
-            });
-          }),
-        ]);
-
-        clearTimeout(timeoutId);
 
         if (error) {
           console.warn('Supabase query error:', error.message || 'Unknown');
@@ -81,10 +68,11 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         }
 
         console.log('Event fetched successfully:', data.id);
+        const eventDate = data.date ? new Date(data.date) : new Date();
         const event: GameEvent = {
           id: data.id,
           city: data.city || 'Amsterdam',
-          date: new Date(data.start_time).toLocaleDateString('en-US', {
+          date: eventDate.toLocaleDateString('en-US', {
             weekday: 'long',
             month: 'short',
             day: 'numeric',
@@ -98,14 +86,8 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         };
         return event;
       } catch (err: any) {
-        clearTimeout(timeoutId);
         const message = err?.message || 'Unknown error';
-        const isNetworkError = message === 'Load failed' || message === 'Network request failed' || message === 'Failed to fetch' || message === 'The operation was aborted.' || err?.name === 'AbortError';
-        if (isNetworkError) {
-          console.warn('Network error fetching event - will retry automatically');
-        } else {
-          console.warn('Error fetching event:', message);
-        }
+        console.warn('Error fetching event:', message);
         throw err;
       }
     },
