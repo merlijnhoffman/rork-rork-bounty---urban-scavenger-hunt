@@ -1,5 +1,6 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { TicketTier } from '@/types/payment';
 import { supabase } from '@/lib/supabase';
 
@@ -33,7 +34,6 @@ export interface Clue {
 const [GameProvider, useGameStoreInternal] = createContextHook(() => {
   
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
-  const [eventLoading, setEventLoading] = useState<boolean>(true);
 
   const [isGameActive, setIsGameActive] = useState<boolean>(false);
   const [userTicket, setUserTicket] = useState<UserTicket | null>(null);
@@ -44,52 +44,56 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [ticketCheckEnabled, setTicketCheckEnabled] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchCurrentEvent = async () => {
-      try {
-        setEventLoading(true);
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .order('start_time', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+  const eventQuery = useQuery({
+    queryKey: ['current-event'],
+    queryFn: async () => {
+      console.log('Fetching current event from Supabase...');
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('start_time', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-        if (error) {
-          console.error('Error fetching event:', error.message || JSON.stringify(error));
-          setCurrentEvent(null);
-          return;
-        }
-
-        if (data) {
-          setCurrentEvent({
-            id: data.id,
-            city: data.city || 'Amsterdam',
-            date: new Date(data.start_time).toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            }),
-            ticketPrice: data.ticket_price || 25,
-            prize: data.prize_amount || 1000,
-            registeredPlayers: 189,
-            startTime: data.start_time,
-            status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
-          });
-        } else {
-          setCurrentEvent(null);
-        }
-      } catch (error: any) {
-        console.error('Unexpected error fetching event:', error.message || error);
-        setCurrentEvent(null);
-      } finally {
-        setEventLoading(false);
+      if (error) {
+        console.error('Error fetching event:', error.message || JSON.stringify(error));
+        throw new Error(error.message || 'Failed to fetch event');
       }
-    };
 
-    fetchCurrentEvent();
-  }, []);
+      if (!data) {
+        console.log('No events found in database');
+        return null;
+      }
+
+      console.log('Event fetched successfully:', data.id);
+      const event: GameEvent = {
+        id: data.id,
+        city: data.city || 'Amsterdam',
+        date: new Date(data.start_time).toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        ticketPrice: (data as any).ticket_price ?? (data as any).price ?? 25,
+        prize: (data as any).prize_amount ?? (data as any).prize ?? 1000,
+        registeredPlayers: 189,
+        startTime: data.start_time,
+        status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
+      };
+      return event;
+    },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    staleTime: 60000,
+    refetchOnWindowFocus: true,
+  });
+
+  useEffect(() => {
+    if (eventQuery.data !== undefined) {
+      setCurrentEvent(eventQuery.data);
+    }
+  }, [eventQuery.data]);
 
   // Enable ticket checking when user is set
   const enableTicketChecking = useCallback((userId: string) => {
@@ -161,7 +165,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     hasTicket: !!userTicket,
     clues,
     gameStartTime,
-    isLoading: isLoading || eventLoading,
+    isLoading: isLoading || eventQuery.isLoading,
     purchaseError,
     purchaseTicket,
     setGameActive: setIsGameActive,
@@ -170,7 +174,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     disableTicketChecking,
     currentUserId,
     ticketCheckEnabled,
-  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, eventLoading, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled]);
+  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, eventQuery.isLoading, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled]);
 });
 
 // Safe wrapper hook that ensures the context is available
