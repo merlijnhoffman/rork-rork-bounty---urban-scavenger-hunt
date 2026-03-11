@@ -26,6 +26,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { TICKET } from '@/constants/payment';
+import { usePayment } from '@/contexts/PaymentContext';
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -55,13 +56,24 @@ export default function HuntScreen() {
   const { 
     currentEvent, 
     isLoading: gameLoading,
-    purchaseError,
+    purchaseError: _gamePurchaseError,
     eventError,
     refetchEvent,
     isEventFetching,
   } = useGameStore();
+  const {
+    offering,
+    isOfferingLoading,
+    hasHuntAccess,
+    purchasePackage,
+    isPurchasing,
+    purchaseError: rcPurchaseError,
+    restorePurchases,
+    isRestoring,
+  } = usePayment();
 
   const [hasTicket, setHasTicket] = useState<boolean>(false);
+  const [showPaywall, setShowPaywall] = useState<boolean>(false);
   const [isHuntActive, setIsHuntActive] = useState<boolean>(false);
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
@@ -231,10 +243,14 @@ export default function HuntScreen() {
   ];
   
   const ticketQuery = useQuery({
-    queryKey: ['ticket-status', user?.id, currentEvent?.id, user, currentEvent],
+    queryKey: ['ticket-status', user?.id, currentEvent?.id],
     queryFn: async () => {
       if (!user || !currentEvent) {
         return { hasTicket: false };
+      }
+
+      if (hasHuntAccess) {
+        return { hasTicket: true };
       }
 
       const { data, error } = await supabase
@@ -416,13 +432,17 @@ export default function HuntScreen() {
       setHasTicket(false);
       return;
     }
+    if (hasHuntAccess) {
+      setHasTicket(true);
+      return;
+    }
     if (ticketQuery.data) {
       setHasTicket(ticketQuery.data.hasTicket);
     }
-  }, [ticketQuery.data, user]);
+  }, [ticketQuery.data, user, hasHuntAccess]);
 
-  const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading;
-  const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched);
+  const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading && !isPurchasing;
+  const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched) || isPurchasing;
   
   const isEventLive = useMemo(() => {
     if (!currentEvent) return false;
@@ -431,66 +451,71 @@ export default function HuntScreen() {
   
   const shouldShowHunt = hasTicket && (isHuntActive || isSimulating);
 
-  const handleClaimFreeTicket = async () => {
-    if (!user || !currentEvent) {
-      console.error('Missing user or event data');
-      Alert.alert('Error', 'Session expired. Please try again.');
-      return;
-    }
-
-    try {
-      const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-      
-      const { data: ticket, error } = await supabase
-        .from('tickets')
-        .insert({
-          user_id: user.id,
-          event_id: currentEvent.id,
-          status: 'active',
-          verification_code: verificationCode,
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        const errorMessage = error.message || 'Unknown error occurred';
-        console.error('Error creating ticket:', errorMessage);
-        Alert.alert('Error', `Failed to claim ticket: ${errorMessage}`);
-        return;
-      }
-      
-      console.log('Free ticket claimed successfully:', ticket.id);
-      
-      await ticketQuery.refetch();
-      
-      Alert.alert(
-        'Free Ticket Claimed!',
-        'Welcome to the first hunt! This event is FREE for early supporters. Check your profile for your verification code.',
-        [
-          {
-            text: 'View Profile',
-            onPress: () => router.push('/profile'),
-          },
-          {
-            text: 'OK',
-          },
-        ]
-      );
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Error claiming free ticket:', errorMessage);
-      Alert.alert('Error', `Failed to claim ticket: ${errorMessage}`);
-    }
-  };
-
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
       router.push('/signup');
       return;
     }
-    
-    void handleClaimFreeTicket();
+    setShowPaywall(true);
+  };
+
+  const handleConfirmPurchase = async () => {
+    if (!offering || offering.availablePackages.length === 0) {
+      Alert.alert('Error', 'No ticket packages available. Please try again later.');
+      return;
+    }
+
+    const pkg = offering.availablePackages[0];
+    try {
+      await purchasePackage(pkg);
+      setShowPaywall(false);
+
+      if (user && currentEvent) {
+        const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        await supabase
+          .from('tickets')
+          .insert({
+            user_id: user.id,
+            event_id: currentEvent.id,
+            status: 'active',
+            verification_code: verificationCode,
+          });
+      }
+
+      await ticketQuery.refetch();
+
+      Alert.alert(
+        'Ticket Purchased!',
+        'You\'re in! Check your profile for your verification code.',
+        [
+          { text: 'View Profile', onPress: () => router.push('/profile') },
+          { text: 'OK' },
+        ]
+      );
+    } catch (error: any) {
+      const msg = error?.message || 'Purchase failed';
+      if (msg.includes('cancelled') || msg.includes('canceled')) {
+        console.log('[Purchase] User cancelled');
+        return;
+      }
+      console.error('[Purchase] Error:', msg);
+      Alert.alert('Purchase Failed', msg);
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      await restorePurchases();
+      await ticketQuery.refetch();
+      if (hasHuntAccess) {
+        setShowPaywall(false);
+        Alert.alert('Restored!', 'Your ticket has been restored.');
+      } else {
+        Alert.alert('No Purchases Found', 'No previous ticket purchases were found for this account.');
+      }
+    } catch (error: any) {
+      Alert.alert('Restore Failed', error?.message || 'Could not restore purchases.');
+    }
   };
 
   if (shouldShowHunt) {
@@ -826,10 +851,10 @@ export default function HuntScreen() {
                   </TouchableOpacity>
                 )}
                 
-                {purchaseError && (
+                {rcPurchaseError && (
                   <View style={styles.errorContainer}>
                     <AlertCircle color={Colors.status.danger} size={16} />
-                    <Text style={styles.errorText}>{purchaseError}</Text>
+                    <Text style={styles.errorText}>{rcPurchaseError}</Text>
                   </View>
                 )}
 
@@ -858,13 +883,13 @@ export default function HuntScreen() {
             </Animated.View>
           )}
           
-          {TICKET.isFirstEvent && !hasTicket && currentEvent && (
+          {!hasTicket && currentEvent && !isEventLive && (
             <Animated.View style={[styles.firstEventBannerContainer, { opacity: opacityAnim }]}>
               <View style={styles.firstEventBanner}>
-                <Zap color={Colors.status.success} size={20} />
+                <Zap color={Colors.accent.primary} size={20} />
                 <View style={styles.firstEventTextContainer}>
-                  <Text style={styles.firstEventText}>FIRST EVENT - FREE ENTRY!</Text>
-                  <Text style={styles.firstEventSubtext}>Special launch event. Future hunts will require paid tickets.</Text>
+                  <Text style={styles.firstEventText}>{TICKET.currency} {TICKET.price.toFixed(2)} PER TICKET</Text>
+                  <Text style={styles.firstEventSubtext}>One-time purchase. Includes all hunt features and prize eligibility.</Text>
                 </View>
               </View>
             </Animated.View>
@@ -882,8 +907,7 @@ export default function HuntScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.ticketButtonText}>
-                  {isLoading ? 'PROCESSING...' : 
-                   TICKET.isFree ? 'CLAIM FREE TICKET' : 'PURCHASE TICKET'}
+                  {isLoading || isPurchasing ? 'PROCESSING...' : `BUY TICKET - ${TICKET.currency} ${TICKET.price.toFixed(2)}`}
                 </Text>
                 {!isLoading && (
                   <ChevronRight color={'#000'} size={18} />
@@ -898,7 +922,7 @@ export default function HuntScreen() {
             <View style={styles.stepsContainer}>
               {[
                 { num: '1', text: 'Create your secure account (one ticket per account)', icon: LogIn },
-                { num: '2', text: TICKET.isFree ? 'Claim your FREE ticket (verified accounts only)' : 'Purchase your ticket for the next hunt', icon: Zap },
+                { num: '2', text: `Purchase your ticket for \u20AC${TICKET.price.toFixed(2)}`, icon: Zap },
                 { num: '3', text: 'Receive real-time clues during the live event', icon: Eye },
                 { num: '4', text: 'Find the target first and claim the prize', icon: Trophy },
               ].map((step, i) => (
@@ -981,6 +1005,78 @@ export default function HuntScreen() {
               >
                 <Text style={styles.modalButtonText}>Got It</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <Modal
+          visible={showPaywall}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowPaywall(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.paywallContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Get Your Ticket</Text>
+                <TouchableOpacity
+                  onPress={() => setShowPaywall(false)}
+                  style={styles.modalCloseButton}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.modalCloseText}>{'\u2715'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.paywallBody}>
+                <View style={styles.paywallPriceSection}>
+                  <Target color={Colors.accent.primary} size={44} />
+                  <Text style={styles.paywallPrice}>{'\u20AC'}{TICKET.price.toFixed(2)}</Text>
+                  <Text style={styles.paywallPriceLabel}>One-time purchase</Text>
+                </View>
+
+                <View style={styles.paywallFeatures}>
+                  {TICKET.features.map((feature, idx) => (
+                    <View key={idx} style={styles.paywallFeatureRow}>
+                      <View style={styles.paywallFeatureCheck}>
+                        <Text style={styles.paywallFeatureCheckText}>{'\u2713'}</Text>
+                      </View>
+                      <Text style={styles.paywallFeatureText}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {rcPurchaseError && (
+                  <View style={styles.paywallError}>
+                    <AlertCircle color={Colors.status.danger} size={16} />
+                    <Text style={styles.paywallErrorText}>{rcPurchaseError}</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.paywallBuyButton,
+                    (isPurchasing || isOfferingLoading) && styles.paywallBuyButtonDisabled,
+                  ]}
+                  onPress={handleConfirmPurchase}
+                  disabled={isPurchasing || isOfferingLoading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.paywallBuyButtonText}>
+                    {isPurchasing ? 'PROCESSING...' : isOfferingLoading ? 'LOADING...' : `PURCHASE FOR \u20AC${TICKET.price.toFixed(2)}`}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.paywallRestoreButton}
+                  onPress={handleRestore}
+                  disabled={isRestoring}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.paywallRestoreText}>
+                    {isRestoring ? 'Restoring...' : 'Restore Previous Purchase'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
@@ -1237,14 +1333,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   firstEventBanner: {
-    backgroundColor: C.status.successMuted,
+    backgroundColor: C.accent.primaryMuted,
     padding: 16,
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
     borderWidth: 1,
-    borderColor: 'rgba(16,185,129,0.25)',
+    borderColor: 'rgba(245,158,11,0.25)',
   },
   firstEventTextContainer: {
     flex: 1,
@@ -1252,7 +1348,7 @@ const styles = StyleSheet.create({
   firstEventText: {
     fontSize: 14,
     fontWeight: '800' as const,
-    color: C.status.success,
+    color: C.accent.primary,
     letterSpacing: 0.5,
     marginBottom: 3,
   },
@@ -1850,6 +1946,104 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 15,
     color: C.dark.textSecondary,
+    fontWeight: '500' as const,
+  },
+  paywallContent: {
+    backgroundColor: C.dark.surface,
+    borderRadius: 24,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '85%',
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  paywallBody: {
+    padding: 24,
+  },
+  paywallPriceSection: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  paywallPrice: {
+    fontSize: 48,
+    fontWeight: '900' as const,
+    color: C.accent.primary,
+    letterSpacing: 2,
+  },
+  paywallPriceLabel: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: C.dark.textMuted,
+    letterSpacing: 1,
+  },
+  paywallFeatures: {
+    gap: 14,
+    marginBottom: 24,
+  },
+  paywallFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  paywallFeatureCheck: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: C.status.successMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paywallFeatureCheckText: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: C.status.success,
+  },
+  paywallFeatureText: {
+    fontSize: 15,
+    color: C.dark.text,
+    flex: 1,
+  },
+  paywallError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.status.dangerMuted,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+    gap: 10,
+  },
+  paywallErrorText: {
+    flex: 1,
+    fontSize: 14,
+    color: C.status.danger,
+    fontWeight: '500' as const,
+  },
+  paywallBuyButton: {
+    backgroundColor: C.accent.primary,
+    paddingVertical: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  paywallBuyButtonDisabled: {
+    backgroundColor: C.dark.card,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  paywallBuyButtonText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#000',
+    letterSpacing: 0.8,
+  },
+  paywallRestoreButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  paywallRestoreText: {
+    fontSize: 14,
+    color: C.dark.textMuted,
     fontWeight: '500' as const,
   },
 });

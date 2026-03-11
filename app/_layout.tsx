@@ -7,13 +7,16 @@ import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import Colors from '@/constants/colors';
 import { GameProvider } from '@/store/game-store';
+import { configureRevenueCat } from '@/hooks/useRevenueCat';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import { PaymentWrapper } from '@/contexts/PaymentContext';
 import { LocationProvider } from '@/contexts/LocationContext';
 import { ErrorBoundary } from 'react-error-boundary';
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
+
+configureRevenueCat();
 
 const queryClient = new QueryClient();
 
