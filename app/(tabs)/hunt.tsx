@@ -12,15 +12,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, CreditCard, LogIn, Target, MapPin, Play, Pause, Crosshair, Navigation } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Play, Pause, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import HuntMap from '@/components/HuntMap';
 import { useGameStore, Clue } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
+import Colors from '@/constants/colors';
 
 import { supabase } from '@/lib/supabase';
-
 
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -36,7 +36,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-
 interface ClueWithLocation extends Clue {
   location?: {
     latitude: number;
@@ -45,8 +44,6 @@ interface ClueWithLocation extends Clue {
     name: string;
   };
 }
-
-
 
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
@@ -57,7 +54,6 @@ export default function HuntScreen() {
     isLoading: gameLoading,
     purchaseError
   } = useGameStore();
-  
 
   const [hasTicket, setHasTicket] = useState<boolean>(false);
   const [isHuntActive, setIsHuntActive] = useState<boolean>(false);
@@ -154,7 +150,7 @@ export default function HuntScreen() {
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '🎯 New Clue Received!',
+          title: 'New Clue Received!',
           body: `Clue #${clue.order}: ${clue.text.substring(0, 100)}${clue.text.length > 100 ? '...' : ''}`,
           sound: true,
           priority: Notifications.AndroidNotificationPriority.HIGH,
@@ -337,14 +333,14 @@ export default function HuntScreen() {
   
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371e3;
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const p1 = lat1 * Math.PI / 180;
+    const p2 = lat2 * Math.PI / 180;
+    const dp = (lat2 - lat1) * Math.PI / 180;
+    const dl = (lon2 - lon1) * Math.PI / 180;
 
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+              Math.cos(p1) * Math.cos(p2) *
+              Math.sin(dl / 2) * Math.sin(dl / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
@@ -385,7 +381,7 @@ export default function HuntScreen() {
       setDistanceMeterUsed(true);
       
       Alert.alert(
-        '📍 Distance Measured',
+        'Distance Measured',
         `You are ${Math.round(distance)} meters away from the Bounty!`,
         [{ text: 'OK' }]
       );
@@ -409,9 +405,7 @@ export default function HuntScreen() {
       setHasTicket(ticketQuery.data.hasTicket);
     }
   }, [ticketQuery.data, user]);
-  
 
-  
   const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading;
   const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched);
   
@@ -455,7 +449,7 @@ export default function HuntScreen() {
       await ticketQuery.refetch();
       
       Alert.alert(
-        '🎉 Free Ticket Claimed!',
+        'Free Ticket Claimed!',
         'Welcome to the first hunt! This event is FREE for early supporters. Check your profile for your verification code.',
         [
           {
@@ -484,33 +478,30 @@ export default function HuntScreen() {
     handleClaimFreeTicket();
   };
 
-
-  
-
-  
-
-
-
-
   if (shouldShowHunt) {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#0A0A0A', '#1A1A1A']}
+          colors={[Colors.gradient.backgroundStart, Colors.gradient.backgroundEnd]}
           style={styles.gradient}
         >
-          <View style={[styles.huntHeader, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.huntTitleContainer}>
-              <Target color="#1E40AF" size={24} />
-              <Text style={styles.huntTitle}>LIVE HUNT</Text>
-              <View style={styles.huntStatus}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>ACTIVE</Text>
+          <View style={[styles.huntHeader, { paddingTop: insets.top + 12 }]}>
+            <View style={styles.huntTitleRow}>
+              <View style={styles.huntTitleLeft}>
+                <View style={styles.liveIconContainer}>
+                  <Target color={Colors.accent.primary} size={20} />
+                </View>
+                <Text style={styles.huntTitle}>LIVE HUNT</Text>
+              </View>
+              <View style={styles.huntStatusPill}>
+                <View style={styles.statusDotPulse} />
+                <Text style={styles.statusPillText}>ACTIVE</Text>
               </View>
             </View>
             
-            <View style={styles.huntInfo}>
+            <View style={styles.huntInfoRow}>
               <Text style={styles.huntLocation}>AMSTERDAM</Text>
+              <Text style={styles.huntTimeSeparator}>|</Text>
               <Text style={styles.huntTime}>Started at 3:00 PM CET</Text>
             </View>
             
@@ -522,9 +513,10 @@ export default function HuntScreen() {
                 ]}
                 onPress={handleDistanceMeter}
                 disabled={distanceMeterUsed || isCalculatingDistance}
+                activeOpacity={0.8}
               >
                 <Navigation 
-                  color={distanceMeterUsed ? '#888' : '#FFF'} 
+                  color={distanceMeterUsed ? Colors.dark.textMuted : '#000'} 
                   size={18} 
                 />
                 <Text style={[
@@ -536,37 +528,40 @@ export default function HuntScreen() {
                    'Use Distance Meter'}
                 </Text>
                 {!distanceMeterUsed && (
-                  <View style={styles.oneTimeUse}>
+                  <View style={styles.oneTimeUseBadge}>
                     <Text style={styles.oneTimeUseText}>1x</Text>
                   </View>
                 )}
               </TouchableOpacity>
             
-            {measuredDistance !== null && (
+              {measuredDistance !== null && (
                 <View style={styles.distanceResult}>
-                  <Target color="#1E40AF" size={16} />
+                  <Target color={Colors.accent.primary} size={16} />
                   <Text style={styles.distanceResultText}>
                     {measuredDistance}m away
                   </Text>
                 </View>
               )}
-          </View>
+            </View>
             
             {isSimulating && (
               <TouchableOpacity 
                 style={styles.simulationControls}
                 onPress={stopSimulation}
+                activeOpacity={0.8}
               >
-                <Pause color="#FF6B6B" size={16} />
+                <Pause color={Colors.status.danger} size={16} />
                 <Text style={styles.simulationText}>Stop Simulation</Text>
               </TouchableOpacity>
             )}
           </View>
           
-          <ScrollView style={styles.cluesContainer}>
+          <ScrollView style={styles.cluesContainer} showsVerticalScrollIndicator={false}>
             {liveClues.length === 0 ? (
               <View style={styles.waitingContainer}>
-                <Clock color="#1E40AF" size={48} />
+                <View style={styles.waitingIconContainer}>
+                  <Clock color={Colors.accent.primary} size={40} />
+                </View>
                 <Text style={styles.waitingTitle}>Waiting for clues...</Text>
                 <Text style={styles.waitingText}>
                   The hunt has started! Clues will appear here as they are released.
@@ -587,11 +582,11 @@ export default function HuntScreen() {
                   ]}
                 >
                   <View style={styles.clueHeader}>
-                    <View style={styles.clueNumber}>
+                    <View style={styles.clueNumberBadge}>
                       <Text style={styles.clueNumberText}>{clue.order}</Text>
                     </View>
                     <View style={styles.clueTimestamp}>
-                      <Clock color="#888" size={14} />
+                      <Clock color={Colors.dark.textMuted} size={13} />
                       <Text style={styles.timestampText}>
                         {new Date(clue.timestamp).toLocaleTimeString('en-US', {
                           hour: '2-digit',
@@ -607,14 +602,15 @@ export default function HuntScreen() {
                     <TouchableOpacity 
                       style={styles.mapButton}
                       onPress={() => setSelectedClueForMap(clue as ClueWithLocation)}
+                      activeOpacity={0.8}
                     >
-                      <Crosshair color="#1E40AF" size={16} />
+                      <Crosshair color={Colors.accent.primary} size={15} />
                       <Text style={styles.mapButtonText}>View Hunt Zone</Text>
                     </TouchableOpacity>
                     
                     {(clue as ClueWithLocation).location && (
                       <View style={styles.radiusIndicator}>
-                        <MapPin color="#888" size={12} />
+                        <MapPin color={Colors.dark.textMuted} size={12} />
                         <Text style={styles.radiusText}>
                           {(clue as ClueWithLocation).location!.radius}m zone
                         </Text>
@@ -635,6 +631,7 @@ export default function HuntScreen() {
                 </Text>
               </View>
             )}
+            <View style={{ height: 40 }} />
           </ScrollView>
           
           <Animated.View 
@@ -651,7 +648,7 @@ export default function HuntScreen() {
               }
             ]}
           >
-            <Target color="#1E40AF" size={20} />
+            <Zap color={Colors.accent.primary} size={20} />
             <Text style={styles.notificationText}>New clue received!</Text>
           </Animated.View>
         </LinearGradient>
@@ -672,31 +669,37 @@ export default function HuntScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#0A0A0A', '#1A1A1A']}
+        colors={[Colors.gradient.backgroundStart, Colors.gradient.backgroundEnd]}
         style={styles.gradient}
       >
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
+        <ScrollView 
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.heroSection}>
+            <View style={styles.heroIconRow}>
+              <View style={styles.heroBadge}>
+                <Crosshair color={Colors.accent.primary} size={16} />
+              </View>
+            </View>
             <Text style={styles.appTitle}>BOUNTY</Text>
-            <Text style={styles.tagline}>Urban Bounty Hunt</Text>
+            <Text style={styles.tagline}>Urban Scavenger Hunt</Text>
           </View>
 
           {isEventLive && !hasTicket && (
             <View style={styles.liveEventNotice}>
-              <View style={styles.liveEventHeader}>
-                <View style={styles.liveIndicator}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>EVENT LIVE NOW</Text>
-                </View>
+              <View style={styles.liveIndicatorPill}>
+                <View style={styles.liveDotSmall} />
+                <Text style={styles.liveIndicatorText}>LIVE NOW</Text>
               </View>
-              <Text style={styles.liveEventTitle}>The Hunt is Currently Active!</Text>
+              <Text style={styles.liveEventTitle}>The Hunt is Active!</Text>
               <Text style={styles.liveEventMessage}>
-                Ticket sales are closed for this event. Hunters are currently tracking the bounty in real-time.
+                Ticket sales are closed for this event. Hunters are currently tracking the bounty.
               </Text>
               <View style={styles.nextEventPrompt}>
-                <AlertCircle color="#1E40AF" size={20} />
+                <AlertCircle color={Colors.accent.primary} size={18} />
                 <Text style={styles.nextEventPromptText}>
-                  Stay alert for the next upcoming event announcement!
+                  Stay alert for the next event!
                 </Text>
               </View>
             </View>
@@ -713,84 +716,94 @@ export default function HuntScreen() {
               ]}
             >
               <LinearGradient
-                colors={['#1E3A8A', '#3B82F6', '#60A5FA']}
+                colors={[Colors.gradient.accentStart, Colors.gradient.accentMid, Colors.gradient.accentEnd]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.eventGradient}
               >
                 <Image
-                    source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/qsqldepkdx2ld5bwrcdk' }}
-                    style={styles.backgroundImage}
-                  />
-                  <View style={styles.eventHeader}>
+                  source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/qsqldepkdx2ld5bwrcdk' }}
+                  style={styles.backgroundImage}
+                />
+                <View style={styles.eventHeader}>
+                  <View style={styles.nextEventPill}>
                     <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
-                    <TouchableOpacity 
-                      style={styles.prizeContainer}
-                      onPress={() => setShowPrizeModal(true)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.prizeAmount}>€{currentEvent.prize}</Text>
-                      <Text style={styles.prizeLabel}>PRIZE - TAP FOR DETAILS</Text>
-                    </TouchableOpacity>
                   </View>
+                  <TouchableOpacity 
+                    style={styles.prizeContainer}
+                    onPress={() => setShowPrizeModal(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Trophy color="#FFF" size={16} />
+                    <Text style={styles.prizeAmount}>{'\u20AC'}{currentEvent.prize}</Text>
+                  </TouchableOpacity>
+                </View>
 
-                  <View style={styles.citySection}>
-                    <Text style={styles.cityLabel}>LOCATION</Text>
-                    <Text style={styles.cityNameLarge}>AMSTERDAM</Text>
-                    <Text style={styles.cityCountry}>Netherlands</Text>
+                <View style={styles.citySection}>
+                  <Text style={styles.cityLabel}>LOCATION</Text>
+                  <Text style={styles.cityNameLarge}>AMSTERDAM</Text>
+                  <Text style={styles.cityCountry}>Netherlands</Text>
+                </View>
+
+                {timeUntilEvent && (
+                  <View style={styles.countdownContainer}>
+                    <Text style={styles.countdownLabel}>STARTS IN</Text>
+                    <Text style={styles.countdownTime}>{timeUntilEvent}</Text>
                   </View>
+                )}
 
-                  {timeUntilEvent && (
-                    <View style={styles.countdownContainer}>
-                      <Text style={styles.countdownLabel}>STARTS IN</Text>
-                      <Text style={styles.countdownTime}>{timeUntilEvent}</Text>
-                    </View>
-                  )}
-
-                  <View style={styles.eventDetails}>
-                    <View style={styles.eventRow}>
-                      <Clock color="#FFF" size={20} />
-                      <Text style={styles.eventDate}>Saturday, Jan 18, 2026 • 12:00 PM CET</Text>
-                    </View>
-                    
-                    <View style={styles.eventRow}>
-                      <Users color="#FFF" size={20} />
-                      <Text style={styles.eventPlayers}>
-                        189 hunters registered
-                      </Text>
-                    </View>
+                <View style={styles.eventDetails}>
+                  <View style={styles.eventRow}>
+                    <Clock color="rgba(255,255,255,0.9)" size={18} />
+                    <Text style={styles.eventDate}>Saturday, Jan 18, 2026 {'\u2022'} 12:00 PM CET</Text>
                   </View>
+                  
+                  <View style={styles.eventRow}>
+                    <Users color="rgba(255,255,255,0.9)" size={18} />
+                    <Text style={styles.eventPlayers}>
+                      189 hunters registered
+                    </Text>
+                  </View>
+                </View>
 
                 {!isLoggedIn && (
                   <TouchableOpacity 
                     style={styles.authRequiredContainer}
                     onPress={() => router.push('/signup')}
+                    activeOpacity={0.8}
                   >
-                    <LogIn color="#FFF" size={20} />
+                    <LogIn color="#FFF" size={18} />
                     <Text style={styles.authRequiredText}>
-                      Sign in to purchase tickets
+                      Sign in to claim your ticket
                     </Text>
+                    <ChevronRight color="rgba(255,255,255,0.6)" size={16} />
                   </TouchableOpacity>
                 )}
                 
                 {purchaseError && (
                   <View style={styles.errorContainer}>
-                    <AlertCircle color="#FF6B6B" size={16} />
+                    <AlertCircle color={Colors.status.danger} size={16} />
                     <Text style={styles.errorText}>{purchaseError}</Text>
                   </View>
                 )}
 
                 {hasTicket && (
-                  <View style={styles.ticketInfoSeparate}>
-                    <Text style={styles.ticketInfoTitle}>✓ TICKET CLAIMED</Text>
-                    <Text style={styles.ticketInfoText}>
+                  <View style={styles.ticketClaimedSection}>
+                    <View style={styles.ticketClaimedHeader}>
+                      <View style={styles.ticketCheckmark}>
+                        <Text style={styles.ticketCheckmarkText}>{'\u2713'}</Text>
+                      </View>
+                      <Text style={styles.ticketClaimedTitle}>TICKET CLAIMED</Text>
+                    </View>
+                    <Text style={styles.ticketClaimedText}>
                       Hunt starts at the scheduled time.
                     </Text>
                     <TouchableOpacity 
                       style={styles.simulationButton}
                       onPress={startSimulation}
+                      activeOpacity={0.8}
                     >
-                      <Play color="#1E40AF" size={16} />
+                      <Play color={Colors.accent.primary} size={16} />
                       <Text style={styles.simulationButtonText}>Preview Hunt Experience</Text>
                     </TouchableOpacity>
                   </View>
@@ -800,10 +813,13 @@ export default function HuntScreen() {
           )}
           
           {TICKET.isFirstEvent && !hasTicket && currentEvent && (
-            <Animated.View style={[styles.firstEventBannerSeparate, { opacity: opacityAnim }]}>
+            <Animated.View style={[styles.firstEventBannerContainer, { opacity: opacityAnim }]}>
               <View style={styles.firstEventBanner}>
-                <Text style={styles.firstEventText}>🎉 FIRST EVENT - FREE ENTRY!</Text>
-                <Text style={styles.firstEventSubtext}>This is a special launch event. Future hunts will require paid tickets.</Text>
+                <Zap color={Colors.status.success} size={20} />
+                <View style={styles.firstEventTextContainer}>
+                  <Text style={styles.firstEventText}>FIRST EVENT - FREE ENTRY!</Text>
+                  <Text style={styles.firstEventSubtext}>Special launch event. Future hunts will require paid tickets.</Text>
+                </View>
               </View>
             </Animated.View>
           )}
@@ -812,25 +828,26 @@ export default function HuntScreen() {
             <Animated.View style={{ opacity: opacityAnim }}>
               <TouchableOpacity
                 style={[
-                  styles.ticketButtonSeparate,
+                  styles.ticketButton,
                   (!canPurchaseTicket || isLoading || isEventLive) && styles.ticketButtonDisabled
                 ]}
                 onPress={handlePurchaseTicket}
                 disabled={!canPurchaseTicket || isLoading || isEventLive}
+                activeOpacity={0.8}
               >
-                <View style={styles.ticketButtonContent}>
-                  <CreditCard color={hasTicket || isEventLive ? '#888' : '#1E40AF'} size={20} />
-                  <Text style={[
-                    styles.ticketButtonTextSeparate,
-                    (hasTicket || isEventLive) && styles.ticketButtonTextDisabled
-                  ]}>
-                    {isLoading ? 'PROCESSING...' : 
-                     isEventLive ? 'EVENT LIVE - SALES CLOSED' :
-                     hasTicket ? 'TICKET CLAIMED' : 
-                     !isLoggedIn ? 'SIGN IN TO CLAIM FREE TICKET' :
-                     TICKET.isFree ? 'CLAIM FREE TICKET' : 'PURCHASE TICKET'}
-                  </Text>
-                </View>
+                <Text style={[
+                  styles.ticketButtonText,
+                  (hasTicket || isEventLive) && styles.ticketButtonTextDisabled
+                ]}>
+                  {isLoading ? 'PROCESSING...' : 
+                   isEventLive ? 'EVENT LIVE - SALES CLOSED' :
+                   hasTicket ? 'TICKET CLAIMED' : 
+                   !isLoggedIn ? 'SIGN IN TO CLAIM FREE TICKET' :
+                   TICKET.isFree ? 'CLAIM FREE TICKET' : 'PURCHASE TICKET'}
+                </Text>
+                {!hasTicket && !isEventLive && !isLoading && (
+                  <ChevronRight color={canPurchaseTicket ? '#000' : Colors.dark.textMuted} size={18} />
+                )}
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -838,36 +855,28 @@ export default function HuntScreen() {
           <View style={styles.howItWorks}>
             <Text style={styles.sectionTitle}>How It Works</Text>
             
-            <View style={styles.stepContainer}>
-              <View style={styles.step}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>1</Text>
+            <View style={styles.stepsContainer}>
+              {[
+                { num: '1', text: 'Create your secure account (one ticket per account)', icon: LogIn },
+                { num: '2', text: TICKET.isFree ? 'Claim your FREE ticket (verified accounts only)' : 'Purchase your ticket for the next hunt', icon: Zap },
+                { num: '3', text: 'Receive real-time clues during the live event', icon: Eye },
+                { num: '4', text: 'Find the target first and claim the prize', icon: Trophy },
+              ].map((step, i) => (
+                <View key={step.num} style={styles.step}>
+                  <View style={styles.stepIconContainer}>
+                    <step.icon color={Colors.accent.primary} size={18} />
+                  </View>
+                  <View style={styles.stepContent}>
+                    <Text style={styles.stepLabel}>STEP {step.num}</Text>
+                    <Text style={styles.stepText}>{step.text}</Text>
+                  </View>
+                  {i < 3 && <View style={styles.stepConnector} />}
                 </View>
-                <Text style={styles.stepText}>Create your secure account (one ticket per account)</Text>
-              </View>
-              
-              <View style={styles.step}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>2</Text>
-                </View>
-                <Text style={styles.stepText}>{TICKET.isFree ? 'Claim your FREE ticket (verified accounts only)' : 'Purchase your ticket for the next hunt'}</Text>
-              </View>
-              
-              <View style={styles.step}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>3</Text>
-                </View>
-                <Text style={styles.stepText}>Receive real-time clues during the live event</Text>
-              </View>
-              
-              <View style={styles.step}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>4</Text>
-                </View>
-                <Text style={styles.stepText}>Find the target first and claim the prize</Text>
-              </View>
+              ))}
             </View>
           </View>
+
+          <View style={{ height: 40 }} />
         </ScrollView>
         
         <Modal
@@ -883,57 +892,44 @@ export default function HuntScreen() {
                 <TouchableOpacity 
                   onPress={() => setShowPrizeModal(false)}
                   style={styles.modalCloseButton}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.modalCloseText}>✕</Text>
+                  <Text style={styles.modalCloseText}>{'\u2715'}</Text>
                 </TouchableOpacity>
               </View>
               
               <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.modalPrizeSection}>
-                  <Text style={styles.modalPrizeAmount}>€{currentEvent?.prize || '1000'}</Text>
+                  <Trophy color={Colors.accent.primary} size={40} />
+                  <Text style={styles.modalPrizeAmount}>{'\u20AC'}{currentEvent?.prize || '1000'}</Text>
                   <Text style={styles.modalPrizeSubtitle}>Cash Prize</Text>
                 </View>
 
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Prize Description</Text>
                   <Text style={styles.modalSectionText}>
-                    The winner will receive €1,000 in cash, paid via bank transfer within 7 business days of verification. 
-                    The prize is awarded to the first verified hunter who successfully locates and identifies the target during the live event.
+                    {`The winner will receive \u20AC1,000 in cash, paid via bank transfer within 7 business days of verification. The prize is awarded to the first verified hunter who successfully locates and identifies the target during the live event.`}
                   </Text>
                 </View>
 
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>How to Win</Text>
                   <Text style={styles.modalSectionText}>
-                    • Be the first to find the target person in the designated area{"\n"}
-                    • Take a photo or video as proof of discovery{"\n"}
-                    • Submit your verification through the app{"\n"}
-                    • Our team will verify your submission{"\n"}
-                    • Winner announced within 1 hour of hunt completion
+                    {`\u2022 Be the first to find the target person in the designated area\n\u2022 Take a photo or video as proof of discovery\n\u2022 Submit your verification through the app\n\u2022 Our team will verify your submission\n\u2022 Winner announced within 1 hour of hunt completion`}
                   </Text>
                 </View>
 
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Legal Terms</Text>
                   <Text style={styles.modalSectionText}>
-                    • Participants must be 18 years or older{"\n"}
-                    • One prize per event, awarded to first verified winner{"\n"}
-                    • Prize cannot be transferred or exchanged for other goods{"\n"}
-                    • Winner must provide valid identification for verification{"\n"}
-                    • Tax obligations are the responsibility of the winner{"\n"}
-                    • Bounty reserves the right to disqualify any participant for rule violations{"\n"}
-                    • All participants must comply with local laws and regulations{"\n"}
-                    • Harassment or aggressive behavior will result in immediate disqualification{"\n"}
-                    • Prize payment subject to identity verification and fraud prevention checks
+                    {`\u2022 Participants must be 18 years or older\n\u2022 One prize per event, awarded to first verified winner\n\u2022 Prize cannot be transferred or exchanged for other goods\n\u2022 Winner must provide valid identification for verification\n\u2022 Tax obligations are the responsibility of the winner\n\u2022 Bounty reserves the right to disqualify any participant for rule violations\n\u2022 All participants must comply with local laws and regulations\n\u2022 Harassment or aggressive behavior will result in immediate disqualification\n\u2022 Prize payment subject to identity verification and fraud prevention checks`}
                   </Text>
                 </View>
 
-                <View style={styles.modalSection}>
+                <View style={[styles.modalSection, { borderBottomWidth: 0 }]}>
                   <Text style={styles.modalSectionTitle}>Important Notice</Text>
                   <Text style={styles.modalSectionText}>
-                    By participating in this hunt, you agree to our Terms of Service and Privacy Policy. 
-                    All decisions made by Bounty regarding winner verification are final. 
-                    The hunt may be cancelled or postponed due to unforeseen circumstances, in which case full refunds will be provided.
+                    By participating in this hunt, you agree to our Terms of Service and Privacy Policy. All decisions made by Bounty regarding winner verification are final. The hunt may be cancelled or postponed due to unforeseen circumstances, in which case full refunds will be provided.
                   </Text>
                 </View>
               </ScrollView>
@@ -941,6 +937,7 @@ export default function HuntScreen() {
               <TouchableOpacity 
                 style={styles.modalButton}
                 onPress={() => setShowPrizeModal(false)}
+                activeOpacity={0.8}
               >
                 <Text style={styles.modalButtonText}>Got It</Text>
               </TouchableOpacity>
@@ -952,10 +949,12 @@ export default function HuntScreen() {
   );
 }
 
+const C = Colors;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: C.dark.background,
   },
   gradient: {
     flex: 1,
@@ -966,32 +965,38 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: 'center',
-    marginBottom: 40,
-    marginTop: 20,
+    marginBottom: 32,
+    marginTop: 12,
+  },
+  heroIconRow: {
+    marginBottom: 12,
+  },
+  heroBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   appTitle: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#1E40AF',
-    letterSpacing: 4,
+    fontSize: 44,
+    fontWeight: '900' as const,
+    color: C.dark.text,
+    letterSpacing: 6,
     textAlign: 'center',
   },
   tagline: {
-    fontSize: 16,
-    color: '#FFF',
-    marginTop: 8,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    fontSize: 14,
+    color: C.dark.textSecondary,
+    marginTop: 6,
+    letterSpacing: 3,
+    textTransform: 'uppercase' as const,
   },
   eventCard: {
     borderRadius: 20,
-    marginBottom: 20,
+    marginBottom: 16,
     overflow: 'hidden',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
   },
   eventGradient: {
     padding: 24,
@@ -1006,7 +1011,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
-    opacity: 0.15,
+    opacity: 0.1,
   },
   eventHeader: {
     flexDirection: 'row',
@@ -1014,283 +1019,371 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  nextEventPill: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
   nextEventLabel: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '700' as const,
     color: '#FFF',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
   },
   prizeContainer: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
   },
   prizeAmount: {
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '900' as const,
     color: '#FFF',
-  },
-  prizeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFF',
-    opacity: 0.7,
   },
   eventDetails: {
-    marginBottom: 24,
+    marginBottom: 8,
     marginTop: 8,
   },
   eventRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  eventRowIcon: {
-    color: '#FFF',
+    marginBottom: 10,
+    gap: 10,
   },
   eventDate: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#FFF',
-    marginLeft: 12,
+    fontWeight: '600' as const,
+    color: 'rgba(255,255,255,0.9)',
   },
   eventPlayers: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#FFF',
-    marginLeft: 12,
+    fontWeight: '500' as const,
+    color: 'rgba(255,255,255,0.9)',
   },
-  ticketButtonSeparate: {
-    backgroundColor: '#1A1A1A',
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    borderRadius: 16,
+  citySection: {
     alignItems: 'center',
     marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#1E40AF',
+    paddingVertical: 12,
   },
-  ticketButtonDisabled: {
-    backgroundColor: '#1A1A1A',
-    borderColor: '#333',
+  cityLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 2,
+    marginBottom: 4,
   },
-  ticketButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ticketButtonTextSeparate: {
-    color: '#1E40AF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginLeft: 8,
-  },
-  ticketButtonTextDisabled: {
-    color: '#888',
-  },
-  howItWorks: {
-    marginTop: 20,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+  cityNameLarge: {
+    fontSize: 34,
+    fontWeight: '900' as const,
     color: '#FFF',
-    marginBottom: 24,
+    letterSpacing: 4,
     textAlign: 'center',
   },
-  stepContainer: {
-    marginTop: 0,
-    gap: 20,
+  cityCountry: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
   },
-  step: {
-    flexDirection: 'row',
+  countdownContainer: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
-  stepNumber: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1E40AF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
+  countdownLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 2,
+    marginBottom: 6,
   },
-  stepNumberText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
-  },
-  stepText: {
-    flex: 1,
-    fontSize: 16,
+  countdownTime: {
+    fontSize: 26,
+    fontWeight: '900' as const,
     color: '#FFF',
-    lineHeight: 22,
+    letterSpacing: 1,
   },
-
   authRequiredContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: '#1E40AF',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 12,
+    gap: 10,
   },
   authRequiredText: {
     flex: 1,
     fontSize: 14,
     color: '#FFF',
-    marginLeft: 8,
-    fontWeight: '500',
+    fontWeight: '600' as const,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: C.status.dangerMuted,
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: '#FF6B6B',
+    borderRadius: 10,
+    marginTop: 12,
+    gap: 10,
   },
   errorText: {
     flex: 1,
     fontSize: 14,
-    color: '#FF6B6B',
-    marginLeft: 8,
-    fontWeight: '500',
+    color: C.status.danger,
+    fontWeight: '500' as const,
   },
-  citySection: {
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingVertical: 16,
-  },
-  cityLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFF',
-    opacity: 0.7,
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  cityNameLarge: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 3,
-    textAlign: 'center',
-  },
-  cityCountry: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
-    opacity: 0.8,
-    marginTop: 2,
-  },
-  ticketInfoSeparate: {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  ticketClaimedSection: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     marginTop: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#1E40AF',
   },
-  ticketInfoTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFF',
+  ticketClaimedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginBottom: 8,
+  },
+  ticketCheckmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: C.status.success,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ticketCheckmarkText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700' as const,
+  },
+  ticketClaimedTitle: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#FFF',
     letterSpacing: 1,
   },
-  ticketInfoText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
-    marginBottom: 4,
+  ticketClaimedText: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 12,
   },
   simulationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0A1A2A',
+    backgroundColor: C.accent.primaryMuted,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    marginTop: 12,
+    borderRadius: 10,
     gap: 8,
   },
   simulationButtonText: {
     fontSize: 14,
-    color: '#1E40AF',
-    fontWeight: '600',
+    color: C.accent.primary,
+    fontWeight: '600' as const,
   },
-  huntHeader: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+  firstEventBannerContainer: {
+    marginBottom: 16,
   },
-  huntTitleContainer: {
+  firstEventBanner: {
+    backgroundColor: C.status.successMuted,
+    padding: 16,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.25)',
+  },
+  firstEventTextContainer: {
+    flex: 1,
+  },
+  firstEventText: {
+    fontSize: 14,
+    fontWeight: '800' as const,
+    color: C.status.success,
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  firstEventSubtext: {
+    fontSize: 13,
+    color: C.dark.textSecondary,
+    lineHeight: 18,
+  },
+  ticketButton: {
+    backgroundColor: C.accent.primary,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 28,
+    flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 16,
     gap: 8,
   },
-  huntTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#1E40AF',
-    letterSpacing: 2,
-    marginLeft: 8,
+  ticketButtonDisabled: {
+    backgroundColor: C.dark.card,
+    borderWidth: 1,
+    borderColor: C.dark.border,
   },
-  huntStatus: {
+  ticketButtonText: {
+    color: '#000',
+    fontSize: 15,
+    fontWeight: '700' as const,
+    letterSpacing: 0.8,
+  },
+  ticketButtonTextDisabled: {
+    color: C.dark.textMuted,
+  },
+  howItWorks: {
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    marginBottom: 20,
+  },
+  stepsContainer: {
+    gap: 0,
+  },
+  step: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    position: 'relative' as const,
+    paddingBottom: 24,
+  },
+  stepIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  stepContent: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: C.accent.primary,
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  stepText: {
+    fontSize: 15,
+    color: C.dark.textSecondary,
+    lineHeight: 22,
+  },
+  stepConnector: {
+    position: 'absolute',
+    left: 19,
+    top: 44,
+    bottom: 4,
+    width: 2,
+    backgroundColor: C.dark.border,
+  },
+  huntHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.dark.border,
+  },
+  huntTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 12,
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  huntTitleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  liveIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  huntTitle: {
+    fontSize: 22,
+    fontWeight: '900' as const,
+    color: C.dark.text,
+    letterSpacing: 2,
+  },
+  huntStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.status.successMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     gap: 6,
   },
-  statusDot: {
+  statusDotPulse: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#00FF88',
+    backgroundColor: C.status.success,
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#00FF88',
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: C.status.success,
     letterSpacing: 1,
-    marginLeft: 6,
   },
-  huntInfo: {
+  huntInfoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 14,
   },
   huntLocation: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: C.dark.text,
     letterSpacing: 1,
+  },
+  huntTimeSeparator: {
+    fontSize: 14,
+    color: C.dark.textMuted,
   },
   huntTime: {
     fontSize: 14,
-    color: '#FFF',
-    marginTop: 4,
+    color: C.dark.textSecondary,
   },
   simulationControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A1A1A',
+    backgroundColor: C.status.dangerMuted,
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
     gap: 8,
-    marginTop: 16,
+    marginTop: 10,
+    alignSelf: 'flex-start',
   },
   simulationText: {
-    fontSize: 12,
-    color: '#FF6B6B',
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: 13,
+    color: C.status.danger,
+    fontWeight: '600' as const,
   },
   cluesContainer: {
     flex: 1,
@@ -1300,65 +1393,72 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
-    gap: 16,
+  },
+  waitingIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   waitingTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#FFF',
+    fontWeight: '700' as const,
+    color: C.dark.text,
     textAlign: 'center',
-    marginTop: 16,
+    marginBottom: 8,
   },
   waitingText: {
-    fontSize: 16,
-    color: '#FFF',
+    fontSize: 15,
+    color: C.dark.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 280,
   },
   clueCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: C.dark.card,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#1E40AF',
+    padding: 18,
+    marginBottom: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: C.accent.primary,
   },
   clueHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
-  clueNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1E40AF',
+  clueNumberBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: C.accent.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   clueNumberText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: C.accent.primary,
   },
   clueTimestamp: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   timestampText: {
     fontSize: 12,
-    color: '#FFF',
-    fontWeight: '500',
-    marginLeft: 6,
+    color: C.dark.textMuted,
+    fontWeight: '500' as const,
   },
   clueText: {
-    fontSize: 16,
-    color: '#FFF',
-    lineHeight: 24,
-    marginBottom: 16,
+    fontSize: 15,
+    color: C.dark.text,
+    lineHeight: 23,
+    marginBottom: 14,
   },
   clueActions: {
     flexDirection: 'row',
@@ -1368,51 +1468,47 @@ const styles = StyleSheet.create({
   mapButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0A1A2A',
-    paddingVertical: 10,
+    backgroundColor: C.accent.primaryMuted,
+    paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#1E40AF',
+    borderRadius: 10,
     gap: 6,
   },
   mapButtonText: {
     fontSize: 13,
-    color: '#FFF',
-    fontWeight: '700',
-    marginLeft: 6,
+    color: C.accent.primary,
+    fontWeight: '600' as const,
   },
   radiusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: C.dark.cardElevated,
     paddingVertical: 6,
     paddingHorizontal: 10,
-    borderRadius: 6,
-    gap: 6,
+    borderRadius: 8,
+    gap: 5,
   },
   radiusText: {
     fontSize: 11,
-    color: '#FFF',
-    fontWeight: '600',
-    marginLeft: 6,
+    color: C.dark.textMuted,
+    fontWeight: '600' as const,
   },
   huntProgress: {
     alignItems: 'center',
     paddingVertical: 20,
-    marginTop: 20,
+    marginTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#333',
+    borderTopColor: C.dark.border,
   },
   progressText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: C.dark.text,
     marginBottom: 4,
   },
   progressSubtext: {
     fontSize: 14,
-    color: '#FFF',
+    color: C.dark.textSecondary,
     textAlign: 'center',
   },
   newClueNotification: {
@@ -1420,220 +1516,157 @@ const styles = StyleSheet.create({
     top: 100,
     left: 20,
     right: 20,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    backgroundColor: C.dark.card,
+    borderRadius: 14,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#1E40AF',
-    shadowColor: '#1E40AF',
+    borderColor: C.accent.primary,
+    shadowColor: C.accent.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
     elevation: 8,
     gap: 12,
   },
   notificationText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginLeft: 12,
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: C.accent.primary,
   },
   huntActions: {
-    marginTop: 16,
+    gap: 10,
   },
   distanceMeterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E40AF',
+    backgroundColor: C.accent.primary,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
     position: 'relative',
     gap: 8,
-    marginBottom: 12,
   },
   distanceMeterButtonDisabled: {
-    backgroundColor: '#333',
+    backgroundColor: C.dark.card,
   },
   distanceMeterButtonText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#FFF',
+    fontWeight: '700' as const,
+    color: '#000',
     letterSpacing: 0.5,
-    marginLeft: 8,
   },
   distanceMeterButtonTextDisabled: {
-    color: '#888',
+    color: C.dark.textMuted,
   },
-  oneTimeUse: {
+  oneTimeUseBadge: {
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 12,
-    paddingHorizontal: 8,
+    backgroundColor: C.status.danger,
+    borderRadius: 10,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     borderWidth: 2,
-    borderColor: '#0A0A0A',
+    borderColor: C.dark.background,
   },
   oneTimeUseText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     color: '#FFF',
-    letterSpacing: 0.5,
   },
   distanceResult: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: C.accent.primaryMuted,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#1E40AF',
+    borderRadius: 12,
     gap: 8,
   },
   distanceResultText: {
     fontSize: 18,
-    fontWeight: '900',
-    color: '#1E40AF',
+    fontWeight: '900' as const,
+    color: C.accent.primary,
     letterSpacing: 1,
-    marginLeft: 8,
   },
   liveEventNotice: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: C.dark.card,
     borderRadius: 16,
     padding: 24,
-    marginBottom: 24,
-    borderWidth: 2,
-    borderColor: '#FF6B6B',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
   },
-  liveEventHeader: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  liveIndicator: {
+  liveIndicatorPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2A1A1A',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    backgroundColor: C.status.dangerMuted,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
     borderRadius: 20,
     gap: 8,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
-  liveDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#FF6B6B',
+  liveDotSmall: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.status.danger,
   },
-  liveText: {
+  liveIndicatorText: {
     fontSize: 12,
-    fontWeight: '900',
-    color: '#FF6B6B',
+    fontWeight: '800' as const,
+    color: C.status.danger,
     letterSpacing: 1.5,
-    marginLeft: 8,
   },
   liveEventTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#FFF',
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: C.dark.text,
     textAlign: 'center',
-    marginBottom: 12,
-    letterSpacing: 0.5,
+    marginBottom: 10,
   },
   liveEventMessage: {
-    fontSize: 16,
-    color: '#FFF',
+    fontSize: 15,
+    color: C.dark.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 20,
+    lineHeight: 22,
+    marginBottom: 16,
   },
   nextEventPrompt: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0A1A2A',
-    padding: 16,
+    backgroundColor: C.accent.primaryMuted,
+    padding: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1E40AF',
-    gap: 12,
+    gap: 10,
   },
   nextEventPromptText: {
     flex: 1,
     fontSize: 14,
-    color: '#1E40AF',
-    fontWeight: '600',
-    lineHeight: 20,
-    marginLeft: 12,
-  },
-  firstEventBannerSeparate: {
-    marginBottom: 20,
-  },
-  firstEventBanner: {
-    backgroundColor: '#1A2A1A',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#00FF88',
-    alignItems: 'center',
-  },
-  firstEventText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#00FF88',
-    letterSpacing: 1,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  firstEventSubtext: {
-    fontSize: 13,
-    color: '#FFF',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  countdownContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 0,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#1E40AF',
-  },
-  countdownLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFF',
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  countdownTime: {
-    fontSize: 25,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 1,
+    color: C.accent.primary,
+    fontWeight: '600' as const,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 20,
+    backgroundColor: C.dark.surface,
+    borderRadius: 24,
     width: '100%',
     maxWidth: 500,
     maxHeight: '90%',
-    borderWidth: 2,
-    borderColor: '#1E40AF',
+    borderWidth: 1,
+    borderColor: C.dark.border,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1641,26 +1674,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: C.dark.border,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 1,
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: C.dark.text,
   },
   modalCloseButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#333',
+    backgroundColor: C.dark.card,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseText: {
-    fontSize: 20,
-    color: '#FFF',
-    fontWeight: '700',
+    fontSize: 16,
+    color: C.dark.textSecondary,
+    fontWeight: '600' as const,
   },
   modalScroll: {
     flex: 1,
@@ -1669,50 +1701,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 30,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: C.dark.border,
+    gap: 8,
   },
   modalPrizeAmount: {
-    fontSize: 56,
-    fontWeight: '900',
-    color: '#1E40AF',
+    fontSize: 52,
+    fontWeight: '900' as const,
+    color: C.accent.primary,
     letterSpacing: 2,
   },
   modalPrizeSubtitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#888',
-    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: C.dark.textMuted,
     letterSpacing: 1,
   },
   modalSection: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: C.dark.border,
   },
   modalSectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFF',
-    marginBottom: 12,
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+    marginBottom: 10,
   },
   modalSectionText: {
     fontSize: 14,
-    color: '#CCC',
+    color: C.dark.textSecondary,
     lineHeight: 22,
   },
   modalButton: {
-    backgroundColor: '#1E40AF',
+    backgroundColor: C.accent.primary,
     paddingVertical: 16,
     marginHorizontal: 20,
     marginVertical: 20,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
   },
   modalButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-    letterSpacing: 1,
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#000',
+    letterSpacing: 0.5,
   },
 });

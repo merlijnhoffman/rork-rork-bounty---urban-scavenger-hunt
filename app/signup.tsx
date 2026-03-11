@@ -13,10 +13,14 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Mail, Lock, Eye, EyeOff, Phone, ChevronDown } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff, Phone, ChevronDown, ArrowLeft, Crosshair, Search } from 'lucide-react-native';
+import Colors from '@/constants/colors';
+
+const C = Colors;
 
 interface CountryCode {
   code: string;
@@ -235,6 +239,7 @@ const countryCodes: CountryCode[] = [
 ];
 
 export default function SignupScreen() {
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState<number>(1);
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -250,11 +255,9 @@ export default function SignupScreen() {
   const [codeSent, setCodeSent] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-
-
-  const validateEmail = (email: string): boolean => {
+  const validateEmail = (emailStr: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    return emailRegex.test(emailStr);
   };
 
   const handleStep1Continue = () => {
@@ -304,26 +307,19 @@ export default function SignupScreen() {
       setLoading(true);
       console.log('=== SENDING OTP ===');
       console.log('Phone number:', fullPhoneNumber);
-      console.log('Supabase URL:', process.env.EXPO_PUBLIC_SUPABASE_URL);
 
       const { data, error } = await supabase.auth.signInWithOtp({
         phone: fullPhoneNumber,
       });
 
       console.log('OTP Response data:', JSON.stringify(data, null, 2));
-      console.log('OTP Response error:', JSON.stringify(error, null, 2));
 
       if (error) {
         console.error('OTP send error:', error);
-        console.error('Error details:', {
-          message: error.message,
-          status: error.status,
-          name: error.name,
-        });
         
         let errorMsg = error.message || 'Failed to send verification code';
         if (error.message?.includes('Phone provider not configured')) {
-          errorMsg = 'Phone authentication is not configured in Supabase. Please configure Twilio in your Supabase Dashboard under Authentication > Providers > Phone.';
+          errorMsg = 'Phone authentication is not configured. Please contact support.';
         } else if (error.message?.includes('rate limit')) {
           errorMsg = 'Too many attempts. Please wait a few minutes before trying again.';
         }
@@ -337,8 +333,6 @@ export default function SignupScreen() {
       Alert.alert('Success', 'Verification code sent to your phone! Check your SMS.');
     } catch (error) {
       console.error('Unexpected error sending OTP:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
       Alert.alert('Error', 'Failed to send verification code. Please try again.');
     } finally {
       setLoading(false);
@@ -361,8 +355,6 @@ export default function SignupScreen() {
     try {
       setLoading(true);
       console.log('=== STEP 1: Verifying phone OTP ===');
-      console.log('Phone:', fullPhoneNumber);
-      console.log('Code:', verificationCode.trim());
 
       const { data: otpData, error: otpError } = await supabase.auth.verifyOtp({
         phone: fullPhoneNumber,
@@ -390,9 +382,6 @@ export default function SignupScreen() {
       }
 
       console.log('Phone verified successfully!');
-      console.log('User ID:', otpData.user.id);
-      console.log('Phone:', otpData.user.phone);
-
       const userId = otpData.user.id;
 
       console.log('=== STEP 2: Updating user with email ===');
@@ -429,7 +418,7 @@ export default function SignupScreen() {
 
       Alert.alert(
         'Account Created Successfully!',
-        'Your phone number has been verified. Please check your email inbox and confirm your email address before signing in. After confirming your email, you can sign in with your email and password.',
+        'Your phone number has been verified. Please check your email inbox and confirm your email address before signing in.',
         [
           {
             text: 'OK',
@@ -439,7 +428,6 @@ export default function SignupScreen() {
       );
     } catch (error) {
       console.error('Unexpected verification error:', error);
-      console.error('Error stack:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       try {
         await supabase.auth.signOut();
@@ -450,8 +438,6 @@ export default function SignupScreen() {
       setLoading(false);
     }
   };
-
-
 
   const filteredCountries = countryCodes.filter((country) => 
     country.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -466,21 +452,23 @@ export default function SignupScreen() {
       animationType="slide"
       onRequestClose={() => setShowCountryPicker(false)}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Country</Text>
+      <View style={styles.pickerOverlay}>
+        <View style={styles.pickerContent}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Select Country</Text>
             <TouchableOpacity onPress={() => {
               setShowCountryPicker(false);
               setSearchQuery('');
             }}>
-              <Text style={styles.modalClose}>Done</Text>
+              <Text style={styles.pickerDone}>Done</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.searchContainer}>
+          <View style={styles.pickerSearchContainer}>
+            <Search size={16} color={C.dark.textMuted} />
             <TextInput
-              style={styles.searchInput}
+              style={styles.pickerSearchInput}
               placeholder="Search country..."
+              placeholderTextColor={C.dark.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
@@ -498,6 +486,7 @@ export default function SignupScreen() {
                   setShowCountryPicker(false);
                   setSearchQuery('');
                 }}
+                activeOpacity={0.7}
               >
                 <Text style={styles.countryName}>{item.name}</Text>
                 <Text style={styles.countryDialCode}>{item.dialCode}</Text>
@@ -515,224 +504,260 @@ export default function SignupScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[C.gradient.backgroundStart, C.gradient.backgroundEnd]}
+        style={styles.gradient}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {step === 1 ? (
-            <>
-              <View style={styles.header}>
-                <Text style={styles.title}>Create Account</Text>
-                <Text style={styles.subtitle}>Step 1 of 2: Enter your email and password</Text>
-              </View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          <ScrollView 
+            contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => step === 2 ? setStep(1) : router.back()}
+              activeOpacity={0.7}
+            >
+              <ArrowLeft color={C.dark.textSecondary} size={22} />
+            </TouchableOpacity>
 
-              <View style={styles.form}>
-                <View style={styles.inputContainer}>
-                  <Mail size={20} color="#666" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    testID="email-input"
-                  />
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Lock size={20} color="#666" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoComplete="password"
-                    testID="password-input"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                    testID="toggle-password"
-                  >
-                    {showPassword ? (
-                      <Eye size={20} color="#666" />
-                    ) : (
-                      <EyeOff size={20} color="#666" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Lock size={20} color="#666" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Confirm Password"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                    autoCapitalize="none"
-                    autoComplete="password"
-                    testID="confirm-password-input"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={styles.eyeIcon}
-                    testID="toggle-confirm-password"
-                  >
-                    {showConfirmPassword ? (
-                      <Eye size={20} color="#666" />
-                    ) : (
-                      <EyeOff size={20} color="#666" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.signupButton}
-                  onPress={handleStep1Continue}
-                  disabled={loading}
-                  testID="continue-button"
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.signupButtonText}>Continue</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>Already have an account? </Text>
-                <TouchableOpacity onPress={() => router.push('/login' as any)}>
-                  <Text style={styles.loginLink}>Sign In</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.header}>
-                <Text style={styles.title}>Verify Phone</Text>
-                <Text style={styles.subtitle}>Step 2 of 2: Enter your phone number for verification</Text>
-              </View>
-
-              <View style={styles.form}>
-                <View style={styles.phoneInputContainer}>
-                  <TouchableOpacity
-                    style={styles.countrySelector}
-                    onPress={() => setShowCountryPicker(true)}
-                    disabled={codeSent}
-                  >
-                    <Text style={[styles.dialCode, codeSent && styles.disabledText]}>{selectedCountry.dialCode}</Text>
-                    <ChevronDown size={16} color={codeSent ? "#ccc" : "#666"} />
-                  </TouchableOpacity>
-                  <View style={[styles.phoneInputWrapper, codeSent && styles.disabledInput]}>
-                    <Phone size={20} color={codeSent ? "#ccc" : "#666"} style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Phone Number"
-                      value={phoneNumber}
-                      onChangeText={setPhoneNumber}
-                      keyboardType="phone-pad"
-                      autoCapitalize="none"
-                      testID="phone-input"
-                      editable={!codeSent}
-                    />
+            {step === 1 ? (
+              <>
+                <View style={styles.header}>
+                  <View style={styles.logoBadge}>
+                    <Crosshair color={C.accent.primary} size={24} />
                   </View>
+                  <Text style={styles.title}>Create Account</Text>
+                  <View style={styles.stepIndicator}>
+                    <View style={styles.stepDotActive} />
+                    <View style={styles.stepDotInactive} />
+                  </View>
+                  <Text style={styles.subtitle}>Step 1 of 2: Enter your email and password</Text>
                 </View>
 
-                {codeSent && (
+                <View style={styles.form}>
                   <View style={styles.inputContainer}>
-                    <Lock size={20} color="#666" style={styles.inputIcon} />
+                    <Mail size={18} color={C.dark.textMuted} />
                     <TextInput
                       style={styles.input}
-                      placeholder="Verification Code"
-                      value={verificationCode}
-                      onChangeText={setVerificationCode}
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      testID="verification-code-input"
+                      placeholder="Email"
+                      placeholderTextColor={C.dark.textMuted}
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      testID="email-input"
                     />
                   </View>
-                )}
 
-                {!codeSent ? (
-                  <TouchableOpacity
-                    style={styles.signupButton}
-                    onPress={handleSendCode}
-                    disabled={loading}
-                    testID="send-code-button"
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.signupButtonText}>Send Verification Code</Text>
-                    )}
-                  </TouchableOpacity>
-                ) : (
-                  <>
+                  <View style={styles.inputContainer}>
+                    <Lock size={18} color={C.dark.textMuted} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Password"
+                      placeholderTextColor={C.dark.textMuted}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoComplete="password"
+                      testID="password-input"
+                    />
                     <TouchableOpacity
-                      style={styles.signupButton}
-                      onPress={handleVerifyCode}
-                      disabled={loading}
-                      testID="verify-button"
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeIcon}
+                      testID="toggle-password"
                     >
-                      {loading ? (
-                        <ActivityIndicator color="#fff" />
+                      {showPassword ? (
+                        <Eye size={18} color={C.dark.textMuted} />
                       ) : (
-                        <Text style={styles.signupButtonText}>Verify & Complete Signup</Text>
+                        <EyeOff size={18} color={C.dark.textMuted} />
                       )}
                     </TouchableOpacity>
-                    <View style={styles.actionButtonsContainer}>
-                      <TouchableOpacity
-                        style={styles.secondaryButton}
-                        onPress={() => {
-                          setCodeSent(false);
-                          setVerificationCode('');
-                        }}
-                        disabled={loading}
-                        testID="change-number-button"
-                      >
-                        <Text style={styles.secondaryButtonText}>Change Number</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.secondaryButton}
-                        onPress={handleSendCode}
-                        disabled={loading}
-                        testID="resend-code-button"
-                      >
-                        <Text style={styles.secondaryButtonText}>Resend Code</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                )}
+                  </View>
 
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={() => setStep(1)}
-                  disabled={loading}
-                >
-                  <Text style={styles.backButtonText}>← Back</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-      {renderCountryPicker()}
-    </SafeAreaView>
+                  <View style={styles.inputContainer}>
+                    <Lock size={18} color={C.dark.textMuted} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Confirm Password"
+                      placeholderTextColor={C.dark.textMuted}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry={!showConfirmPassword}
+                      autoCapitalize="none"
+                      autoComplete="password"
+                      testID="confirm-password-input"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={styles.eyeIcon}
+                      testID="toggle-confirm-password"
+                    >
+                      {showConfirmPassword ? (
+                        <Eye size={18} color={C.dark.textMuted} />
+                      ) : (
+                        <EyeOff size={18} color={C.dark.textMuted} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                    onPress={handleStep1Continue}
+                    disabled={loading}
+                    activeOpacity={0.8}
+                    testID="continue-button"
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#000" />
+                    ) : (
+                      <Text style={styles.primaryButtonText}>Continue</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.footer}>
+                  <Text style={styles.footerText}>Already have an account? </Text>
+                  <TouchableOpacity onPress={() => router.push('/login' as any)}>
+                    <Text style={styles.loginLink}>Sign In</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.header}>
+                  <View style={styles.logoBadge}>
+                    <Phone color={C.accent.primary} size={24} />
+                  </View>
+                  <Text style={styles.title}>Verify Phone</Text>
+                  <View style={styles.stepIndicator}>
+                    <View style={styles.stepDotCompleted} />
+                    <View style={styles.stepDotActive} />
+                  </View>
+                  <Text style={styles.subtitle}>Step 2 of 2: Enter your phone number for verification</Text>
+                </View>
+
+                <View style={styles.form}>
+                  <View style={styles.phoneInputContainer}>
+                    <TouchableOpacity
+                      style={styles.countrySelector}
+                      onPress={() => setShowCountryPicker(true)}
+                      disabled={codeSent}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.dialCode, codeSent && styles.disabledText]}>{selectedCountry.dialCode}</Text>
+                      <ChevronDown size={14} color={codeSent ? C.dark.textMuted : C.dark.textSecondary} />
+                    </TouchableOpacity>
+                    <View style={[styles.phoneInputWrapper, codeSent && styles.inputDisabled]}>
+                      <Phone size={18} color={codeSent ? C.dark.textMuted : C.dark.textMuted} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Phone Number"
+                        placeholderTextColor={C.dark.textMuted}
+                        value={phoneNumber}
+                        onChangeText={setPhoneNumber}
+                        keyboardType="phone-pad"
+                        autoCapitalize="none"
+                        testID="phone-input"
+                        editable={!codeSent}
+                      />
+                    </View>
+                  </View>
+
+                  {codeSent && (
+                    <View style={styles.inputContainer}>
+                      <Lock size={18} color={C.dark.textMuted} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Verification Code"
+                        placeholderTextColor={C.dark.textMuted}
+                        value={verificationCode}
+                        onChangeText={setVerificationCode}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        testID="verification-code-input"
+                      />
+                    </View>
+                  )}
+
+                  {!codeSent ? (
+                    <TouchableOpacity
+                      style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                      onPress={handleSendCode}
+                      disabled={loading}
+                      activeOpacity={0.8}
+                      testID="send-code-button"
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#000" />
+                      ) : (
+                        <Text style={styles.primaryButtonText}>Send Verification Code</Text>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                        onPress={handleVerifyCode}
+                        disabled={loading}
+                        activeOpacity={0.8}
+                        testID="verify-button"
+                      >
+                        {loading ? (
+                          <ActivityIndicator color="#000" />
+                        ) : (
+                          <Text style={styles.primaryButtonText}>Verify & Complete Signup</Text>
+                        )}
+                      </TouchableOpacity>
+                      <View style={styles.actionButtonsRow}>
+                        <TouchableOpacity
+                          style={styles.secondaryButton}
+                          onPress={() => {
+                            setCodeSent(false);
+                            setVerificationCode('');
+                          }}
+                          disabled={loading}
+                          activeOpacity={0.8}
+                          testID="change-number-button"
+                        >
+                          <Text style={styles.secondaryButtonText}>Change Number</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.secondaryButton}
+                          onPress={handleSendCode}
+                          disabled={loading}
+                          activeOpacity={0.8}
+                          testID="resend-code-button"
+                        >
+                          <Text style={styles.secondaryButtonText}>Resend Code</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+        {renderCountryPicker()}
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: C.dark.background,
+  },
+  gradient: {
+    flex: 1,
   },
   keyboardView: {
     flex: 1,
@@ -742,67 +767,99 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: 'center',
   },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.dark.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 36,
+  },
+  logoBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 8,
+    fontSize: 30,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    marginBottom: 12,
+  },
+  stepIndicator: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  stepDotActive: {
+    width: 24,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.accent.primary,
+  },
+  stepDotInactive: {
+    width: 24,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.dark.border,
+  },
+  stepDotCompleted: {
+    width: 24,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.status.success,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 15,
+    color: C.dark.textSecondary,
     textAlign: 'center',
   },
   form: {
     marginBottom: 32,
+    gap: 14,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: C.dark.card,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
+    borderColor: C.dark.border,
+    borderRadius: 14,
     paddingHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  inputIcon: {
-    marginRight: 12,
+    gap: 12,
   },
   input: {
     flex: 1,
     paddingVertical: 16,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: C.dark.text,
   },
   eyeIcon: {
     padding: 4,
-    marginLeft: 8,
   },
-  termsContainer: {
-    marginBottom: 24,
-  },
-  termsText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  signupButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
+  primaryButton: {
+    backgroundColor: C.accent.primary,
+    borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 16,
+    marginTop: 4,
   },
-  signupButtonText: {
-    color: '#fff',
+  primaryButtonDisabled: {
+    opacity: 0.7,
+  },
+  primaryButtonText: {
+    color: '#000',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700' as const,
   },
   footer: {
     flexDirection: 'row',
@@ -811,146 +868,129 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#666',
+    color: C.dark.textSecondary,
   },
   loginLink: {
     fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: C.accent.primary,
+    fontWeight: '600' as const,
   },
   phoneInputContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
-    gap: 8,
+    gap: 10,
   },
   countrySelector: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: C.dark.card,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#f9f9f9',
-    gap: 4,
+    borderColor: C.dark.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    gap: 6,
   },
   dialCode: {
     fontSize: 16,
-    color: '#1a1a1a',
-    fontWeight: '600',
+    color: C.dark.text,
+    fontWeight: '600' as const,
   },
   phoneInputWrapper: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: C.dark.card,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 12,
+    borderColor: C.dark.border,
+    borderRadius: 14,
     paddingHorizontal: 16,
-    backgroundColor: '#f9f9f9',
+    gap: 12,
   },
-  modalOverlay: {
+  inputDisabled: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: C.dark.textMuted,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  secondaryButton: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: C.dark.card,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  secondaryButtonText: {
+    color: C.accent.primary,
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  pickerContent: {
+    backgroundColor: C.dark.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     height: 500,
   },
-  modalHeader: {
+  pickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: C.dark.border,
   },
-  modalTitle: {
+  pickerTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontWeight: '700' as const,
+    color: C.dark.text,
   },
-  modalClose: {
+  pickerDone: {
     fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: C.accent.primary,
+    fontWeight: '600' as const,
+  },
+  pickerSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.dark.card,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginHorizontal: 20,
+    marginVertical: 12,
+    gap: 10,
+  },
+  pickerSearchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: C.dark.text,
   },
   countryItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: C.dark.border,
   },
   countryName: {
     fontSize: 16,
-    color: '#1a1a1a',
+    color: C.dark.text,
   },
   countryDialCode: {
     fontSize: 16,
-    color: '#666',
-    fontWeight: '600',
-  },
-  resendButton: {
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  resendButtonText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  secondaryButtonText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  disabledInput: {
-    backgroundColor: '#f5f5f5',
-  },
-  disabledText: {
-    color: '#999',
-  },
-  backButton: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  backButtonText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  searchInput: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    color: C.dark.textSecondary,
+    fontWeight: '600' as const,
   },
   emptyContainer: {
     padding: 40,
@@ -958,6 +998,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: C.dark.textMuted,
   },
 });

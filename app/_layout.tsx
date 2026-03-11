@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
+import Colors from '@/constants/colors';
 import { GameProvider } from '@/store/game-store';
 
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -19,7 +20,7 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   return (
     <>
-      <StatusBar style="light" backgroundColor="#0A0A0A" />
+      <StatusBar style="light" backgroundColor={Colors.dark.background} />
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -47,18 +48,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: Colors.dark.background,
   },
   errorTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FF6B6B',
+    color: Colors.status.danger,
     marginBottom: 16,
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: 16,
-    color: '#FFF',
+    color: Colors.dark.text,
     textAlign: 'center',
     lineHeight: 24,
   },

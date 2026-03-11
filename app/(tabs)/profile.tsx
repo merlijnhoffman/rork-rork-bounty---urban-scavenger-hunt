@@ -12,14 +12,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Lock } from 'lucide-react-native';
+import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Lock, Fingerprint } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import Colors from '@/constants/colors';
 
 const ADMIN_PASSWORD = 'whereswally2003';
+const C = Colors;
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -30,7 +32,6 @@ export default function ProfileScreen() {
   const [password, setPassword] = useState<string>('');
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Fetch ticket data from Supabase
   const profileQuery = useQuery({
     queryKey: ['user-profile', user?.id],
     queryFn: async () => {
@@ -109,22 +110,21 @@ export default function ProfileScreen() {
     await signOut();
   };
 
-  // Show login/signup options if not authenticated
   if (!user) {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#0A0A0A', '#1A1A1A']}
+          colors={[C.gradient.backgroundStart, C.gradient.backgroundEnd]}
           style={styles.gradient}
         >
           <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
             <View style={styles.authHeader}>
-              <View style={styles.avatarContainer}>
-                <User color="#1E40AF" size={32} />
+              <View style={styles.avatarLarge}>
+                <User color={C.accent.primary} size={36} />
               </View>
               <Text style={styles.authTitle}>Join the Hunt</Text>
               <Text style={styles.authSubtitle}>
-                Create an account to purchase tickets and participate in treasure hunts
+                Create an account to claim tickets and participate in treasure hunts
               </Text>
             </View>
 
@@ -132,6 +132,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.primaryAuthButton}
                 onPress={() => router.push('/signup')}
+                activeOpacity={0.8}
               >
                 <UserPlus color="#000" size={20} />
                 <Text style={styles.primaryAuthButtonText}>Create Account</Text>
@@ -140,29 +141,28 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.secondaryAuthButton}
                 onPress={() => router.push('/login')}
+                activeOpacity={0.8}
               >
-                <LogIn color="#1E40AF" size={20} />
+                <LogIn color={C.accent.primary} size={20} />
                 <Text style={styles.secondaryAuthButtonText}>Sign In</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.benefitsContainer}>
+            <View style={styles.benefitsCard}>
               <Text style={styles.benefitsTitle}>Why Create an Account?</Text>
               
-              <View style={styles.benefitItem}>
-                <Shield color="#1E40AF" size={20} />
-                <Text style={styles.benefitText}>Secure ticket purchases</Text>
-              </View>
-              
-              <View style={styles.benefitItem}>
-                <QrCode color="#1E40AF" size={20} />
-                <Text style={styles.benefitText}>Unique verification codes</Text>
-              </View>
-              
-              <View style={styles.benefitItem}>
-                <Clock color="#1E40AF" size={20} />
-                <Text style={styles.benefitText}>Real-time hunt updates</Text>
-              </View>
+              {[
+                { icon: Shield, text: 'Secure ticket management' },
+                { icon: QrCode, text: 'Unique verification codes' },
+                { icon: Clock, text: 'Real-time hunt updates' },
+              ].map((item, i) => (
+                <View key={i} style={styles.benefitRow}>
+                  <View style={styles.benefitIconContainer}>
+                    <item.icon color={C.accent.primary} size={18} />
+                  </View>
+                  <Text style={styles.benefitText}>{item.text}</Text>
+                </View>
+              ))}
             </View>
           </ScrollView>
         </LinearGradient>
@@ -173,17 +173,17 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#0A0A0A', '#1A1A1A']}
+        colors={[C.gradient.backgroundStart, C.gradient.backgroundEnd]}
         style={styles.gradient}
       >
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
           <View style={styles.profileHeader}>
             <Pressable
-              style={styles.avatarContainer}
+              style={styles.avatarLarge}
               onPressIn={handleLongPressStart}
               onPressOut={handleLongPressEnd}
             >
-              <User color="#1E40AF" size={32} />
+              <User color={C.accent.primary} size={36} />
             </Pressable>
             <Text style={styles.welcomeText}>Welcome back!</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
@@ -193,15 +193,21 @@ export default function ProfileScreen() {
             <Text style={styles.cardTitle}>Account Details</Text>
             
             <View style={styles.detailRow}>
-              <Mail color="#888" size={20} />
+              <View style={styles.detailIconContainer}>
+                <Mail color={C.dark.textMuted} size={18} />
+              </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Email</Text>
                 <Text style={styles.detailValue}>{user.email}</Text>
               </View>
             </View>
 
+            <View style={styles.detailDivider} />
+
             <View style={styles.detailRow}>
-              <Phone color="#888" size={20} />
+              <View style={styles.detailIconContainer}>
+                <Phone color={C.dark.textMuted} size={18} />
+              </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Phone</Text>
                 <Text style={styles.detailValue}>
@@ -210,23 +216,55 @@ export default function ProfileScreen() {
               </View>
             </View>
 
+            <View style={styles.detailDivider} />
+
             <View style={styles.detailRow}>
-              <Shield color="#888" size={20} />
+              <View style={styles.detailIconContainer}>
+                <Fingerprint color={C.dark.textMuted} size={18} />
+              </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Account Status</Text>
-                <Text style={[styles.detailValue, { color: user.email_confirmed_at ? '#00FF88' : '#FF6B6B' }]}>
-                  {user.email_confirmed_at ? 'Verified' : 'Not Verified'}
-                </Text>
+                <View style={[
+                  styles.statusChip,
+                  user.email_confirmed_at ? styles.statusChipSuccess : styles.statusChipDanger
+                ]}>
+                  <View style={[
+                    styles.statusChipDot,
+                    { backgroundColor: user.email_confirmed_at ? C.status.success : C.status.danger }
+                  ]} />
+                  <Text style={[
+                    styles.statusChipText,
+                    { color: user.email_confirmed_at ? C.status.success : C.status.danger }
+                  ]}>
+                    {user.email_confirmed_at ? 'Verified' : 'Not Verified'}
+                  </Text>
+                </View>
               </View>
             </View>
 
+            <View style={styles.detailDivider} />
+
             <View style={styles.detailRow}>
-              <Ticket color="#888" size={20} />
+              <View style={styles.detailIconContainer}>
+                <Ticket color={C.dark.textMuted} size={18} />
+              </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Ticket Status</Text>
-                <Text style={[styles.detailValue, { color: hasTicket ? '#00FF88' : '#888' }]}>
-                  {hasTicket ? 'Active Ticket' : 'No Active Ticket'}
-                </Text>
+                <View style={[
+                  styles.statusChip,
+                  hasTicket ? styles.statusChipSuccess : styles.statusChipMuted
+                ]}>
+                  <View style={[
+                    styles.statusChipDot,
+                    { backgroundColor: hasTicket ? C.status.success : C.dark.textMuted }
+                  ]} />
+                  <Text style={[
+                    styles.statusChipText,
+                    { color: hasTicket ? C.status.success : C.dark.textMuted }
+                  ]}>
+                    {hasTicket ? 'Active Ticket' : 'No Active Ticket'}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -234,12 +272,14 @@ export default function ProfileScreen() {
           {hasTicket && verificationCode && (
             <View style={styles.verificationCard}>
               <LinearGradient
-                colors={['#1E40AF', '#1E3A8A']}
+                colors={[C.gradient.accentStart, C.gradient.accentEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={styles.verificationGradient}
               >
                 <View style={styles.verificationHeader}>
-                  <QrCode color="#FFF" size={24} />
-                  <Text style={styles.verificationTitle}>Your Ticket Verification Code</Text>
+                  <QrCode color="#FFF" size={22} />
+                  <Text style={styles.verificationTitle}>Verification Code</Text>
                 </View>
                 
                 <View style={styles.codeContainer}>
@@ -247,12 +287,12 @@ export default function ProfileScreen() {
                 </View>
                 
                 <Text style={styles.verificationNote}>
-                  Present this code to claim your prize if you find the target first during the hunt!
+                  Present this code to claim your prize if you find the target first!
                 </Text>
                 
-                <View style={styles.ticketDetails}>
-                  <Shield color="#FFF" size={16} />
-                  <Text style={styles.ticketDetailsText}>
+                <View style={styles.secureNotice}>
+                  <Shield color="rgba(255,255,255,0.8)" size={14} />
+                  <Text style={styles.secureNoticeText}>
                     Keep this code secure and don&apos;t share it
                   </Text>
                 </View>
@@ -261,10 +301,10 @@ export default function ProfileScreen() {
           )}
 
           {hasTicket && !verificationCode && (
-            <View style={styles.waitingCard}>
-              <Clock color="#1E40AF" size={32} />
-              <Text style={styles.waitingTitle}>Loading Ticket...</Text>
-              <Text style={styles.waitingText}>
+            <View style={styles.loadingTicketCard}>
+              <Clock color={C.accent.primary} size={28} />
+              <Text style={styles.loadingTicketTitle}>Loading Ticket...</Text>
+              <Text style={styles.loadingTicketText}>
                 Your verification code is being retrieved
               </Text>
             </View>
@@ -273,17 +313,20 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.signOutButton}
             onPress={handleSignOut}
+            activeOpacity={0.8}
           >
             <Text style={styles.signOutButtonText}>Sign Out</Text>
           </TouchableOpacity>
 
-          <View style={styles.securityInfo}>
-            <Shield color="#1E40AF" size={24} />
+          <View style={styles.securityCard}>
+            <Shield color={C.accent.primary} size={22} />
             <Text style={styles.securityTitle}>Security Features</Text>
             <Text style={styles.securityDescription}>
-              {`• Account verification required\n• Secure authentication\n• Screenshot protection enabled\n• Unique verification codes\n• Anti-sharing technology`}
+              {`\u2022 Account verification required\n\u2022 Secure authentication\n\u2022 Screenshot protection enabled\n\u2022 Unique verification codes\n\u2022 Anti-sharing technology`}
             </Text>
           </View>
+
+          <View style={{ height: 40 }} />
         </ScrollView>
       </LinearGradient>
       
@@ -298,14 +341,14 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Lock color="#FF6B6B" size={48} />
+            <Lock color={C.status.danger} size={40} />
             <Text style={styles.modalTitle}>Admin Access</Text>
             <Text style={styles.modalSubtitle}>Enter password to continue</Text>
             
             <TextInput
               style={styles.passwordInput}
               placeholder="Password"
-              placeholderTextColor="#666"
+              placeholderTextColor={C.dark.textMuted}
               secureTextEntry
               value={password}
               onChangeText={setPassword}
@@ -320,6 +363,7 @@ export default function ProfileScreen() {
                   setShowPasswordModal(false);
                   setPassword('');
                 }}
+                activeOpacity={0.8}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -327,6 +371,7 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.modalSubmitButton}
                 onPress={handlePasswordSubmit}
+                activeOpacity={0.8}
               >
                 <Text style={styles.modalSubmitText}>Enter</Text>
               </TouchableOpacity>
@@ -341,7 +386,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A',
+    backgroundColor: C.dark.background,
   },
   gradient: {
     flex: 1,
@@ -352,193 +397,189 @@ const styles = StyleSheet.create({
   },
   authHeader: {
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 40,
+    marginTop: 32,
+    marginBottom: 36,
+  },
+  authTitle: {
+    fontSize: 28,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  authSubtitle: {
+    fontSize: 15,
+    color: C.dark.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
   },
   authButtonsContainer: {
-    marginBottom: 40,
+    marginBottom: 32,
+    gap: 12,
   },
   primaryAuthButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E40AF',
+    backgroundColor: C.accent.primary,
     paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: 14,
+    gap: 10,
   },
   primaryAuthButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     color: '#000',
-    marginLeft: 8,
   },
   secondaryAuthButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#1E40AF',
+    backgroundColor: C.accent.primaryMuted,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.3)',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
+    gap: 10,
   },
   secondaryAuthButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1E40AF',
-    marginLeft: 8,
+    fontWeight: '600' as const,
+    color: C.accent.primary,
   },
-  benefitsContainer: {
-    backgroundColor: '#222',
+  benefitsCard: {
+    backgroundColor: C.dark.card,
     borderRadius: 16,
     padding: 20,
   },
   benefitsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFF',
-    marginBottom: 20,
-    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+    marginBottom: 18,
   },
-  benefitItem: {
+  benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
+    gap: 12,
+  },
+  benefitIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   benefitText: {
-    fontSize: 16,
-    color: '#FFF',
-    marginLeft: 12,
+    fontSize: 15,
+    color: C.dark.textSecondary,
     flex: 1,
-  },
-  authTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFF',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  authSubtitle: {
-    fontSize: 16,
-    color: '#FFF',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  formContainer: {
-    marginBottom: 40,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#222',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    marginBottom: 16,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#FFF',
-    paddingVertical: 16,
-    paddingLeft: 12,
-  },
-  authButton: {
-    backgroundColor: '#1E40AF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  authButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
-  },
-  switchButton: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  switchButtonText: {
-    fontSize: 14,
-    color: '#1E40AF',
-  },
-  securityNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#222',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 20,
-  },
-  securityText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#FFF',
-    marginLeft: 12,
-    lineHeight: 20,
   },
   profileHeader: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 30,
+    marginTop: 12,
+    marginBottom: 28,
   },
-  avatarContainer: {
+  avatarLarge: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: '#222',
+    borderRadius: 24,
+    backgroundColor: C.accent.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
   welcomeText: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#FFF',
+    fontWeight: '800' as const,
+    color: C.dark.text,
     marginBottom: 4,
   },
   userEmail: {
-    fontSize: 16,
-    color: '#FFF',
+    fontSize: 15,
+    color: C.dark.textSecondary,
   },
   profileCard: {
-    backgroundColor: '#222',
+    backgroundColor: C.dark.card,
     borderRadius: 16,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFF',
-    marginBottom: 20,
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+    marginBottom: 18,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: 12,
+    paddingVertical: 4,
+  },
+  detailIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: C.dark.cardElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   detailContent: {
     flex: 1,
-    marginLeft: 12,
   },
   detailLabel: {
-    fontSize: 12,
-    color: '#FFF',
-    marginBottom: 2,
-    textTransform: 'uppercase',
+    fontSize: 11,
+    color: C.dark.textMuted,
+    textTransform: 'uppercase' as const,
     letterSpacing: 1,
+    marginBottom: 2,
   },
   detailValue: {
-    fontSize: 16,
-    color: '#FFF',
-    fontWeight: '500',
+    fontSize: 15,
+    color: C.dark.text,
+    fontWeight: '500' as const,
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: C.dark.border,
+    marginVertical: 12,
+    marginLeft: 48,
+  },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 2,
+  },
+  statusChipSuccess: {
+    backgroundColor: C.status.successMuted,
+  },
+  statusChipDanger: {
+    backgroundColor: C.status.dangerMuted,
+  },
+  statusChipMuted: {
+    backgroundColor: C.dark.cardElevated,
+  },
+  statusChipDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusChipText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
   },
   verificationCard: {
     borderRadius: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     overflow: 'hidden',
   },
   verificationGradient: {
@@ -548,187 +589,141 @@ const styles = StyleSheet.create({
   verificationHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
+    gap: 10,
   },
   verificationTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '700' as const,
     color: '#FFF',
-    marginLeft: 8,
   },
   codeContainer: {
-    backgroundColor: '#000',
-    paddingHorizontal: 24,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingHorizontal: 28,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   verificationCode: {
     fontSize: 24,
-    fontWeight: '900',
-    color: '#1E40AF',
-    letterSpacing: 4,
+    fontWeight: '900' as const,
+    color: '#FFF',
+    letterSpacing: 5,
     textAlign: 'center',
   },
   verificationNote: {
     fontSize: 14,
-    color: '#FFF',
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
+    lineHeight: 20,
   },
-  ticketDetails: {
+  secureNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    gap: 8,
   },
-  ticketDetailsText: {
+  secureNoticeText: {
     fontSize: 12,
-    color: '#FFF',
-    marginLeft: 8,
-    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600' as const,
   },
-  waitingCard: {
-    backgroundColor: '#222',
+  loadingTicketCard: {
+    backgroundColor: C.dark.card,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    gap: 8,
   },
-  waitingTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFF',
-    marginTop: 12,
-    marginBottom: 8,
+  loadingTicketTitle: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+    marginTop: 4,
   },
-  waitingText: {
+  loadingTicketText: {
     fontSize: 14,
-    color: '#FFF',
+    color: C.dark.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 12,
   },
-  startTime: {
-    fontSize: 16,
-    color: '#1E40AF',
-    fontWeight: '600',
+  signOutButton: {
+    backgroundColor: C.status.dangerMuted,
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.2)',
   },
-  securityInfo: {
-    backgroundColor: '#222',
+  signOutButtonText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: C.status.danger,
+  },
+  securityCard: {
+    backgroundColor: C.dark.card,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
   },
   securityTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-    marginTop: 12,
-    marginBottom: 12,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+    marginTop: 10,
+    marginBottom: 10,
   },
   securityDescription: {
     fontSize: 14,
-    color: '#FFF',
+    color: C.dark.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#1E40AF',
-    marginLeft: 8,
-    fontWeight: '600',
-  },
-  phoneNumber: {
-    color: '#1E40AF',
-    fontWeight: '600',
-  },
-  verificationContainer: {
-    marginBottom: 30,
-  },
-  verificationLabel: {
-    fontSize: 16,
-    color: '#FFF',
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  verificationInput: {
-    backgroundColor: '#222',
-    borderRadius: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    fontSize: 24,
-    color: '#FFF',
-    fontWeight: '700',
-    letterSpacing: 8,
-    textAlign: 'center',
-  },
-  verificationNoteText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#FFF',
-    marginLeft: 12,
-    lineHeight: 20,
-  },
-  signOutButton: {
-    backgroundColor: '#FF6B6B',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  signOutButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFF',
-  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0,0,0,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalContent: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 20,
+    backgroundColor: C.dark.surface,
+    borderRadius: 24,
     padding: 32,
     alignItems: 'center',
     width: '85%',
     maxWidth: 400,
-    borderWidth: 2,
-    borderColor: '#FF6B6B',
+    borderWidth: 1,
+    borderColor: C.dark.border,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#FFF',
+    fontSize: 22,
+    fontWeight: '800' as const,
+    color: C.dark.text,
     marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#FFF',
+    color: C.dark.textSecondary,
     marginBottom: 24,
   },
   passwordInput: {
     width: '100%',
-    backgroundColor: '#222',
+    backgroundColor: C.dark.card,
     borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
+    borderColor: C.dark.border,
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#FFF',
+    color: C.dark.text,
     marginBottom: 24,
   },
   modalButtons: {
@@ -738,26 +733,26 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: C.dark.card,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
   },
   modalCancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#888',
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: C.dark.textSecondary,
   },
   modalSubmitButton: {
     flex: 1,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: C.status.danger,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
   },
   modalSubmitText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '700' as const,
     color: '#FFF',
   },
 });
