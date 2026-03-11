@@ -293,7 +293,7 @@ export default function ProfileScreen() {
                 <View style={styles.secureNotice}>
                   <Shield color="rgba(255,255,255,0.8)" size={14} />
                   <Text style={styles.secureNoticeText}>
-                    Keep this code secure and don&apos;t share it
+                    Keep this code secure and don't share it
                   </Text>
                 </View>
               </LinearGradient>
