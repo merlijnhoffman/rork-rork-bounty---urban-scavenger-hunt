@@ -6,15 +6,10 @@ import {
   TouchableOpacity,
   Animated,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Target, Navigation2 } from 'lucide-react-native';
-import { AppleMaps, GoogleMaps } from 'expo-maps';
-import { AppleMapsMapType } from 'expo-maps/build/apple/AppleMaps.types';
-import type { AppleMapsCircle } from 'expo-maps/build/apple/AppleMaps.types';
-import { GoogleMapsMapType, GoogleMapsColorScheme } from 'expo-maps/build/google/GoogleMaps.types';
-import type { GoogleMapsCircle } from 'expo-maps/build/google/GoogleMaps.types';
+import MapView, { Circle, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Colors from '@/constants/colors';
 
@@ -36,10 +31,9 @@ const AMBER_MUTED = 'rgba(245, 158, 11, 0.2)';
 
 export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation }: HuntMapProps) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [_userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(true);
-  const appleMapRef = useRef<AppleMaps.MapView>(null);
-  const googleMapRef = useRef<GoogleMaps.MapView>(null);
+  const mapRef = useRef<MapView>(null);
 
   const getUserLocation = useCallback(async () => {
     try {
@@ -104,118 +98,15 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
   const zoneProgress = ((clueOrder / totalClues) * 100).toFixed(0);
   const remainingClues = totalClues - clueOrder;
 
-  const cameraPosition = {
-    coordinates: {
-      latitude: targetLocation.latitude,
-      longitude: targetLocation.longitude,
-    },
-    zoom: 14,
-  };
-
-  const zoneCircleApple: AppleMapsCircle = {
-    center: {
-      latitude: targetLocation.latitude,
-      longitude: targetLocation.longitude,
-    },
-    radius: targetLocation.radius,
-    color: AMBER_MUTED,
-    lineColor: AMBER,
-    lineWidth: 3,
-  };
-
-  const zoneCircleGoogle: GoogleMapsCircle = {
-    center: {
-      latitude: targetLocation.latitude,
-      longitude: targetLocation.longitude,
-    },
-    radius: targetLocation.radius,
-    color: AMBER_MUTED,
-    lineColor: AMBER,
-    lineWidth: 3,
-  };
-
-  const markerApple: AppleMaps.Marker = {
-    coordinates: {
-      latitude: targetLocation.latitude,
-      longitude: targetLocation.longitude,
-    },
-    title: targetLocation.name,
-    tintColor: AMBER,
-    systemImage: 'scope',
-  };
-
-  const markerGoogle: GoogleMaps.Marker = {
-    coordinates: {
-      latitude: targetLocation.latitude,
-      longitude: targetLocation.longitude,
-    },
-    title: targetLocation.name,
-    snippet: `Search radius: ${targetLocation.radius}m`,
+  const initialRegion = {
+    latitude: targetLocation.latitude,
+    longitude: targetLocation.longitude,
+    latitudeDelta: 0.02,
+    longitudeDelta: 0.02,
   };
 
   const handleRecenter = () => {
-    const pos = {
-      coordinates: {
-        latitude: targetLocation.latitude,
-        longitude: targetLocation.longitude,
-      },
-      zoom: 14,
-    };
-    if (Platform.OS === 'ios' && appleMapRef.current) {
-      appleMapRef.current.setCameraPosition(pos);
-    } else if (Platform.OS === 'android' && googleMapRef.current) {
-      googleMapRef.current.setCameraPosition({ ...pos, duration: 500 });
-    }
-  };
-
-  const renderMap = () => {
-    if (Platform.OS === 'ios') {
-      return (
-        <AppleMaps.View
-          ref={appleMapRef}
-          style={styles.mapView}
-          cameraPosition={cameraPosition}
-          markers={[markerApple]}
-          circles={[zoneCircleApple]}
-          properties={{
-            isMyLocationEnabled: true,
-            mapType: AppleMapsMapType.STANDARD,
-          }}
-          uiSettings={{
-            compassEnabled: true,
-            myLocationButtonEnabled: true,
-            scaleBarEnabled: true,
-          }}
-        />
-      );
-    }
-
-    return (
-      <GoogleMaps.View
-        ref={googleMapRef}
-        style={styles.mapView}
-        cameraPosition={cameraPosition}
-        markers={[markerGoogle]}
-        circles={[zoneCircleGoogle]}
-        properties={{
-          isMyLocationEnabled: true,
-          mapType: GoogleMapsMapType.NORMAL,
-        }}
-        uiSettings={{
-          compassEnabled: true,
-          myLocationButtonEnabled: true,
-          zoomControlsEnabled: true,
-          scaleBarEnabled: true,
-        }}
-        colorScheme={GoogleMapsColorScheme.DARK}
-        {...(userLocation ? {
-          userLocation: {
-            coordinates: userLocation,
-            followUserLocation: false,
-          },
-        } : {})}
-      />
-    );
+    mapRef.current?.animateToRegion(initialRegion, 500);
   };
 
   return (
@@ -233,7 +124,38 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
       </SafeAreaView>
 
       <View style={styles.map}>
-        {visible && renderMap()}
+        {visible && (
+          <MapView
+            ref={mapRef}
+            style={styles.mapView}
+            provider={PROVIDER_DEFAULT}
+            initialRegion={initialRegion}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+            showsCompass={true}
+            userInterfaceStyle="dark"
+          >
+            <Circle
+              center={{
+                latitude: targetLocation.latitude,
+                longitude: targetLocation.longitude,
+              }}
+              radius={targetLocation.radius}
+              fillColor={AMBER_MUTED}
+              strokeColor={AMBER}
+              strokeWidth={3}
+            />
+            <Marker
+              coordinate={{
+                latitude: targetLocation.latitude,
+                longitude: targetLocation.longitude,
+              }}
+              title={targetLocation.name}
+              description={`Search radius: ${targetLocation.radius}m`}
+              pinColor={AMBER}
+            />
+          </MapView>
+        )}
 
         <TouchableOpacity
           style={styles.recenterButton}
