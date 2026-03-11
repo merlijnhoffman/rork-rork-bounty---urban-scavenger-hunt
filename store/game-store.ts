@@ -48,16 +48,30 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     queryKey: ['current-event'],
     queryFn: async () => {
       console.log('Fetching current event from Supabase...');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       try {
-        const { data, error } = await supabase
+        const query = supabase
           .from('events')
           .select('*')
           .order('start_time', { ascending: false })
           .limit(1)
           .maybeSingle();
 
+        const { data, error } = await Promise.race([
+          query,
+          new Promise<never>((_, reject) => {
+            controller.signal.addEventListener('abort', () => {
+              reject(new Error('Request timeout'));
+            });
+          }),
+        ]);
+
+        clearTimeout(timeoutId);
+
         if (error) {
-          console.error('Error fetching event:', error.message || JSON.stringify(error));
+          console.warn('Supabase query error:', error.message || 'Unknown');
           throw new Error(error.message || 'Failed to fetch event');
         }
 
@@ -84,17 +98,25 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         };
         return event;
       } catch (err: any) {
+        clearTimeout(timeoutId);
         const message = err?.message || 'Unknown error';
-        console.error('Error fetching event:', message);
-        if (message === 'Load failed' || message === 'Network request failed' || message === 'Failed to fetch') {
+        const isNetworkError = message === 'Load failed' || message === 'Network request failed' || message === 'Failed to fetch' || message === 'The operation was aborted.' || err?.name === 'AbortError';
+        if (isNetworkError) {
           console.warn('Network error fetching event - will retry automatically');
+        } else {
+          console.warn('Error fetching event:', message);
         }
         throw err;
       }
     },
-    retry: 5,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 15000),
-    staleTime: 60000,
+    retry: (failureCount, error: any) => {
+      const message = error?.message || '';
+      const isNetworkError = message === 'Load failed' || message === 'Network request failed' || message === 'Failed to fetch' || error?.name === 'AbortError';
+      if (isNetworkError) return failureCount < 3;
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(2000 * 2 ** attemptIndex, 20000),
+    staleTime: 120000,
     gcTime: 300000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
