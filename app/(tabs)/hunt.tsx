@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Play, Pause, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import HuntMap from '@/components/HuntMap';
@@ -74,9 +74,8 @@ export default function HuntScreen() {
 
   const [hasTicket, setHasTicket] = useState<boolean>(false);
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
-  const [isHuntActive, setIsHuntActive] = useState<boolean>(false);
+  const [isHuntActive, _setIsHuntActive] = useState<boolean>(false);
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
-  const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   const slideUpAnim = useMemo(() => new Animated.Value(50), []);
@@ -191,57 +190,6 @@ export default function HuntScreen() {
     }
   }, [notificationPermission]);
   
-  const mockClues: ClueWithLocation[] = [
-    {
-      id: '1',
-      text: 'BOUNTY SPOTTED: Wearing a bright red jacket and black baseball cap. Last seen heading towards the central square area. They were carrying a blue backpack and stopped to check their phone near a large monument.',
-      timestamp: new Date().toISOString(),
-      order: 1,
-      location: {
-        latitude: 52.3731,
-        longitude: 4.8922,
-        radius: 500,
-        name: 'Dam Square Area',
-      },
-    },
-    {
-      id: '2', 
-      text: 'UPDATE: The bounty was seen 5 minutes ago walking south. Still wearing the red jacket. Witnesses report they stopped at a coffee shop with outdoor seating. Look for someone with a blue backpack sitting alone.',
-      timestamp: new Date(Date.now() + 5 * 60000).toISOString(),
-      order: 2,
-      location: {
-        latitude: 52.3580,
-        longitude: 4.8810,
-        radius: 300,
-        name: 'Museum District',
-      },
-    },
-    {
-      id: '3',
-      text: 'FRESH SIGHTING: Bounty spotted near the flower market! They removed their red jacket - now wearing a white t-shirt underneath. Still has the black cap and blue backpack. Moving slowly, checking their phone frequently.',
-      timestamp: new Date(Date.now() + 10 * 60000).toISOString(),
-      order: 3,
-      location: {
-        latitude: 52.3676,
-        longitude: 4.8913,
-        radius: 150,
-        name: 'Bloemenmarkt',
-      },
-    },
-    {
-      id: '4',
-      text: 'FINAL LOCATION: Bounty confirmed heading north! White t-shirt, black cap, blue backpack. They were seen entering a historic building with a long queue outside. Move fast - they\'re on the move!',
-      timestamp: new Date(Date.now() + 15 * 60000).toISOString(),
-      order: 4,
-      location: {
-        latitude: 52.3752,
-        longitude: 4.8840,
-        radius: 50,
-        name: 'Anne Frank House',
-      },
-    },
-  ];
-  
   const ticketQuery = useQuery({
     queryKey: ['ticket-status', user?.id, currentEvent?.id],
     queryFn: async () => {
@@ -326,42 +274,6 @@ export default function HuntScreen() {
     };
   }, [hasTicket, currentEvent, user, fadeAnim, sendClueNotification]);
   
-  const startSimulation = () => {
-    setIsSimulating(true);
-    setIsHuntActive(true);
-    setLiveClues([]);
-    
-    mockClues.forEach((clue, index) => {
-      setTimeout(() => {
-        setLiveClues(prev => [...prev, clue]);
-        
-        void sendClueNotification(clue);
-        
-        Animated.sequence([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 500,
-            delay: 2000,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }, index * 8000);
-    });
-  };
-  
-  const stopSimulation = () => {
-    setIsSimulating(false);
-    setIsHuntActive(false);
-    setLiveClues([]);
-    setDistanceMeterUsed(false);
-    setMeasuredDistance(null);
-  };
-  
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371e3;
     const p1 = lat1 * Math.PI / 180;
@@ -444,12 +356,7 @@ export default function HuntScreen() {
   const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading && !isPurchasing;
   const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched) || isPurchasing;
   
-  const isEventLive = useMemo(() => {
-    if (!currentEvent) return false;
-    return currentEvent.status === 'live';
-  }, [currentEvent]);
-  
-  const shouldShowHunt = hasTicket && (isHuntActive || isSimulating);
+  const shouldShowHunt = hasTicket && isHuntActive;
 
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
@@ -584,16 +491,6 @@ export default function HuntScreen() {
               )}
             </View>
             
-            {isSimulating && (
-              <TouchableOpacity 
-                style={styles.simulationControls}
-                onPress={stopSimulation}
-                activeOpacity={0.8}
-              >
-                <Pause color={Colors.status.danger} size={16} />
-                <Text style={styles.simulationText}>Stop Simulation</Text>
-              </TouchableOpacity>
-            )}
           </View>
           
           <ScrollView style={styles.cluesContainer} showsVerticalScrollIndicator={false}>
@@ -698,7 +595,7 @@ export default function HuntScreen() {
             visible={true}
             onClose={() => setSelectedClueForMap(null)}
             clueOrder={selectedClueForMap.order}
-            totalClues={mockClues.length}
+            totalClues={liveClues.length}
             targetLocation={selectedClueForMap.location}
           />
         )}
@@ -754,25 +651,6 @@ export default function HuntScreen() {
             <View style={styles.loadingCard}>
               <View style={styles.loadingPulse} />
               <Text style={styles.loadingText}>Loading event details...</Text>
-            </View>
-          )}
-
-          {isEventLive && !hasTicket && (
-            <View style={styles.liveEventNotice}>
-              <View style={styles.liveIndicatorPill}>
-                <View style={styles.liveDotSmall} />
-                <Text style={styles.liveIndicatorText}>LIVE NOW</Text>
-              </View>
-              <Text style={styles.liveEventTitle}>The Hunt is Active!</Text>
-              <Text style={styles.liveEventMessage}>
-                Ticket sales are closed for this event. Hunters are currently tracking the bounty.
-              </Text>
-              <View style={styles.nextEventPrompt}>
-                <AlertCircle color={Colors.accent.primary} size={18} />
-                <Text style={styles.nextEventPromptText}>
-                  Stay alert for the next event!
-                </Text>
-              </View>
             </View>
           )}
 
@@ -869,21 +747,13 @@ export default function HuntScreen() {
                     <Text style={styles.ticketClaimedText}>
                       Hunt starts at the scheduled time.
                     </Text>
-                    <TouchableOpacity 
-                      style={styles.simulationButton}
-                      onPress={startSimulation}
-                      activeOpacity={0.8}
-                    >
-                      <Play color={Colors.accent.primary} size={16} />
-                      <Text style={styles.simulationButtonText}>Preview Hunt Experience</Text>
-                    </TouchableOpacity>
                   </View>
                 )}
               </LinearGradient>
             </Animated.View>
           )}
           
-          {!hasTicket && currentEvent && !isEventLive && (
+          {!hasTicket && currentEvent && (
             <Animated.View style={[styles.firstEventBannerContainer, { opacity: opacityAnim }]}>
               <View style={styles.firstEventBanner}>
                 <Zap color={Colors.accent.primary} size={20} />
@@ -895,7 +765,7 @@ export default function HuntScreen() {
             </Animated.View>
           )}
           
-          {currentEvent && isLoggedIn && !hasTicket && !isEventLive && (
+          {currentEvent && isLoggedIn && !hasTicket && (
             <Animated.View style={{ opacity: opacityAnim }}>
               <TouchableOpacity
                 style={[
@@ -1315,20 +1185,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     marginBottom: 12,
   },
-  simulationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.accent.primaryMuted,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    gap: 8,
-  },
-  simulationButtonText: {
-    fontSize: 14,
-    color: C.accent.primary,
-    fontWeight: '600' as const,
-  },
   firstEventBannerContainer: {
     marginBottom: 16,
   },
@@ -1504,22 +1360,6 @@ const styles = StyleSheet.create({
   huntTime: {
     fontSize: 14,
     color: C.dark.textSecondary,
-  },
-  simulationControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.status.dangerMuted,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    gap: 8,
-    marginTop: 10,
-    alignSelf: 'flex-start',
-  },
-  simulationText: {
-    fontSize: 13,
-    color: C.status.danger,
-    fontWeight: '600' as const,
   },
   cluesContainer: {
     flex: 1,
@@ -1728,65 +1568,6 @@ const styles = StyleSheet.create({
     fontWeight: '900' as const,
     color: C.accent.primary,
     letterSpacing: 1,
-  },
-  liveEventNotice: {
-    backgroundColor: C.dark.card,
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
-  },
-  liveIndicatorPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.status.dangerMuted,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    gap: 8,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  liveDotSmall: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.status.danger,
-  },
-  liveIndicatorText: {
-    fontSize: 12,
-    fontWeight: '800' as const,
-    color: C.status.danger,
-    letterSpacing: 1.5,
-  },
-  liveEventTitle: {
-    fontSize: 20,
-    fontWeight: '800' as const,
-    color: C.dark.text,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  liveEventMessage: {
-    fontSize: 15,
-    color: C.dark.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  nextEventPrompt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.accent.primaryMuted,
-    padding: 14,
-    borderRadius: 12,
-    gap: 10,
-  },
-  nextEventPromptText: {
-    flex: 1,
-    fontSize: 14,
-    color: C.accent.primary,
-    fontWeight: '600' as const,
   },
   modalOverlay: {
     flex: 1,
