@@ -1,18 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ScrollView,
-  Modal,
-  TextInput,
-  Alert,
-  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Lock, Fingerprint } from 'lucide-react-native';
+import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
@@ -20,7 +16,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/colors';
 
-const ADMIN_PASSWORD = 'whereswally2003';
 const C = Colors;
 
 export default function ProfileScreen() {
@@ -28,9 +23,6 @@ export default function ProfileScreen() {
   const { currentEvent } = useGameStore();
   const { user, signOut } = useAuth();
   
-  const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
-  const [password, setPassword] = useState<string>('');
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const profileQuery = useQuery({
     queryKey: ['user-profile', user?.id],
@@ -82,30 +74,6 @@ export default function ProfileScreen() {
   const hasTicket = ticketQuery.data?.hasTicket || false;
   const verificationCode = ticketQuery.data?.ticket?.verification_code || null;
   
-  const handleLongPressStart = () => {
-    longPressTimer.current = setTimeout(() => {
-      setShowPasswordModal(true);
-    }, 10000);
-  };
-  
-  const handleLongPressEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
-  
-  const handlePasswordSubmit = () => {
-    if (password === ADMIN_PASSWORD) {
-      setShowPasswordModal(false);
-      setPassword('');
-      router.push('/admin');
-    } else {
-      Alert.alert('Access Denied', 'Incorrect password');
-      setPassword('');
-    }
-  };
-
   const handleSignOut = async () => {
     await signOut();
   };
@@ -178,13 +146,9 @@ export default function ProfileScreen() {
       >
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
           <View style={styles.profileHeader}>
-            <Pressable
-              style={styles.avatarLarge}
-              onPressIn={handleLongPressStart}
-              onPressOut={handleLongPressEnd}
-            >
+            <View style={styles.avatarLarge}>
               <User color={C.accent.primary} size={36} />
-            </Pressable>
+            </View>
             <Text style={styles.welcomeText}>Welcome back!</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
           </View>
@@ -329,56 +293,7 @@ export default function ProfileScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </LinearGradient>
-      
-      <Modal
-        visible={showPasswordModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setShowPasswordModal(false);
-          setPassword('');
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Lock color={C.status.danger} size={40} />
-            <Text style={styles.modalTitle}>Admin Access</Text>
-            <Text style={styles.modalSubtitle}>Enter password to continue</Text>
-            
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Password"
-              placeholderTextColor={C.dark.textMuted}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              autoFocus
-              onSubmitEditing={handlePasswordSubmit}
-            />
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => {
-                  setShowPasswordModal(false);
-                  setPassword('');
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.modalSubmitButton}
-                onPress={handlePasswordSubmit}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.modalSubmitText}>Enter</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+
     </View>
   );
 }
@@ -686,73 +601,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalContent: {
-    backgroundColor: C.dark.surface,
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    width: '85%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: C.dark.border,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '800' as const,
-    color: C.dark.text,
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: C.dark.textSecondary,
-    marginBottom: 24,
-  },
-  passwordInput: {
-    width: '100%',
-    backgroundColor: C.dark.card,
-    borderWidth: 1,
-    borderColor: C.dark.border,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: C.dark.text,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    backgroundColor: C.dark.card,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: C.dark.textSecondary,
-  },
-  modalSubmitButton: {
-    flex: 1,
-    backgroundColor: C.status.danger,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  modalSubmitText: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: '#FFF',
-  },
+
 });
