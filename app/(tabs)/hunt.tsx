@@ -85,6 +85,7 @@ export default function HuntScreen() {
   const [notificationPermission, setNotificationPermission] = useState<boolean>(false);
   const [timeUntilEvent, setTimeUntilEvent] = useState<string>('');
   const [showPrizeModal, setShowPrizeModal] = useState<boolean>(false);
+  const [joinedLiveHunt, setJoinedLiveHunt] = useState<boolean>(false);
   
   const bountyLocation = useMemo(() => ({
     latitude: 52.3752,
@@ -108,12 +109,33 @@ export default function HuntScreen() {
   
   useEffect(() => {
     const updateCountdown = () => {
+      if (!currentEvent) {
+        setTimeUntilEvent('');
+        return;
+      }
+
+      if (currentEvent.status === 'live') {
+        setTimeUntilEvent('Event is live!');
+        return;
+      }
+
+      if (currentEvent.status === 'completed') {
+        setTimeUntilEvent('Event has ended');
+        return;
+      }
+
       const now = new Date();
-      const eventStart = new Date('2026-01-18T12:00:00');
+      const eventStart = currentEvent.startTime ? new Date(currentEvent.startTime) : null;
+      
+      if (!eventStart || isNaN(eventStart.getTime())) {
+        setTimeUntilEvent('Coming soon');
+        return;
+      }
+
       const diff = eventStart.getTime() - now.getTime();
       
       if (diff <= 0) {
-        setTimeUntilEvent('Event is live!');
+        setTimeUntilEvent('Starting soon...');
         return;
       }
       
@@ -135,7 +157,7 @@ export default function HuntScreen() {
     const interval = setInterval(updateCountdown, 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [currentEvent]);
   
   useEffect(() => {
     const requestNotificationPermissions = async () => {
@@ -220,6 +242,42 @@ export default function HuntScreen() {
     staleTime: 0,
   });
   
+  useEffect(() => {
+    if (!hasTicket || !currentEvent || !user || currentEvent.status !== 'live') return;
+
+    console.log('Fetching existing clues for event:', currentEvent.id);
+    const fetchExistingClues = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('clues')
+          .select('*')
+          .eq('event_id', currentEvent.id)
+          .order('order_number', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching existing clues:', error.message);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          console.log('Loaded', data.length, 'existing clues');
+          const mapped: Clue[] = data.map((c: any) => ({
+            id: c.id,
+            text: c.text,
+            hint: c.hint,
+            timestamp: c.release_time,
+            order: c.order_number,
+          }));
+          setLiveClues(mapped);
+        }
+      } catch (err) {
+        console.error('Error loading clues:', err);
+      }
+    };
+
+    void fetchExistingClues();
+  }, [hasTicket, currentEvent, user]);
+
   useEffect(() => {
     if (!hasTicket || !currentEvent || !user) return;
     
@@ -356,7 +414,7 @@ export default function HuntScreen() {
   const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched) || isPurchasing;
   
   const isHuntActive = currentEvent?.status === 'live';
-  const shouldShowHunt = hasTicket && isHuntActive;
+  const shouldShowHunt = hasTicket && isHuntActive && joinedLiveHunt;
 
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
@@ -675,8 +733,10 @@ export default function HuntScreen() {
                   style={styles.backgroundImage}
                 />
                 <View style={styles.eventHeader}>
-                  <View style={styles.nextEventPill}>
-                    <Text style={styles.nextEventLabel}>NEXT HUNT</Text>
+                  <View style={[styles.nextEventPill, isHuntActive && styles.livePill]}>
+                    <Text style={[styles.nextEventLabel, isHuntActive && styles.livePillText]}>
+                      {isHuntActive ? 'LIVE NOW' : currentEvent?.status === 'completed' ? 'COMPLETED' : 'NEXT HUNT'}
+                    </Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.prizeContainer}
@@ -694,10 +754,24 @@ export default function HuntScreen() {
                   <Text style={styles.cityCountry}>Netherlands</Text>
                 </View>
 
-                {timeUntilEvent && (
+                {timeUntilEvent && !isHuntActive && (
                   <View style={styles.countdownContainer}>
-                    <Text style={styles.countdownLabel}>STARTS IN</Text>
+                    <Text style={styles.countdownLabel}>
+                      {currentEvent?.status === 'completed' ? 'STATUS' : 'STARTS IN'}
+                    </Text>
                     <Text style={styles.countdownTime}>{timeUntilEvent}</Text>
+                  </View>
+                )}
+
+                {isHuntActive && (
+                  <View style={[styles.countdownContainer, styles.liveCountdownContainer]}>
+                    <View style={styles.liveIndicatorRow}>
+                      <View style={styles.liveIndicatorDot} />
+                      <Text style={styles.liveIndicatorText}>HUNT IS ACTIVE</Text>
+                    </View>
+                    <Text style={styles.liveSubtext}>
+                      {hasTicket ? 'Scroll down or tap below to join the hunt!' : 'Purchase a ticket to join the live hunt!'}
+                    </Text>
                   </View>
                 )}
 
@@ -736,7 +810,7 @@ export default function HuntScreen() {
                   </View>
                 )}
 
-                {hasTicket && (
+                {hasTicket && !isHuntActive && (
                   <View style={styles.ticketClaimedSection}>
                     <View style={styles.ticketClaimedHeader}>
                       <View style={styles.ticketCheckmark}>
@@ -748,6 +822,18 @@ export default function HuntScreen() {
                       Hunt starts at the scheduled time.
                     </Text>
                   </View>
+                )}
+
+                {hasTicket && isHuntActive && (
+                  <TouchableOpacity
+                    style={styles.joinHuntButton}
+                    onPress={() => setJoinedLiveHunt(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Target color="#000" size={20} />
+                    <Text style={styles.joinHuntButtonText}>JOIN LIVE HUNT</Text>
+                    <ChevronRight color="#000" size={18} />
+                  </TouchableOpacity>
                 )}
               </LinearGradient>
             </Animated.View>
@@ -1826,5 +1912,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.dark.textMuted,
     fontWeight: '500' as const,
+  },
+  livePill: {
+    backgroundColor: 'rgba(239,68,68,0.3)',
+  },
+  livePillText: {
+    color: '#EF4444',
+  },
+  liveCountdownContainer: {
+    borderColor: 'rgba(239,68,68,0.3)',
+    backgroundColor: 'rgba(239,68,68,0.1)',
+  },
+  liveIndicatorRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 6,
+  },
+  liveIndicatorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
+  },
+  liveIndicatorText: {
+    fontSize: 14,
+    fontWeight: '800' as const,
+    color: '#FFF',
+    letterSpacing: 2,
+  },
+  liveSubtext: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center' as const,
+  },
+  joinHuntButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: C.accent.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    marginTop: 16,
+    gap: 10,
+  },
+  joinHuntButtonText: {
+    fontSize: 16,
+    fontWeight: '800' as const,
+    color: '#000',
+    letterSpacing: 1.5,
   },
 });

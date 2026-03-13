@@ -1,6 +1,6 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TicketTier } from '@/types/payment';
 import { supabase } from '@/lib/supabase';
 
@@ -32,7 +32,7 @@ export interface Clue {
 }
 
 const [GameProvider, useGameStoreInternal] = createContextHook(() => {
-  
+  const queryClient = useQueryClient();
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
 
   const [isGameActive, setIsGameActive] = useState<boolean>(false);
@@ -98,8 +98,9 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
       return failureCount < 2;
     },
     retryDelay: (attemptIndex) => Math.min(2000 * 2 ** attemptIndex, 20000),
-    staleTime: 120000,
+    staleTime: 15000,
     gcTime: 300000,
+    refetchInterval: 30000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
@@ -109,6 +110,42 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
       setCurrentEvent(eventQuery.data);
     }
   }, [eventQuery.data]);
+
+  useEffect(() => {
+    console.log('Setting up realtime subscription for event status changes');
+    const subscription = supabase
+      .channel('event-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'events',
+        },
+        (payload) => {
+          console.log('Event updated via realtime:', payload.new);
+          void queryClient.invalidateQueries({ queryKey: ['current-event'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'events',
+        },
+        (payload) => {
+          console.log('New event created via realtime:', payload.new);
+          void queryClient.invalidateQueries({ queryKey: ['current-event'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up event realtime subscription');
+      void subscription.unsubscribe();
+    };
+  }, [queryClient]);
 
   // Enable ticket checking when user is set
   const enableTicketChecking = useCallback((userId: string) => {
