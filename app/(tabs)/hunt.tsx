@@ -74,7 +74,6 @@ export default function HuntScreen() {
 
   const [hasTicket, setHasTicket] = useState<boolean>(false);
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
-  const [isHuntActive, _setIsHuntActive] = useState<boolean>(false);
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
   const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
@@ -356,6 +355,7 @@ export default function HuntScreen() {
   const canPurchaseTicket = isLoggedIn && !hasTicket && !ticketQuery.isLoading && !isPurchasing;
   const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched) || isPurchasing;
   
+  const isHuntActive = currentEvent?.status === 'live';
   const shouldShowHunt = hasTicket && isHuntActive;
 
   const handlePurchaseTicket = () => {
