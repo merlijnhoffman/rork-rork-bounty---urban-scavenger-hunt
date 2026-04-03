@@ -776,24 +776,15 @@ export default function HuntScreen() {
                 )}
 
                 <View style={styles.eventDetails}>
-                  <View style={styles.dateTimeRow}>
-                    <View style={styles.dateChip}>
-                      <Clock color="rgba(255,255,255,0.85)" size={14} />
-                      <Text style={styles.dateChipText}>SAT, JAN 18</Text>
+                  <View style={styles.eventMetaRow}>
+                    <View style={styles.eventMetaItem}>
+                      <Clock color="rgba(255,255,255,0.55)" size={13} />
+                      <Text style={styles.eventMetaText}>SAT, JAN 18 · 12:00 PM CET</Text>
                     </View>
-                    <View style={styles.dateDivider} />
-                    <View style={styles.dateChip}>
-                      <Text style={styles.dateChipText}>12:00 PM</Text>
+                    <View style={styles.eventMetaItem}>
+                      <Users color="rgba(255,255,255,0.55)" size={13} />
+                      <Text style={styles.eventMetaText}>189 hunters</Text>
                     </View>
-                    <View style={styles.dateDivider} />
-                    <View style={styles.dateChip}>
-                      <Text style={styles.dateChipTextMuted}>CET</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.huntersRow}>
-                    <Users color="rgba(255,255,255,0.6)" size={14} />
-                    <Text style={styles.huntersText}>189 hunters registered</Text>
                   </View>
                 </View>
 
@@ -1148,50 +1139,26 @@ const styles = StyleSheet.create({
   eventDetails: {
     marginBottom: 8,
     marginTop: 8,
-    gap: 10,
   },
-  dateTimeRow: {
+  eventMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.07)',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    gap: 10,
   },
-  dateChip: {
+  eventMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  dateChipText: {
-    fontSize: 13,
-    fontWeight: '700' as const,
-    color: 'rgba(255,255,255,0.9)',
-    letterSpacing: 0.8,
-  },
-  dateChipTextMuted: {
+  eventMetaText: {
     fontSize: 12,
     fontWeight: '600' as const,
-    color: 'rgba(255,255,255,0.45)',
-    letterSpacing: 0.5,
-  },
-  dateDivider: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  huntersRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 4,
-  },
-  huntersText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 0.3,
   },
   citySection: {
     alignItems: 'center',
