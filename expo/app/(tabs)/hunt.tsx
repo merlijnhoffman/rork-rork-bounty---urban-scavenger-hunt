@@ -1917,14 +1917,14 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
   },
   livePill: {
-    backgroundColor: 'rgba(239,68,68,0.3)',
+    backgroundColor: 'rgba(139,0,0,0.35)',
   },
   livePillText: {
-    color: '#EF4444',
+    color: '#C41E3A',
   },
   liveCountdownContainer: {
-    borderColor: 'rgba(239,68,68,0.3)',
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderColor: 'rgba(139,0,0,0.4)',
+    backgroundColor: 'rgba(139,0,0,0.15)',
   },
   liveIndicatorRow: {
     flexDirection: 'row' as const,
@@ -1936,7 +1936,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#C41E3A',
   },
   liveIndicatorText: {
     fontSize: 14,
