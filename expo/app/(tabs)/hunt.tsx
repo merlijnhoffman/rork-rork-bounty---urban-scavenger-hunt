@@ -778,17 +778,17 @@ export default function HuntScreen() {
                 <View style={styles.eventDetails}>
                   <View style={styles.eventDateTimeRow}>
                     <View style={styles.eventDateTimeItem}>
-                      <Clock color="rgba(255,255,255,0.55)" size={14} />
+                      <Clock color="rgba(255,255,255,0.7)" size={13} />
                       <Text style={styles.eventDateTimeText}>SAT, JAN 18</Text>
                     </View>
                     <View style={styles.eventDateTimeDot} />
                     <View style={styles.eventDateTimeItem}>
-                      <Zap color="rgba(255,255,255,0.55)" size={14} />
+                      <Zap color="rgba(255,255,255,0.7)" size={13} />
                       <Text style={styles.eventDateTimeText}>12:00 PM CET</Text>
                     </View>
                   </View>
                   <View style={styles.huntersRow}>
-                    <Users color={Colors.accent.primary} size={14} />
+                    <Users color="#FFFFFF" size={14} />
                     <Text style={styles.huntersCount}>189</Text>
                     <Text style={styles.huntersLabel}>hunters registered</Text>
                   </View>
@@ -1150,12 +1150,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    gap: 10,
     marginBottom: 8,
+    alignSelf: 'center',
   },
   eventDateTimeItem: {
     flexDirection: 'row',
@@ -1178,23 +1179,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
     gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.15)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    alignSelf: 'center',
   },
   huntersCount: {
     fontSize: 15,
     fontWeight: '800' as const,
-    color: C.accent.primary,
+    color: '#FFFFFF',
   },
   huntersLabel: {
     fontSize: 13,
     fontWeight: '500' as const,
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.85)',
   },
   citySection: {
     alignItems: 'center',
