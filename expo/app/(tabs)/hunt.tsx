@@ -776,21 +776,21 @@ export default function HuntScreen() {
                 )}
 
                 <View style={styles.eventDetails}>
-                  <View style={styles.eventMetaRow}>
-                    <View style={styles.eventMetaItem}>
-                      <Clock color="rgba(255,255,255,0.55)" size={13} />
-                      <Text style={styles.eventMetaText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>SAT, JAN 18</Text>
+                  <View style={styles.eventDateTimeRow}>
+                    <View style={styles.eventDateTimeItem}>
+                      <Clock color="rgba(255,255,255,0.55)" size={14} />
+                      <Text style={styles.eventDateTimeText}>SAT, JAN 18</Text>
                     </View>
-                    <View style={styles.eventMetaDivider} />
-                    <View style={styles.eventMetaItem}>
-                      <Zap color="rgba(255,255,255,0.55)" size={13} />
-                      <Text style={styles.eventMetaText} numberOfLines={1}>12:00 PM CET</Text>
+                    <View style={styles.eventDateTimeDot} />
+                    <View style={styles.eventDateTimeItem}>
+                      <Zap color="rgba(255,255,255,0.55)" size={14} />
+                      <Text style={styles.eventDateTimeText}>12:00 PM CET</Text>
                     </View>
-                    <View style={styles.eventMetaDivider} />
-                    <View style={styles.eventMetaItem}>
-                      <Users color="rgba(255,255,255,0.55)" size={13} />
-                      <Text style={styles.eventMetaText} numberOfLines={1}>189</Text>
-                    </View>
+                  </View>
+                  <View style={styles.huntersRow}>
+                    <Users color={Colors.accent.primary} size={14} />
+                    <Text style={styles.huntersCount}>189</Text>
+                    <Text style={styles.huntersLabel}>hunters registered</Text>
                   </View>
                 </View>
 
@@ -1146,32 +1146,55 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 8,
   },
-  eventMetaRow: {
+  eventDateTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.07)',
     borderRadius: 10,
     paddingVertical: 10,
-    paddingHorizontal: 12,
-    gap: 10,
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 8,
   },
-  eventMetaItem: {
+  eventDateTimeItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    flexShrink: 1,
+    gap: 6,
   },
-  eventMetaDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  eventDateTimeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
-  eventMetaText: {
-    fontSize: 11,
+  eventDateTimeText: {
+    fontSize: 13,
     fontWeight: '600' as const,
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 0.3,
+    color: 'rgba(255,255,255,0.75)',
+    letterSpacing: 0.5,
+  },
+  huntersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.15)',
+  },
+  huntersCount: {
+    fontSize: 15,
+    fontWeight: '800' as const,
+    color: C.accent.primary,
+  },
+  huntersLabel: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: 'rgba(255,255,255,0.6)',
   },
   citySection: {
     alignItems: 'center',
