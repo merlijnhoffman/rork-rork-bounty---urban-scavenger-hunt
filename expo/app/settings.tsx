@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ScrollView,
-  Switch,
-  Platform,
   Linking,
   Alert,
 } from 'react-native';
@@ -14,11 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft,
-  Bell,
-  BellRing,
-  Clock,
-  Zap,
-  Trophy,
   Shield,
   FileText,
   ExternalLink,
@@ -26,71 +19,16 @@ import {
   Info,
   Trash2,
   HelpCircle,
-  MessageCircle,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
-import * as Haptics from 'expo-haptics';
 
 const C = Colors;
-
-const NOTIFICATION_PREFS_KEY = 'bounty_notification_prefs';
-
-interface NotificationPrefs {
-  eventReminder24h: boolean;
-  eventReminder1h: boolean;
-  eventLive: boolean;
-  huntUpdates: boolean;
-  winnerAnnouncements: boolean;
-  promotions: boolean;
-}
-
-const DEFAULT_PREFS: NotificationPrefs = {
-  eventReminder24h: true,
-  eventReminder1h: true,
-  eventLive: true,
-  huntUpdates: true,
-  winnerAnnouncements: true,
-  promotions: false,
-};
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
-  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
-  const [_loaded, setLoaded] = useState<boolean>(false);
-
-  useEffect(() => {
-    const loadPrefs = async () => {
-      try {
-        const stored = await AsyncStorage.getItem(NOTIFICATION_PREFS_KEY);
-        if (stored) {
-          setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(stored) });
-        }
-      } catch (e) {
-        console.error('Failed to load notification prefs:', e);
-      } finally {
-        setLoaded(true);
-      }
-    };
-    void loadPrefs();
-  }, []);
-
-  const updatePref = useCallback((key: keyof NotificationPrefs, value: boolean) => {
-    if (Platform.OS !== 'web') {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    const updated = { ...prefs, [key]: value };
-    setPrefs(updated);
-    try {
-      void AsyncStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(updated));
-      console.log('Notification prefs saved:', key, value);
-    } catch (e) {
-      console.error('Failed to save notification prefs:', e);
-    }
-  }, [prefs]);
 
 
   const handleDeleteAccount = useCallback(() => {
@@ -126,28 +64,6 @@ export default function SettingsScreen() {
       },
     ]);
   }, [signOut]);
-
-  const renderToggle = useCallback((
-    icon: React.ReactNode,
-    title: string,
-    subtitle: string,
-    key: keyof NotificationPrefs,
-  ) => (
-    <View style={styles.settingRow} key={key}>
-      <View style={styles.settingIconWrap}>{icon}</View>
-      <View style={styles.settingContent}>
-        <Text style={styles.settingTitle}>{title}</Text>
-        <Text style={styles.settingSubtitle}>{subtitle}</Text>
-      </View>
-      <Switch
-        value={prefs[key]}
-        onValueChange={(v) => updatePref(key, v)}
-        trackColor={{ false: C.dark.cardElevated, true: 'rgba(245,158,11,0.4)' }}
-        thumbColor={prefs[key] ? C.accent.primary : C.dark.textMuted}
-        ios_backgroundColor={C.dark.cardElevated}
-      />
-    </View>
-  ), [prefs, updatePref]);
 
   const renderLink = useCallback((
     icon: React.ReactNode,
@@ -192,56 +108,6 @@ export default function SettingsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Bell color={C.accent.primary} size={16} />
-              <Text style={styles.sectionTitle}>Push Notifications</Text>
-            </View>
-            <View style={styles.card}>
-              {renderToggle(
-                <BellRing color={C.accent.primary} size={18} />,
-                '24h Reminder',
-                'Get notified 24 hours before an event',
-                'eventReminder24h',
-              )}
-              <View style={styles.rowDivider} />
-              {renderToggle(
-                <Clock color={C.accent.primary} size={18} />,
-                '1h Reminder',
-                'Get notified 1 hour before an event',
-                'eventReminder1h',
-              )}
-              <View style={styles.rowDivider} />
-              {renderToggle(
-                <Zap color={C.accent.primary} size={18} />,
-                'Event Live',
-                'Know the moment a hunt goes live',
-                'eventLive',
-              )}
-              <View style={styles.rowDivider} />
-              {renderToggle(
-                <MessageCircle color={C.accent.primary} size={18} />,
-                'Hunt Updates',
-                'New clues and in-game alerts',
-                'huntUpdates',
-              )}
-              <View style={styles.rowDivider} />
-              {renderToggle(
-                <Trophy color={C.accent.primary} size={18} />,
-                'Winner Announcements',
-                'See who claimed the bounty',
-                'winnerAnnouncements',
-              )}
-              <View style={styles.rowDivider} />
-              {renderToggle(
-                <Bell color={C.dark.textMuted} size={18} />,
-                'Promotions',
-                'Deals, discounts, and special offers',
-                'promotions',
-              )}
-            </View>
-          </View>
-
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Info color={C.accent.primary} size={16} />
