@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint } from 'lucide-react-native';
+import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
@@ -146,6 +146,14 @@ export default function ProfileScreen() {
       >
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}>
           <View style={styles.profileHeader}>
+            <TouchableOpacity
+              style={styles.settingsButton}
+              onPress={() => router.push('/settings')}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Settings color={C.dark.textSecondary} size={22} />
+            </TouchableOpacity>
             <View style={styles.avatarLarge}>
               <User color={C.accent.primary} size={36} />
             </View>
@@ -397,6 +405,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
     marginBottom: 28,
+  },
+  settingsButton: {
+    position: 'absolute' as const,
+    top: 0,
+    right: 0,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: C.dark.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
   avatarLarge: {
     width: 80,
