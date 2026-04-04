@@ -779,11 +779,17 @@ export default function HuntScreen() {
                   <View style={styles.eventMetaRow}>
                     <View style={styles.eventMetaItem}>
                       <Clock color="rgba(255,255,255,0.55)" size={13} />
-                      <Text style={styles.eventMetaText}>SAT, JAN 18 · 12:00 PM CET</Text>
+                      <Text style={styles.eventMetaText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>SAT, JAN 18</Text>
                     </View>
+                    <View style={styles.eventMetaDivider} />
+                    <View style={styles.eventMetaItem}>
+                      <Zap color="rgba(255,255,255,0.55)" size={13} />
+                      <Text style={styles.eventMetaText} numberOfLines={1}>12:00 PM CET</Text>
+                    </View>
+                    <View style={styles.eventMetaDivider} />
                     <View style={styles.eventMetaItem}>
                       <Users color="rgba(255,255,255,0.55)" size={13} />
-                      <Text style={styles.eventMetaText}>189 hunters</Text>
+                      <Text style={styles.eventMetaText} numberOfLines={1}>189</Text>
                     </View>
                   </View>
                 </View>
@@ -1143,19 +1149,26 @@ const styles = StyleSheet.create({
   eventMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.07)',
     borderRadius: 10,
     paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+    gap: 10,
   },
   eventMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    flexShrink: 1,
+  },
+  eventMetaDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   eventMetaText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600' as const,
     color: 'rgba(255,255,255,0.7)',
     letterSpacing: 0.3,
