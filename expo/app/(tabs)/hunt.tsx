@@ -779,14 +779,17 @@ export default function HuntScreen() {
                   <View style={styles.eventDateTimeRow}>
                     <View style={styles.eventDateTimeItem}>
                       <Clock color="rgba(255,255,255,0.7)" size={13} />
-                      <Text style={styles.eventDateTimeText}>SAT, JAN 18</Text>
+                      <Text style={styles.eventDateTimeText} numberOfLines={1}>SAT, JAN 18</Text>
                     </View>
                     <View style={styles.eventDateTimeDot} />
                     <View style={styles.eventDateTimeItem}>
                       <Zap color="rgba(255,255,255,0.7)" size={13} />
-                      <Text style={styles.eventDateTimeText}>12:00 PM CET</Text>
+                      <Text style={styles.eventDateTimeText} numberOfLines={1}>12:00 PM CET</Text>
                     </View>
                   </View>
+                </View>
+
+                <View style={styles.huntersRowContainer}>
                   <View style={styles.huntersRow}>
                     <Users color="#FFFFFF" size={14} />
                     <Text style={styles.huntersCount}>189</Text>
@@ -1143,25 +1146,26 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   eventDetails: {
-    marginBottom: 8,
+    marginBottom: 12,
     marginTop: 8,
   },
   eventDateTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    gap: 10,
-    marginBottom: 8,
-    overflow: 'hidden',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    gap: 12,
+    flexWrap: 'wrap',
   },
   eventDateTimeItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
   },
   eventDateTimeDot: {
     width: 4,
@@ -1174,6 +1178,9 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: 'rgba(255,255,255,0.75)',
     letterSpacing: 0.5,
+  },
+  huntersRowContainer: {
+    marginBottom: 8,
   },
   huntersRow: {
     flexDirection: 'row',
