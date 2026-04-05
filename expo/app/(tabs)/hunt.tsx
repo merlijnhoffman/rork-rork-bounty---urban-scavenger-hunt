@@ -681,7 +681,7 @@ export default function HuntScreen() {
             <Text style={styles.tagline}>Urban Scavenger Hunt</Text>
           </View>
 
-          {!currentEvent && !gameLoading && eventError && (
+          {!currentEvent && !gameLoading && !!eventError && (
             <View style={styles.errorCard}>
               <View style={styles.errorCardIcon}>
                 <AlertCircle color={Colors.status.danger} size={28} />
@@ -758,7 +758,7 @@ export default function HuntScreen() {
                   <Text style={styles.cityCoordinates}>52.37°N  4.88°E</Text>
                 </View>
 
-                {timeUntilEvent && !isHuntActive && (
+                {!!timeUntilEvent && !isHuntActive && (
                   <View style={styles.countdownContainer}>
                     <Text style={styles.countdownLabel}>
                       {currentEvent?.status === 'completed' ? 'STATUS' : 'STARTS IN'}
@@ -815,7 +815,7 @@ export default function HuntScreen() {
                   </TouchableOpacity>
                 )}
                 
-                {rcPurchaseError && (
+                {!!rcPurchaseError && (
                   <View style={styles.errorContainer}>
                     <AlertCircle color={Colors.status.danger} size={16} />
                     <Text style={styles.errorText}>{rcPurchaseError}</Text>
@@ -1013,7 +1013,7 @@ export default function HuntScreen() {
                   ))}
                 </View>
 
-                {rcPurchaseError && (
+                {!!rcPurchaseError && (
                   <View style={styles.paywallError}>
                     <AlertCircle color={Colors.status.danger} size={16} />
                     <Text style={styles.paywallErrorText}>{rcPurchaseError}</Text>

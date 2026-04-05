@@ -241,7 +241,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {hasTicket && verificationCode && (
+          {hasTicket && !!verificationCode && (
             <View style={styles.verificationCard}>
               <LinearGradient
                 colors={[C.gradient.accentStart, C.gradient.accentEnd]}
@@ -272,7 +272,7 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {hasTicket && !verificationCode && (
+          {!!hasTicket && !verificationCode && (
             <View style={styles.loadingTicketCard}>
               <Clock color={C.accent.primary} size={28} />
               <Text style={styles.loadingTicketTitle}>Loading Ticket...</Text>
@@ -301,7 +301,6 @@ export default function ProfileScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </LinearGradient>
-
     </View>
   );
 }
