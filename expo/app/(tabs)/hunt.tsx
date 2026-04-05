@@ -23,7 +23,7 @@ import Colors from '@/constants/colors';
 
 import { supabase } from '@/lib/supabase';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { TICKET } from '@/constants/payment';
 import { usePayment } from '@/contexts/PaymentContext';
@@ -74,6 +74,7 @@ export default function HuntScreen() {
 
   const [hasTicket, setHasTicket] = useState<boolean>(false);
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
+  const queryClient = useQueryClient();
   const [liveClues, setLiveClues] = useState<Clue[]>([]);
   const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
@@ -242,47 +243,77 @@ export default function HuntScreen() {
     staleTime: 0,
   });
   
-  useEffect(() => {
-    if (!hasTicket || !currentEvent || !user || currentEvent.status !== 'live') return;
+  const isLiveWithTicket = !!hasTicket && !!currentEvent && currentEvent.status === 'live' && !!user;
 
-    console.log('Fetching existing clues for event:', currentEvent.id);
-    const fetchExistingClues = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('clues')
-          .select('*')
-          .eq('event_id', currentEvent.id)
-          .order('order_number', { ascending: true });
+  const cluesQuery = useQuery({
+    queryKey: ['live-clues', currentEvent?.id],
+    queryFn: async () => {
+      if (!currentEvent) return [];
+      console.log('[Clues] Polling clues for event:', currentEvent.id);
+      const { data, error } = await supabase
+        .from('clues')
+        .select('*')
+        .eq('event_id', currentEvent.id)
+        .order('order_number', { ascending: true });
 
-        if (error) {
-          console.error('Error fetching existing clues:', error.message);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          console.log('Loaded', data.length, 'existing clues');
-          const mapped: Clue[] = data.map((c: any) => ({
-            id: c.id,
-            text: c.text,
-            hint: c.hint,
-            timestamp: c.release_time,
-            order: c.order_number,
-          }));
-          setLiveClues(mapped);
-        }
-      } catch (err) {
-        console.error('Error loading clues:', err);
+      if (error) {
+        console.error('[Clues] Error fetching clues:', error.message, error.details, error.hint);
+        throw error;
       }
-    };
 
-    void fetchExistingClues();
-  }, [hasTicket, currentEvent, user]);
+      console.log('[Clues] Fetched', data?.length ?? 0, 'clues');
+      const mapped: Clue[] = (data || []).map((c: any) => ({
+        id: c.id,
+        text: c.text,
+        hint: c.hint,
+        timestamp: c.release_time || c.created_at,
+        order: c.order_number,
+      }));
+      return mapped;
+    },
+    enabled: isLiveWithTicket,
+    refetchInterval: 5000,
+    staleTime: 2000,
+  });
 
   useEffect(() => {
-    if (!hasTicket || !currentEvent || !user) return;
+    if (cluesQuery.data && cluesQuery.data.length > 0) {
+      setLiveClues(prev => {
+        const newClues = cluesQuery.data;
+        if (newClues.length > prev.length) {
+          const latestNew = newClues[newClues.length - 1];
+          const alreadyHave = prev.find(c => c.id === latestNew.id);
+          if (!alreadyHave) {
+            console.log('[Clues] New clue detected via polling:', latestNew.id);
+            void sendClueNotification(latestNew);
+            Animated.sequence([
+              Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+              }),
+              Animated.timing(fadeAnim, {
+                toValue: 0,
+                duration: 500,
+                delay: 2000,
+                useNativeDriver: true,
+              }),
+            ]).start();
+          }
+        }
+        return newClues;
+      });
+    }
+  }, [cluesQuery.data, fadeAnim, sendClueNotification]);
+
+  useEffect(() => {
+    if (!currentEvent || !user) return;
+    
+    const channelName = `clues-${currentEvent.id}-${Date.now()}`;
+    console.log('[Clues] Setting up realtime subscription on channel:', channelName);
     
     const subscription = supabase
-      .channel('clues')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -292,44 +323,19 @@ export default function HuntScreen() {
           filter: `event_id=eq.${currentEvent.id}`,
         },
         (payload) => {
-          console.log('New clue received:', payload.new);
-          const newClue: Clue = {
-            id: payload.new.id,
-            text: payload.new.text,
-            hint: payload.new.hint,
-            timestamp: payload.new.release_time,
-            order: payload.new.order_number,
-          };
-          
-          setLiveClues(prev => {
-            const exists = prev.find(c => c.id === newClue.id);
-            if (exists) return prev;
-            return [...prev, newClue].sort((a, b) => a.order - b.order);
-          });
-          
-          void sendClueNotification(newClue);
-          
-          Animated.sequence([
-            Animated.timing(fadeAnim, {
-              toValue: 1,
-              duration: 500,
-              useNativeDriver: true,
-            }),
-            Animated.timing(fadeAnim, {
-              toValue: 0,
-              duration: 500,
-              delay: 2000,
-              useNativeDriver: true,
-            }),
-          ]).start();
+          console.log('[Clues] Realtime INSERT received:', payload.new);
+          void queryClient.invalidateQueries({ queryKey: ['live-clues', currentEvent.id] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Clues] Realtime subscription status:', status);
+      });
     
     return () => {
+      console.log('[Clues] Cleaning up realtime subscription:', channelName);
       void subscription.unsubscribe();
     };
-  }, [hasTicket, currentEvent, user, fadeAnim, sendClueNotification]);
+  }, [currentEvent, user, queryClient]);
   
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371e3;
