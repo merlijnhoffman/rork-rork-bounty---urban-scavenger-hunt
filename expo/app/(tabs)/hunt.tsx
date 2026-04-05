@@ -1738,6 +1738,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     borderWidth: 1,
     borderColor: C.dark.border,
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1766,7 +1767,8 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
   },
   modalScroll: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   modalPrizeSection: {
     alignItems: 'center',
