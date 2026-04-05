@@ -751,7 +751,11 @@ export default function HuntScreen() {
                 <View style={styles.citySection}>
                   <Text style={styles.cityLabel}>LOCATION</Text>
                   <Text style={styles.cityNameLarge}>AMSTERDAM</Text>
-                  <Text style={styles.cityCountry}>Netherlands</Text>
+                  <View style={styles.cityMetaRow}>
+                    <Text style={styles.cityFlag}>{'🇳🇱'}</Text>
+                    <Text style={styles.cityCountry}>Netherlands</Text>
+                  </View>
+                  <Text style={styles.cityCoordinates}>52.37°N  4.88°E</Text>
                 </View>
 
                 {timeUntilEvent && !isHuntActive && (
@@ -1224,11 +1228,27 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textAlign: 'center',
   },
+  cityMetaRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    marginTop: 4,
+  },
+  cityFlag: {
+    fontSize: 16,
+  },
   cityCountry: {
     fontSize: 15,
     fontWeight: '600' as const,
     color: 'rgba(255,255,255,0.7)',
-    marginTop: 2,
+  },
+  cityCoordinates: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontWeight: '600' as const,
+    color: 'rgba(255,255,255,0.45)',
+    letterSpacing: 1.5,
+    marginTop: 6,
   },
   countdownContainer: {
     backgroundColor: 'rgba(0,0,0,0.35)',
