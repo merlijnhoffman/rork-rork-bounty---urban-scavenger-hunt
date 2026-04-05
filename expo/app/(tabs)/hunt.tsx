@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import HuntMap from '@/components/HuntMap';
@@ -87,6 +87,9 @@ export default function HuntScreen() {
   const [timeUntilEvent, setTimeUntilEvent] = useState<string>('');
   const [showPrizeModal, setShowPrizeModal] = useState<boolean>(false);
   const [joinedLiveHunt, setJoinedLiveHunt] = useState<boolean>(false);
+  const [hintTokens, setHintTokens] = useState<number>(3);
+  const [unlockedHints, setUnlockedHints] = useState<Set<string>>(new Set());
+  const [showHintConfirm, setShowHintConfirm] = useState<string | null>(null);
   
   const bountyLocation = useMemo(() => ({
     latitude: 52.3752,
@@ -352,6 +355,22 @@ export default function HuntScreen() {
     return R * c;
   };
   
+  const handleUnlockHint = useCallback((clueId: string) => {
+    setShowHintConfirm(clueId);
+  }, []);
+
+  const confirmUnlockHint = useCallback(() => {
+    if (!showHintConfirm || hintTokens <= 0) return;
+    console.log('[Hints] Unlocking hint for clue:', showHintConfirm, 'tokens remaining:', hintTokens - 1);
+    setHintTokens(prev => prev - 1);
+    setUnlockedHints(prev => {
+      const next = new Set(prev);
+      next.add(showHintConfirm);
+      return next;
+    });
+    setShowHintConfirm(null);
+  }, [showHintConfirm, hintTokens]);
+
   const handleDistanceMeter = async () => {
     if (distanceMeterUsed) {
       Alert.alert('Already Used', 'You have already used your distance meter for this hunt.');
@@ -516,6 +535,30 @@ export default function HuntScreen() {
               <Text style={styles.huntTime}>Started at 3:00 PM CET</Text>
             </View>
             
+            <View style={styles.hintTokensBar}>
+              <View style={styles.hintTokensLeft}>
+                <Lightbulb color={Colors.accent.primary} size={16} />
+                <Text style={styles.hintTokensLabel}>Hint Tokens</Text>
+              </View>
+              <View style={styles.hintTokensRight}>
+                {[0, 1, 2].map((i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.hintTokenDot,
+                      i < hintTokens ? styles.hintTokenDotActive : styles.hintTokenDotUsed,
+                    ]}
+                  >
+                    {i < hintTokens ? (
+                      <Lightbulb color="#000" size={11} />
+                    ) : (
+                      <Text style={styles.hintTokenDotUsedText}>{"\u2715"}</Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+
             <View style={styles.huntActions}>
               <TouchableOpacity 
                 style={[
@@ -599,6 +642,38 @@ export default function HuntScreen() {
                   
                   <Text style={styles.clueText}>{clue.text}</Text>
                   
+                  {clue.hint && (
+                    unlockedHints.has(clue.id) ? (
+                      <View style={styles.hintRevealed}>
+                        <View style={styles.hintRevealedHeader}>
+                          <Lightbulb color={Colors.accent.primaryLight} size={14} />
+                          <Text style={styles.hintRevealedLabel}>HINT</Text>
+                        </View>
+                        <Text style={styles.hintRevealedText}>{clue.hint}</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.hintLockedButton}
+                        onPress={() => handleUnlockHint(clue.id)}
+                        activeOpacity={0.7}
+                        disabled={hintTokens <= 0}
+                      >
+                        <Lock color={hintTokens > 0 ? Colors.accent.primary : Colors.dark.textMuted} size={14} />
+                        <Text style={[
+                          styles.hintLockedText,
+                          hintTokens <= 0 && styles.hintLockedTextDisabled
+                        ]}>
+                          {hintTokens > 0 ? 'Use Hint Token' : 'No Tokens Left'}
+                        </Text>
+                        {hintTokens > 0 && (
+                          <View style={styles.hintTokenCost}>
+                            <Text style={styles.hintTokenCostText}>-1</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    )
+                  )}
+                  
                   <View style={styles.clueActions}>
                     <TouchableOpacity 
                       style={styles.mapButton}
@@ -654,6 +729,42 @@ export default function HuntScreen() {
           </Animated.View>
         </LinearGradient>
         
+        <Modal
+          visible={showHintConfirm !== null}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowHintConfirm(null)}
+        >
+          <View style={styles.hintModalOverlay}>
+            <View style={styles.hintModalContent}>
+              <View style={styles.hintModalIcon}>
+                <Lightbulb color={Colors.accent.primary} size={32} />
+              </View>
+              <Text style={styles.hintModalTitle}>Use Hint Token?</Text>
+              <Text style={styles.hintModalDesc}>
+                Spend 1 hint token to reveal an extra clue for this riddle. You have {hintTokens} token{hintTokens !== 1 ? 's' : ''} remaining.
+              </Text>
+              <View style={styles.hintModalActions}>
+                <TouchableOpacity
+                  style={styles.hintModalCancel}
+                  onPress={() => setShowHintConfirm(null)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.hintModalCancelText}>Keep Token</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.hintModalConfirm}
+                  onPress={confirmUnlockHint}
+                  activeOpacity={0.8}
+                >
+                  <Unlock color="#000" size={16} />
+                  <Text style={styles.hintModalConfirmText}>Unlock Hint</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
         {selectedClueForMap && selectedClueForMap.location && (
           <HuntMap
             visible={true}
@@ -2039,5 +2150,185 @@ const styles = StyleSheet.create({
     fontWeight: '800' as const,
     color: '#000',
     letterSpacing: 1.5,
+  },
+  hintTokensBar: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    backgroundColor: C.dark.card,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  hintTokensLeft: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+  },
+  hintTokensLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: C.dark.textSecondary,
+  },
+  hintTokensRight: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+  },
+  hintTokenDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  hintTokenDotActive: {
+    backgroundColor: C.accent.primary,
+  },
+  hintTokenDotUsed: {
+    backgroundColor: C.dark.cardElevated,
+    borderWidth: 1,
+    borderColor: C.dark.borderLight,
+  },
+  hintTokenDotUsedText: {
+    fontSize: 9,
+    color: C.dark.textMuted,
+    fontWeight: '700' as const,
+  },
+  hintRevealed: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  hintRevealedHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    marginBottom: 6,
+  },
+  hintRevealedLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: C.accent.primaryLight,
+    letterSpacing: 1.5,
+  },
+  hintRevealedText: {
+    fontSize: 14,
+    color: C.accent.primaryLight,
+    lineHeight: 20,
+    fontStyle: 'italic' as const,
+  },
+  hintLockedButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: C.dark.cardElevated,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: C.dark.borderLight,
+    borderStyle: 'dashed' as const,
+  },
+  hintLockedText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: C.accent.primary,
+    flex: 1,
+  },
+  hintLockedTextDisabled: {
+    color: C.dark.textMuted,
+  },
+  hintTokenCost: {
+    backgroundColor: C.accent.primaryMuted,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  hintTokenCostText: {
+    fontSize: 11,
+    fontWeight: '800' as const,
+    color: C.accent.primary,
+  },
+  hintModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    padding: 30,
+  },
+  hintModalContent: {
+    backgroundColor: C.dark.surface,
+    borderRadius: 24,
+    padding: 28,
+    width: '100%' as const,
+    maxWidth: 340,
+    alignItems: 'center' as const,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  hintModalIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: 18,
+  },
+  hintModalTitle: {
+    fontSize: 20,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    marginBottom: 10,
+    textAlign: 'center' as const,
+  },
+  hintModalDesc: {
+    fontSize: 14,
+    color: C.dark.textSecondary,
+    textAlign: 'center' as const,
+    lineHeight: 21,
+    marginBottom: 24,
+  },
+  hintModalActions: {
+    flexDirection: 'row' as const,
+    gap: 12,
+    width: '100%' as const,
+  },
+  hintModalCancel: {
+    flex: 1,
+    backgroundColor: C.dark.card,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center' as const,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  hintModalCancelText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: C.dark.textSecondary,
+  },
+  hintModalConfirm: {
+    flex: 1,
+    backgroundColor: C.accent.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center' as const,
+    flexDirection: 'row' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+  },
+  hintModalConfirmText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#000',
   },
 });
