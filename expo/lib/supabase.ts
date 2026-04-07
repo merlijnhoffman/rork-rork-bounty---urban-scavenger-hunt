@@ -219,9 +219,8 @@ export type Database = {
           order_number: number;
           release_time: string;
           created_at: string;
-          image_url?: string;
-          video_url?: string;
-          audio_url?: string;
+          media_type?: string;
+          media_url?: string;
         };
         Insert: {
           id?: string;
@@ -231,9 +230,8 @@ export type Database = {
           order_number: number;
           release_time: string;
           created_at?: string;
-          image_url?: string;
-          video_url?: string;
-          audio_url?: string;
+          media_type?: string;
+          media_url?: string;
         };
         Update: {
           id?: string;
@@ -243,9 +241,8 @@ export type Database = {
           order_number?: number;
           release_time?: string;
           created_at?: string;
-          image_url?: string;
-          video_url?: string;
-          audio_url?: string;
+          media_type?: string;
+          media_url?: string;
         };
       };
       connection_codes: {

@@ -268,16 +268,20 @@ export default function HuntScreen() {
       }
 
       console.log('[Clues] Fetched', data?.length ?? 0, 'clues');
-      const mapped: Clue[] = (data || []).map((c: any) => ({
-        id: c.id,
-        text: c.text,
-        hint: c.hint,
-        timestamp: c.release_time || c.created_at,
-        order: c.order_number,
-        imageUrl: c.image_url || undefined,
-        videoUrl: c.video_url || undefined,
-        audioUrl: c.audio_url || undefined,
-      }));
+      const mapped: Clue[] = (data || []).map((c: any) => {
+        const mediaType = c.media_type || null;
+        const mediaUrl = c.media_url || null;
+        return {
+          id: c.id,
+          text: c.text,
+          hint: c.hint,
+          timestamp: c.release_time || c.created_at,
+          order: c.order_number,
+          imageUrl: mediaType === 'image' ? mediaUrl : undefined,
+          videoUrl: mediaType === 'video' ? mediaUrl : undefined,
+          audioUrl: mediaType === 'audio' ? mediaUrl : undefined,
+        };
+      });
       console.log('[Clues] Mapped clues with media:', mapped.map(c => ({ id: c.id, hasImage: !!c.imageUrl, hasVideo: !!c.videoUrl, hasAudio: !!c.audioUrl })));
       return mapped;
     },
