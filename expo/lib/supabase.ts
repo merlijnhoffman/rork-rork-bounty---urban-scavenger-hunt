@@ -22,21 +22,39 @@ export async function sendClueToSupabase({
   hint,
   orderNumber,
   releaseTime,
+  mediaType,
+  mediaUrl,
+  zoneLatitude,
+  zoneLongitude,
+  zoneRadius,
+  zoneName,
 }: {
   eventId: string;
   text: string;
   hint?: string;
   orderNumber: number;
   releaseTime?: string;
+  mediaType?: string;
+  mediaUrl?: string;
+  zoneLatitude?: number;
+  zoneLongitude?: number;
+  zoneRadius?: number;
+  zoneName?: string;
 }) {
   const { data, error } = await supabase
     .from('clues')
     .insert({
       event_id: eventId,
-      text,
+      clue_text: text,
       hint,
       order_number: orderNumber,
       release_time: releaseTime || new Date().toISOString(),
+      media_type: mediaType,
+      media_url: mediaUrl,
+      zone_latitude: zoneLatitude,
+      zone_longitude: zoneLongitude,
+      zone_radius: zoneRadius,
+      zone_name: zoneName,
     })
     .select()
     .single();
@@ -214,7 +232,7 @@ export type Database = {
         Row: {
           id: string;
           event_id: string;
-          text: string;
+          clue_text: string;
           hint?: string;
           order_number: number;
           release_time: string;
@@ -229,7 +247,7 @@ export type Database = {
         Insert: {
           id?: string;
           event_id: string;
-          text: string;
+          clue_text: string;
           hint?: string;
           order_number: number;
           release_time: string;
@@ -244,7 +262,7 @@ export type Database = {
         Update: {
           id?: string;
           event_id?: string;
-          text?: string;
+          clue_text?: string;
           hint?: string;
           order_number?: number;
           release_time?: string;

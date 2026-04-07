@@ -273,13 +273,19 @@ export default function HuntScreen() {
         const mediaUrl = c.media_url || null;
         return {
           id: c.id,
-          text: c.text,
+          text: c.clue_text || c.text || '',
           hint: c.hint,
           timestamp: c.release_time || c.created_at,
           order: c.order_number,
           imageUrl: mediaType === 'image' ? mediaUrl : undefined,
           videoUrl: mediaType === 'video' ? mediaUrl : undefined,
           audioUrl: mediaType === 'audio' ? mediaUrl : undefined,
+          location: c.zone_latitude && c.zone_longitude ? {
+            latitude: c.zone_latitude,
+            longitude: c.zone_longitude,
+            radius: c.zone_radius || 100,
+            name: c.zone_name || 'Hunt Zone',
+          } : undefined,
         };
       });
       console.log('[Clues] Mapped clues with media:', mapped.map(c => ({ id: c.id, hasImage: !!c.imageUrl, hasVideo: !!c.videoUrl, hasAudio: !!c.audioUrl })));
