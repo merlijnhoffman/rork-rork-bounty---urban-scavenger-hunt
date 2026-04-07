@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock } from 'lucide-react-native';
+import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, CalendarPlus } from 'lucide-react-native';
+import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import HuntMap from '@/components/HuntMap';
@@ -370,6 +371,47 @@ export default function HuntScreen() {
     });
     setShowHintConfirm(null);
   }, [showHintConfirm, hintTokens]);
+
+  const handleAddToCalendar = useCallback(async () => {
+    try {
+      if (Platform.OS === 'web') {
+        const googleUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=BOUNTY+-+Urban+Scavenger+Hunt&dates=20250118T110000Z/20250118T150000Z&details=BOUNTY+Urban+Scavenger+Hunt+in+Amsterdam.+Find+the+target+and+win!&location=Amsterdam,+Netherlands';
+        const { Linking } = require('react-native');
+        await Linking.openURL(googleUrl);
+        return;
+      }
+
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Calendar access is needed to add the event.');
+        return;
+      }
+
+      const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+      const defaultCalendar = Platform.OS === 'ios'
+        ? calendars.find(c => c.allowsModifications && c.type === Calendar.CalendarType.LOCAL) || calendars.find(c => c.allowsModifications)
+        : calendars.find(c => c.isPrimary) || calendars.find(c => c.allowsModifications);
+
+      if (!defaultCalendar) {
+        Alert.alert('No Calendar Found', 'Could not find a writable calendar on your device.');
+        return;
+      }
+
+      await Calendar.createEventAsync(defaultCalendar.id, {
+        title: 'BOUNTY - Urban Scavenger Hunt',
+        startDate: new Date('2025-01-18T12:00:00+01:00'),
+        endDate: new Date('2025-01-18T16:00:00+01:00'),
+        location: 'Amsterdam, Netherlands',
+        notes: 'BOUNTY Urban Scavenger Hunt. Find the target and win the prize!',
+        timeZone: 'Europe/Amsterdam',
+      });
+
+      Alert.alert('Added to Calendar!', 'The hunt event has been added to your calendar.');
+    } catch (error) {
+      console.error('Error adding to calendar:', error);
+      Alert.alert('Error', 'Failed to add the event to your calendar.');
+    }
+  }, []);
 
   const handleDistanceMeter = async () => {
     if (distanceMeterUsed) {
@@ -907,6 +949,14 @@ export default function HuntScreen() {
                       <Zap color="rgba(255,255,255,0.7)" size={13} />
                       <Text style={styles.eventDateTimeText} numberOfLines={1}>12:00 PM CET</Text>
                     </View>
+                    <View style={styles.eventDateTimeDivider} />
+                    <TouchableOpacity
+                      style={styles.addToCalendarButton}
+                      onPress={handleAddToCalendar}
+                      activeOpacity={0.7}
+                    >
+                      <CalendarPlus color={Colors.accent.primary} size={15} />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -1293,6 +1343,20 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  eventDateTimeDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginHorizontal: 2,
+  },
+  addToCalendarButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   eventDateTimeText: {
     fontSize: 13,
