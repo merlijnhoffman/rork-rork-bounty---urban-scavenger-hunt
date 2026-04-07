@@ -29,6 +29,9 @@ export interface Clue {
   hint?: string;
   timestamp: string;
   order: number;
+  imageUrl?: string;
+  videoUrl?: string;
+  audioUrl?: string;
 }
 
 const [GameProvider, useGameStoreInternal] = createContextHook(() => {

@@ -19,6 +19,7 @@ import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import HuntMap from '@/components/HuntMap';
+import ClueMedia from '@/components/ClueMedia';
 import { useGameStore, Clue } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors from '@/constants/colors';
@@ -273,7 +274,11 @@ export default function HuntScreen() {
         hint: c.hint,
         timestamp: c.release_time || c.created_at,
         order: c.order_number,
+        imageUrl: c.image_url || undefined,
+        videoUrl: c.video_url || undefined,
+        audioUrl: c.audio_url || undefined,
       }));
+      console.log('[Clues] Mapped clues with media:', mapped.map(c => ({ id: c.id, hasImage: !!c.imageUrl, hasVideo: !!c.videoUrl, hasAudio: !!c.audioUrl })));
       return mapped;
     },
     enabled: isLiveWithTicket,
@@ -683,6 +688,12 @@ export default function HuntScreen() {
                   </View>
                   
                   <Text style={styles.clueText}>{clue.text}</Text>
+
+                  <ClueMedia
+                    imageUrl={clue.imageUrl}
+                    videoUrl={clue.videoUrl}
+                    audioUrl={clue.audioUrl}
+                  />
                   
                   {clue.hint && (
                     unlockedHints.has(clue.id) ? (
