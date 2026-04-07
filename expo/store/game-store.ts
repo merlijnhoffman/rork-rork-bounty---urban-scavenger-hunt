@@ -32,6 +32,12 @@ export interface Clue {
   imageUrl?: string;
   videoUrl?: string;
   audioUrl?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    radius: number;
+    name: string;
+  };
 }
 
 const [GameProvider, useGameStoreInternal] = createContextHook(() => {

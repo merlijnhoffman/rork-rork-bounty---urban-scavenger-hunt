@@ -221,6 +221,10 @@ export type Database = {
           created_at: string;
           media_type?: string;
           media_url?: string;
+          zone_latitude?: number;
+          zone_longitude?: number;
+          zone_radius?: number;
+          zone_name?: string;
         };
         Insert: {
           id?: string;
@@ -232,6 +236,10 @@ export type Database = {
           created_at?: string;
           media_type?: string;
           media_url?: string;
+          zone_latitude?: number;
+          zone_longitude?: number;
+          zone_radius?: number;
+          zone_name?: string;
         };
         Update: {
           id?: string;
@@ -243,6 +251,10 @@ export type Database = {
           created_at?: string;
           media_type?: string;
           media_url?: string;
+          zone_latitude?: number;
+          zone_longitude?: number;
+          zone_radius?: number;
+          zone_name?: string;
         };
       };
       connection_codes: {

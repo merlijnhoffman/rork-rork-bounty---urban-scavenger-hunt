@@ -731,25 +731,25 @@ export default function HuntScreen() {
                     )
                   )}
                   
-                  <View style={styles.clueActions}>
-                    <TouchableOpacity 
-                      style={styles.mapButton}
-                      onPress={() => setSelectedClueForMap(clue as ClueWithLocation)}
-                      activeOpacity={0.8}
-                    >
-                      <Crosshair color={Colors.accent.primary} size={15} />
-                      <Text style={styles.mapButtonText}>View Hunt Zone</Text>
-                    </TouchableOpacity>
-                    
-                    {(clue as ClueWithLocation).location && (
+                  {clue.location && (
+                    <View style={styles.clueActions}>
+                      <TouchableOpacity 
+                        style={styles.mapButton}
+                        onPress={() => setSelectedClueForMap(clue)}
+                        activeOpacity={0.8}
+                      >
+                        <Crosshair color={Colors.accent.primary} size={15} />
+                        <Text style={styles.mapButtonText}>View Hunt Zone</Text>
+                      </TouchableOpacity>
+                      
                       <View style={styles.radiusIndicator}>
                         <MapPin color={Colors.dark.textMuted} size={12} />
                         <Text style={styles.radiusText}>
-                          {(clue as ClueWithLocation).location!.radius}m zone
+                          {clue.location.radius}m zone
                         </Text>
                       </View>
-                    )}
-                  </View>
+                    </View>
+                  )}
                 </Animated.View>
               ))
             )}
