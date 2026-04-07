@@ -10,6 +10,7 @@ import {
   Alert,
   Image,
   Platform,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -376,7 +377,6 @@ export default function HuntScreen() {
     try {
       if (Platform.OS === 'web') {
         const googleUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=BOUNTY+-+Urban+Scavenger+Hunt&dates=20250118T110000Z/20250118T150000Z&details=BOUNTY+Urban+Scavenger+Hunt+in+Amsterdam.+Find+the+target+and+win!&location=Amsterdam,+Netherlands';
-        const { Linking } = require('react-native');
         await Linking.openURL(googleUrl);
         return;
       }
