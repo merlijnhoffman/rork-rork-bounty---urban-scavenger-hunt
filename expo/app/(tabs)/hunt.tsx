@@ -17,7 +17,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, CalendarPlus } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
-import * as Notifications from 'expo-notifications';
 import HuntMap from '@/components/HuntMap';
 import ClueMedia from '@/components/ClueMedia';
 import { useGameStore, Clue } from '@/store/game-store';
@@ -30,18 +29,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { TICKET } from '@/constants/payment';
 import { usePayment } from '@/contexts/PaymentContext';
-
-if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-}
 
 interface ClueWithLocation extends Clue {
   location?: {
@@ -86,7 +73,6 @@ export default function HuntScreen() {
   const [distanceMeterUsed, setDistanceMeterUsed] = useState<boolean>(false);
   const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
   const [isCalculatingDistance, setIsCalculatingDistance] = useState<boolean>(false);
-  const [notificationPermission, setNotificationPermission] = useState<boolean>(false);
   const [timeUntilEvent, setTimeUntilEvent] = useState<string>('');
   const [showPrizeModal, setShowPrizeModal] = useState<boolean>(false);
   const [joinedLiveHunt, setJoinedLiveHunt] = useState<boolean>(false);
@@ -165,58 +151,6 @@ export default function HuntScreen() {
     
     return () => clearInterval(interval);
   }, [currentEvent]);
-  
-  useEffect(() => {
-    const requestNotificationPermissions = async () => {
-      if (Platform.OS === 'web') {
-        console.log('Notifications not supported on web');
-        setNotificationPermission(false);
-        return;
-      }
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      setNotificationPermission(finalStatus === 'granted');
-      
-      if (finalStatus !== 'granted') {
-        console.log('Notification permissions not granted');
-      }
-    };
-    
-    void requestNotificationPermissions();
-  }, []);
-  
-  const sendClueNotification = useCallback(async (clue: Clue) => {
-    if (Platform.OS === 'web') {
-      console.log('Notifications not supported on web, skipping for clue:', clue.id);
-      return;
-    }
-    if (!notificationPermission) {
-      console.log('Notification permission not granted');
-      return;
-    }
-    
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'New Clue Received!',
-          body: `Clue #${clue.order}: ${clue.text.substring(0, 100)}${clue.text.length > 100 ? '...' : ''}`,
-          sound: true,
-          priority: Notifications.AndroidNotificationPriority.HIGH,
-          data: { clueId: clue.id, order: clue.order },
-        },
-        trigger: null,
-      });
-      console.log('Notification sent for clue:', clue.id);
-    } catch (error) {
-      console.error('Error sending notification:', error);
-    }
-  }, [notificationPermission]);
   
   const ticketQuery = useQuery({
     queryKey: ['ticket-status', user?.id, currentEvent?.id],
@@ -305,7 +239,6 @@ export default function HuntScreen() {
           const alreadyHave = prev.find(c => c.id === latestNew.id);
           if (!alreadyHave) {
             console.log('[Clues] New clue detected via polling:', latestNew.id);
-            void sendClueNotification(latestNew);
             Animated.sequence([
               Animated.timing(fadeAnim, {
                 toValue: 1,
@@ -324,7 +257,7 @@ export default function HuntScreen() {
         return newClues;
       });
     }
-  }, [cluesQuery.data, fadeAnim, sendClueNotification]);
+  }, [cluesQuery.data, fadeAnim]);
 
   useEffect(() => {
     if (!currentEvent || !user) return;
