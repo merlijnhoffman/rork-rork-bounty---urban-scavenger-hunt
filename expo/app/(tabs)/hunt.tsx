@@ -35,6 +35,8 @@ interface ClueWithLocation extends Clue {
     latitude: number;
     longitude: number;
     radius: number;
+    fullRadius: number;
+    revealPercent: number;
     name: string;
   };
 }
@@ -205,6 +207,12 @@ export default function HuntScreen() {
       const mapped: Clue[] = (data || []).map((c: any) => {
         const mediaType = c.media_type || null;
         const mediaUrl = c.media_url || null;
+        const fullRadius: number = c.zone_radius || 100;
+        const rawRevealPercent: number | null | undefined = c.reveal_percent;
+        const revealPercent: number = typeof rawRevealPercent === 'number' && rawRevealPercent >= 0 && rawRevealPercent <= 100
+          ? rawRevealPercent
+          : 100;
+        const visibleRadius: number = Math.max(1, Math.round(fullRadius * (revealPercent / 100)));
         return {
           id: c.id,
           text: c.clue_text || c.text || '',
@@ -214,10 +222,13 @@ export default function HuntScreen() {
           imageUrl: mediaType === 'image' ? mediaUrl : undefined,
           videoUrl: mediaType === 'video' ? mediaUrl : undefined,
           audioUrl: mediaType === 'audio' ? mediaUrl : undefined,
+          revealPercent: rawRevealPercent ?? null,
           location: c.zone_latitude && c.zone_longitude ? {
             latitude: c.zone_latitude,
             longitude: c.zone_longitude,
-            radius: c.zone_radius || 100,
+            radius: visibleRadius,
+            fullRadius,
+            revealPercent,
             name: c.zone_name || 'Hunt Zone',
           } : undefined,
         };
