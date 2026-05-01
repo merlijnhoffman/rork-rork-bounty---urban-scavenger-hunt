@@ -36,7 +36,6 @@ interface ClueWithLocation extends Clue {
     longitude: number;
     radius: number;
     fullRadius: number;
-    revealPercent: number;
     name: string;
   };
 }
@@ -208,11 +207,10 @@ export default function HuntScreen() {
         const mediaType = c.media_type || null;
         const mediaUrl = c.media_url || null;
         const fullRadius: number = c.zone_radius || 100;
-        const rawRevealPercent: number | null | undefined = c.reveal_percent;
-        const revealPercent: number = typeof rawRevealPercent === 'number' && rawRevealPercent >= 0 && rawRevealPercent <= 100
-          ? rawRevealPercent
-          : 100;
-        const visibleRadius: number = Math.max(1, Math.round(fullRadius * (revealPercent / 100)));
+        const rawZoneNarrowed: number | null | undefined = c.zone_narrowed;
+        const zoneNarrowed: number | null = typeof rawZoneNarrowed === 'number' && rawZoneNarrowed >= 0 && rawZoneNarrowed <= 100
+          ? rawZoneNarrowed
+          : null;
         return {
           id: c.id,
           text: c.clue_text || c.text || '',
@@ -222,13 +220,12 @@ export default function HuntScreen() {
           imageUrl: mediaType === 'image' ? mediaUrl : undefined,
           videoUrl: mediaType === 'video' ? mediaUrl : undefined,
           audioUrl: mediaType === 'audio' ? mediaUrl : undefined,
-          revealPercent: rawRevealPercent ?? null,
+          zoneNarrowed,
           location: c.zone_latitude && c.zone_longitude ? {
             latitude: c.zone_latitude,
             longitude: c.zone_longitude,
-            radius: visibleRadius,
+            radius: fullRadius,
             fullRadius,
-            revealPercent,
             name: c.zone_name || 'Hunt Zone',
           } : undefined,
         };
@@ -240,6 +237,17 @@ export default function HuntScreen() {
     refetchInterval: 5000,
     staleTime: 2000,
   });
+
+  const effectiveZoneNarrowed = useMemo<number | null>(() => {
+    const sorted = [...liveClues].sort((a, b) => a.order - b.order);
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      const v = sorted[i].zoneNarrowed;
+      if (typeof v === 'number' && v >= 0 && v <= 100) {
+        return v;
+      }
+    }
+    return null;
+  }, [liveClues]);
 
   useEffect(() => {
     if (cluesQuery.data && cluesQuery.data.length > 0) {
@@ -288,6 +296,19 @@ export default function HuntScreen() {
         },
         (payload) => {
           console.log('[Clues] Realtime INSERT received:', payload.new);
+          void queryClient.invalidateQueries({ queryKey: ['live-clues', currentEvent.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'clues',
+          filter: `event_id=eq.${currentEvent.id}`,
+        },
+        (payload) => {
+          console.log('[Clues] Realtime UPDATE received:', payload.new);
           void queryClient.invalidateQueries({ queryKey: ['live-clues', currentEvent.id] });
         }
       )
@@ -695,7 +716,9 @@ export default function HuntScreen() {
                       <View style={styles.radiusIndicator}>
                         <MapPin color={Colors.dark.textMuted} size={12} />
                         <Text style={styles.radiusText}>
-                          {clue.location.radius}m zone
+                          {effectiveZoneNarrowed !== null
+                            ? Math.max(1, Math.round(clue.location.fullRadius * Math.sqrt(effectiveZoneNarrowed / 100)))
+                            : clue.location.fullRadius}m zone
                         </Text>
                       </View>
                     </View>
@@ -779,6 +802,7 @@ export default function HuntScreen() {
             clueOrder={selectedClueForMap.order}
             totalClues={liveClues.length}
             targetLocation={selectedClueForMap.location}
+            zoneNarrowed={effectiveZoneNarrowed}
           />
         )}
       </View>

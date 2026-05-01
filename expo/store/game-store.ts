@@ -32,13 +32,12 @@ export interface Clue {
   imageUrl?: string;
   videoUrl?: string;
   audioUrl?: string;
-  revealPercent?: number | null;
+  zoneNarrowed?: number | null;
   location?: {
     latitude: number;
     longitude: number;
     radius: number;
     fullRadius: number;
-    revealPercent: number;
     name: string;
   };
 }

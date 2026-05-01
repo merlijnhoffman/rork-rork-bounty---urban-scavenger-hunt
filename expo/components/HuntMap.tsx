@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -20,15 +20,39 @@ interface HuntMapProps {
     latitude: number;
     longitude: number;
     radius: number;
+    fullRadius?: number;
     name: string;
   };
+  zoneNarrowed?: number | null;
 }
 
 const AMBER = Colors.accent.primary;
 
-export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation }: HuntMapProps) {
+export default function HuntMap({ visible, onClose, clueOrder, totalClues, targetLocation, zoneNarrowed }: HuntMapProps) {
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  const fullRadius: number = targetLocation.fullRadius ?? targetLocation.radius;
+  const narrowedFactor: number = useMemo(() => {
+    if (typeof zoneNarrowed === 'number' && zoneNarrowed >= 0 && zoneNarrowed <= 100) {
+      return Math.sqrt(zoneNarrowed / 100);
+    }
+    return 1;
+  }, [zoneNarrowed]);
+  const currentRadius: number = Math.max(1, Math.round(fullRadius * narrowedFactor));
+
+  useEffect(() => {
+    if (!visible || !mapLoaded) return;
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentWindow) return;
+    try {
+      iframe.contentWindow.postMessage({ type: 'setRadius', radius: currentRadius, duration: 600 }, '*');
+      console.log('[HuntMap] Posted setRadius', currentRadius);
+    } catch (err) {
+      console.error('[HuntMap] postMessage failed:', err);
+    }
+  }, [currentRadius, mapLoaded, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -97,13 +121,38 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
             maxZoom: 19,
           }).addTo(map);
 
-          L.circle([${targetLocation.latitude}, ${targetLocation.longitude}], {
-            radius: ${targetLocation.radius},
+          var huntCircle = L.circle([${targetLocation.latitude}, ${targetLocation.longitude}], {
+            radius: ${currentRadius},
             color: '${AMBER}',
             weight: 3,
             fillColor: '${AMBER}',
             fillOpacity: 0.15,
           }).addTo(map);
+
+          var rafId = null;
+          function easeInOut(t) {
+            return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+          }
+          function animateRadius(target, duration) {
+            if (rafId) cancelAnimationFrame(rafId);
+            var startRadius = huntCircle.getRadius();
+            var startTime = performance.now();
+            function step(now) {
+              var t = Math.min(1, (now - startTime) / duration);
+              var eased = easeInOut(t);
+              var r = startRadius + (target - startRadius) * eased;
+              huntCircle.setRadius(r);
+              if (t < 1) {
+                rafId = requestAnimationFrame(step);
+              }
+            }
+            rafId = requestAnimationFrame(step);
+          }
+          window.addEventListener('message', function(e) {
+            if (e && e.data && e.data.type === 'setRadius') {
+              animateRadius(e.data.radius, e.data.duration || 600);
+            }
+          });
 
           var targetIcon = L.divIcon({
             className: 'target-marker',
@@ -145,6 +194,7 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
             </View>
           ) : (
             <iframe
+              ref={iframeRef}
               src={mapDataUri}
               style={{ width: '100%', height: '100%', border: 'none', borderRadius: 16 } as any}
               title="Hunt Zone Map"
@@ -157,12 +207,14 @@ export default function HuntMap({ visible, onClose, clueOrder, totalClues, targe
         <View style={styles.zoneStats}>
           <View style={styles.zoneStat}>
             <Text style={styles.zoneStatLabel}>Search Zone</Text>
-            <Text style={styles.zoneStatValue}>{targetLocation.radius}m</Text>
+            <Text style={styles.zoneStatValue}>{currentRadius}m</Text>
           </View>
           <View style={styles.zoneDivider} />
           <View style={styles.zoneStat}>
             <Text style={styles.zoneStatLabel}>Zone Narrowed</Text>
-            <Text style={styles.zoneStatValue}>{zoneProgress}%</Text>
+            <Text style={styles.zoneStatValue}>
+              {typeof zoneNarrowed === 'number' ? `${100 - zoneNarrowed}%` : `${zoneProgress}%`}
+            </Text>
           </View>
         </View>
 

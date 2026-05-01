@@ -28,7 +28,7 @@ export async function sendClueToSupabase({
   zoneLongitude,
   zoneRadius,
   zoneName,
-  revealPercent,
+  zoneNarrowed,
 }: {
   eventId: string;
   text: string;
@@ -41,7 +41,7 @@ export async function sendClueToSupabase({
   zoneLongitude?: number;
   zoneRadius?: number;
   zoneName?: string;
-  revealPercent?: number | null;
+  zoneNarrowed?: number | null;
 }) {
   const { data, error } = await supabase
     .from('clues')
@@ -57,7 +57,7 @@ export async function sendClueToSupabase({
       zone_longitude: zoneLongitude,
       zone_radius: zoneRadius,
       zone_name: zoneName,
-      reveal_percent: revealPercent ?? null,
+      zone_narrowed: zoneNarrowed ?? null,
     })
     .select()
     .single();
@@ -154,7 +154,7 @@ export type Clue = {
   clue_order: number;
   hint: string | null;
   created_at: string;
-  reveal_percent: number | null;
+  zone_narrowed: number | null;
 };
 
 export type Database = {
@@ -256,7 +256,7 @@ export type Database = {
           zone_longitude?: number;
           zone_radius?: number;
           zone_name?: string;
-          reveal_percent?: number | null;
+          zone_narrowed?: number | null;
         };
         Insert: {
           id?: string;
@@ -272,7 +272,7 @@ export type Database = {
           zone_longitude?: number;
           zone_radius?: number;
           zone_name?: string;
-          reveal_percent?: number | null;
+          zone_narrowed?: number | null;
         };
         Update: {
           id?: string;
@@ -288,7 +288,7 @@ export type Database = {
           zone_longitude?: number;
           zone_radius?: number;
           zone_name?: string;
-          reveal_percent?: number | null;
+          zone_narrowed?: number | null;
         };
       };
       connection_codes: {
