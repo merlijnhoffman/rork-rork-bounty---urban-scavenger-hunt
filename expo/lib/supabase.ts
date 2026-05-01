@@ -144,6 +144,15 @@ CREATE POLICY "Service role can insert clues" ON clues
 */
 
 
+export type Clue = {
+  id: string;
+  event_id: string;
+  clue_text: string;
+  clue_order: number;
+  hint: string | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
