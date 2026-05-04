@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, CalendarPlus } from 'lucide-react-native';
+import { Clock, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, CalendarPlus } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -954,7 +954,6 @@ export default function HuntScreen() {
                     <Text style={styles.cityFlag}>{'🇳🇱'}</Text>
                     <Text style={styles.cityCountry}>Netherlands</Text>
                   </View>
-                  <Text style={styles.cityCoordinates}>52.37°N  4.88°E</Text>
                 </View>
 
                 {!!timeUntilEvent && !isHuntActive && (
@@ -982,14 +981,8 @@ export default function HuntScreen() {
                   <View style={styles.eventDateTimeRow}>
                     <View style={styles.eventDateTimeItem}>
                       <Clock color="rgba(255,255,255,0.7)" size={13} />
-                      <Text style={styles.eventDateTimeText} numberOfLines={1}>SAT, JAN 18</Text>
+                      <Text style={styles.eventDateTimeText} numberOfLines={1}>SAT, JAN 18  ·  12:00 PM CET</Text>
                     </View>
-                    <View style={styles.eventDateTimeDot} />
-                    <View style={styles.eventDateTimeItem}>
-                      <Zap color="rgba(255,255,255,0.7)" size={13} />
-                      <Text style={styles.eventDateTimeText} numberOfLines={1}>12:00 PM CET</Text>
-                    </View>
-                    <View style={styles.eventDateTimeDivider} />
                     <TouchableOpacity
                       style={styles.addToCalendarButton}
                       onPress={handleAddToCalendar}
@@ -997,14 +990,6 @@ export default function HuntScreen() {
                     >
                       <CalendarPlus color={Colors.accent.primary} size={15} />
                     </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.huntersRowContainer}>
-                  <View style={styles.huntersRow}>
-                    <Users color="#FFFFFF" size={14} />
-                    <Text style={styles.huntersCount}>189</Text>
-                    <Text style={styles.huntersLabel}>hunters registered</Text>
                   </View>
                 </View>
 
@@ -1323,7 +1308,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   eventGradient: {
-    padding: 24,
+    padding: 22,
     position: 'relative' as const,
     overflow: 'hidden',
   },
@@ -1341,7 +1326,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   nextEventPill: {
     backgroundColor: 'rgba(0,0,0,0.3)',
@@ -1370,20 +1355,19 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   eventDetails: {
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: 4,
+    marginTop: 4,
   },
   eventDateTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    gap: 12,
-    flexWrap: 'wrap',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 10,
   },
   eventDateTimeItem: {
     flexDirection: 'row',
@@ -1445,8 +1429,8 @@ const styles = StyleSheet.create({
   },
   citySection: {
     alignItems: 'center',
-    marginBottom: 20,
-    paddingVertical: 12,
+    marginBottom: 18,
+    paddingVertical: 8,
   },
   cityLabel: {
     fontSize: 11,
