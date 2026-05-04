@@ -1014,7 +1014,7 @@ export default function HuntScreen() {
                   >
                     <LogIn color="#FFF" size={18} />
                     <Text style={styles.authRequiredText}>
-                      Sign in to claim your ticket
+                      Sign up to claim your ticket
                     </Text>
                     <ChevronRight color="rgba(255,255,255,0.6)" size={16} />
                   </TouchableOpacity>
