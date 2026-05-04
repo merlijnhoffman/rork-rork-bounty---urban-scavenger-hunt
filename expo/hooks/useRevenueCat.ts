@@ -19,22 +19,22 @@ let isRCConfigured = false;
 
 export function configureRevenueCat() {
   if (isRCConfigured) {
-    console.log('[RevenueCat] Already configured');
+    if (__DEV__) console.log('[RevenueCat] Already configured');
     return;
   }
 
   const apiKey = getRCApiKey();
   if (!apiKey) {
-    console.warn('[RevenueCat] No API key found for platform:', Platform.OS);
+    if (__DEV__) console.warn('[RevenueCat] No API key found for platform:', Platform.OS);
     return;
   }
 
   try {
     Purchases.configure({ apiKey });
     isRCConfigured = true;
-    console.log('[RevenueCat] Configured successfully for platform:', Platform.OS);
+    if (__DEV__) console.log('[RevenueCat] Configured successfully for platform:', Platform.OS);
   } catch (error) {
-    console.error('[RevenueCat] Configuration error:', error);
+    if (__DEV__) console.error('[RevenueCat] Configuration error:', error);
   }
 }
 
@@ -44,10 +44,10 @@ export function useLoginRevenueCat() {
   return useMutation({
     mutationFn: async (userId: string) => {
       if (!isRCConfigured) {
-        console.warn('[RevenueCat] Not configured, skipping login');
+        if (__DEV__) console.warn('[RevenueCat] Not configured, skipping login');
         return null;
       }
-      console.log('[RevenueCat] Logging in user:', userId);
+      if (__DEV__) console.log('[RevenueCat] Logging in user:', userId);
       const { customerInfo } = await Purchases.logIn(userId);
       return customerInfo;
     },
@@ -64,7 +64,7 @@ export function useLogoutRevenueCat() {
   return useMutation({
     mutationFn: async () => {
       if (!isRCConfigured) return null;
-      console.log('[RevenueCat] Logging out');
+      if (__DEV__) console.log('[RevenueCat] Logging out');
       const customerInfo = await Purchases.logOut();
       return customerInfo;
     },
@@ -79,19 +79,19 @@ export function useOfferings() {
     queryKey: ['rc-offerings'],
     queryFn: async (): Promise<PurchasesOffering | null> => {
       if (!isRCConfigured) {
-        console.warn('[RevenueCat] Not configured, cannot fetch offerings');
+        if (__DEV__) console.warn('[RevenueCat] Not configured, cannot fetch offerings');
         return null;
       }
-      console.log('[RevenueCat] Fetching offerings...');
+      if (__DEV__) console.log('[RevenueCat] Fetching offerings...');
       const offerings = await Purchases.getOfferings();
-      console.log('[RevenueCat] Offerings fetched:', JSON.stringify(Object.keys(offerings.all)));
+      if (__DEV__) console.log('[RevenueCat] Offerings fetched:', JSON.stringify(Object.keys(offerings.all)));
 
       const huntOffering = offerings.all[TICKET.rcOfferingId] ?? offerings.current;
       if (!huntOffering) {
-        console.warn('[RevenueCat] No hunt_ticket offering found');
+        if (__DEV__) console.warn('[RevenueCat] No hunt_ticket offering found');
         return null;
       }
-      console.log('[RevenueCat] Hunt offering found with packages:', huntOffering.availablePackages.length);
+      if (__DEV__) console.log('[RevenueCat] Hunt offering found with packages:', huntOffering.availablePackages.length);
       return huntOffering;
     },
     staleTime: 300000,
@@ -108,7 +108,7 @@ export function useCustomerInfo() {
         return null;
       }
       const customerInfo = await Purchases.getCustomerInfo();
-      console.log('[RevenueCat] Customer info fetched, entitlements:', JSON.stringify(Object.keys(customerInfo.entitlements.active)));
+      if (__DEV__) console.log('[RevenueCat] Customer info fetched, entitlements:', JSON.stringify(Object.keys(customerInfo.entitlements.active)));
       return customerInfo;
     },
     staleTime: 30000,
@@ -132,9 +132,9 @@ export function usePurchasePackage() {
       if (!isRCConfigured) {
         throw new Error('RevenueCat is not configured');
       }
-      console.log('[RevenueCat] Purchasing package:', pkg.identifier);
+      if (__DEV__) console.log('[RevenueCat] Purchasing package:', pkg.identifier);
       const { customerInfo } = await Purchases.purchasePackage(pkg);
-      console.log('[RevenueCat] Purchase complete, entitlements:', JSON.stringify(Object.keys(customerInfo.entitlements.active)));
+      if (__DEV__) console.log('[RevenueCat] Purchase complete, entitlements:', JSON.stringify(Object.keys(customerInfo.entitlements.active)));
       return customerInfo;
     },
     onSuccess: () => {
@@ -152,9 +152,9 @@ export function useRestorePurchases() {
       if (!isRCConfigured) {
         throw new Error('RevenueCat is not configured');
       }
-      console.log('[RevenueCat] Restoring purchases...');
+      if (__DEV__) console.log('[RevenueCat] Restoring purchases...');
       const customerInfo = await Purchases.restorePurchases();
-      console.log('[RevenueCat] Restore complete, entitlements:', JSON.stringify(Object.keys(customerInfo.entitlements.active)));
+      if (__DEV__) console.log('[RevenueCat] Restore complete, entitlements:', JSON.stringify(Object.keys(customerInfo.entitlements.active)));
       return customerInfo;
     },
     onSuccess: () => {

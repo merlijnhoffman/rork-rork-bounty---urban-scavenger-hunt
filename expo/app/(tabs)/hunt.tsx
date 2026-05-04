@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, Users, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, CalendarPlus } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import HuntMap from '@/components/HuntMap';
 import ClueMedia from '@/components/ClueMedia';
 import { useGameStore, Clue } from '@/store/game-store';
@@ -80,11 +81,49 @@ export default function HuntScreen() {
   const [hintTokens, setHintTokens] = useState<number>(3);
   const [unlockedHints, setUnlockedHints] = useState<Set<string>>(new Set());
   const [showHintConfirm, setShowHintConfirm] = useState<string | null>(null);
-  
-  const bountyLocation = useMemo(() => ({
-    latitude: 52.3752,
-    longitude: 4.8840,
-  }), []);
+  const [hintsHydrated, setHintsHydrated] = useState<boolean>(false);
+
+  const hintStorageKey = currentEvent ? `hints:${currentEvent.id}` : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!hintStorageKey) {
+      setHintsHydrated(true);
+      return;
+    }
+    setHintsHydrated(false);
+    AsyncStorage.getItem(hintStorageKey)
+      .then((raw) => {
+        if (cancelled) return;
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw) as { tokens?: number; unlocked?: string[] };
+            if (typeof parsed.tokens === 'number') setHintTokens(parsed.tokens);
+            if (Array.isArray(parsed.unlocked)) setUnlockedHints(new Set(parsed.unlocked));
+          } catch {}
+        }
+        setHintsHydrated(true);
+      })
+      .catch(() => setHintsHydrated(true));
+    return () => { cancelled = true; };
+  }, [hintStorageKey]);
+
+  useEffect(() => {
+    if (!hintsHydrated || !hintStorageKey) return;
+    const payload = JSON.stringify({ tokens: hintTokens, unlocked: Array.from(unlockedHints) });
+    AsyncStorage.setItem(hintStorageKey, payload).catch(() => {});
+  }, [hintTokens, unlockedHints, hintStorageKey, hintsHydrated]);
+
+  const bountyLocation = useMemo(() => {
+    const firstWithLocation = liveClues.find(c => c.location);
+    if (firstWithLocation?.location) {
+      return {
+        latitude: firstWithLocation.location.latitude,
+        longitude: firstWithLocation.location.longitude,
+      };
+    }
+    return null;
+  }, [liveClues]);
   
   useEffect(() => {
     Animated.parallel([
@@ -355,8 +394,17 @@ export default function HuntScreen() {
 
   const handleAddToCalendar = useCallback(async () => {
     try {
+      const startISO = currentEvent?.startTime;
+      const startDate = startISO ? new Date(startISO) : null;
+      if (!startDate || isNaN(startDate.getTime())) {
+        Alert.alert('No event scheduled', 'There is no upcoming hunt to add yet.');
+        return;
+      }
+      const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000);
+
       if (Platform.OS === 'web') {
-        const googleUrl = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=BOUNTY+-+Urban+Scavenger+Hunt&dates=20250118T110000Z/20250118T150000Z&details=BOUNTY+Urban+Scavenger+Hunt+in+Amsterdam.+Find+the+target+and+win!&location=Amsterdam,+Netherlands';
+        const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=BOUNTY+-+Urban+Scavenger+Hunt&dates=${fmt(startDate)}/${fmt(endDate)}&details=BOUNTY+Urban+Scavenger+Hunt.+Find+the+target+and+win!&location=${encodeURIComponent(currentEvent?.city || '')}`;
         await Linking.openURL(googleUrl);
         return;
       }
@@ -379,26 +427,29 @@ export default function HuntScreen() {
 
       await Calendar.createEventAsync(defaultCalendar.id, {
         title: 'BOUNTY - Urban Scavenger Hunt',
-        startDate: new Date('2025-01-18T12:00:00+01:00'),
-        endDate: new Date('2025-01-18T16:00:00+01:00'),
-        location: 'Amsterdam, Netherlands',
+        startDate,
+        endDate,
+        location: currentEvent?.city || '',
         notes: 'BOUNTY Urban Scavenger Hunt. Find the target and win the prize!',
-        timeZone: 'Europe/Amsterdam',
       });
 
       Alert.alert('Added to Calendar!', 'The hunt event has been added to your calendar.');
     } catch (error) {
-      console.error('Error adding to calendar:', error);
+      if (__DEV__) console.error('Error adding to calendar:', error);
       Alert.alert('Error', 'Failed to add the event to your calendar.');
     }
-  }, []);
+  }, [currentEvent]);
 
   const handleDistanceMeter = async () => {
     if (distanceMeterUsed) {
       Alert.alert('Already Used', 'You have already used your distance meter for this hunt.');
       return;
     }
-    
+    if (!bountyLocation) {
+      Alert.alert('No Target Yet', 'Wait for the first clue with a hunt zone before using the distance meter.');
+      return;
+    }
+
     setIsCalculatingDistance(true);
     
     try {
@@ -433,7 +484,7 @@ export default function HuntScreen() {
         [{ text: 'OK' }]
       );
     } catch (error) {
-      console.error('Error getting location:', error);
+      if (__DEV__) console.error('Error getting location:', error);
       Alert.alert(
         'Error',
         'Failed to get your location. Please make sure location services are enabled.'
@@ -1031,7 +1082,7 @@ export default function HuntScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.ticketButtonText}>
-                  {isLoading || isPurchasing ? 'PROCESSING...' : `BUY TICKET - ${TICKET.currency} ${TICKET.price.toFixed(2)}`}
+                  {isLoading || isPurchasing ? 'PROCESSING...' : `BUY TICKET - ${offering?.availablePackages?.[0]?.product?.priceString ?? `${TICKET.currency} ${TICKET.price.toFixed(2)}`}`}
                 </Text>
                 {!isLoading && (
                   <ChevronRight color={'#000'} size={18} />
@@ -1154,7 +1205,7 @@ export default function HuntScreen() {
               <View style={styles.paywallBody}>
                 <View style={styles.paywallPriceSection}>
                   <Target color={Colors.accent.primary} size={44} />
-                  <Text style={styles.paywallPrice}>{'\u20AC'}{TICKET.price.toFixed(2)}</Text>
+                  <Text style={styles.paywallPrice}>{offering?.availablePackages?.[0]?.product?.priceString ?? `\u20AC${TICKET.price.toFixed(2)}`}</Text>
                   <Text style={styles.paywallPriceLabel}>One-time purchase</Text>
                 </View>
 
@@ -1186,7 +1237,7 @@ export default function HuntScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={styles.paywallBuyButtonText}>
-                    {isPurchasing ? 'PROCESSING...' : isOfferingLoading ? 'LOADING...' : `PURCHASE FOR \u20AC${TICKET.price.toFixed(2)}`}
+                    {isPurchasing ? 'PROCESSING...' : isOfferingLoading ? 'LOADING...' : `PURCHASE FOR ${offering?.availablePackages?.[0]?.product?.priceString ?? `\u20AC${TICKET.price.toFixed(2)}`}`}
                   </Text>
                 </TouchableOpacity>
 
@@ -1200,6 +1251,19 @@ export default function HuntScreen() {
                     {isRestoring ? 'Restoring...' : 'Restore Previous Purchase'}
                   </Text>
                 </TouchableOpacity>
+
+                <View style={styles.paywallLegalRow}>
+                  <TouchableOpacity onPress={() => Linking.openURL('https://bounty.app/terms')} activeOpacity={0.7}>
+                    <Text style={styles.paywallLegalLink}>Terms of Service</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.paywallLegalDot}>{'\u2022'}</Text>
+                  <TouchableOpacity onPress={() => Linking.openURL('https://bounty.app/privacy')} activeOpacity={0.7}>
+                    <Text style={styles.paywallLegalLink}>Privacy Policy</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.paywallLegalNote}>
+                  Charged to your {Platform.OS === 'ios' ? 'Apple ID' : 'Google account'}. One-time purchase, no auto-renewal.
+                </Text>
               </View>
             </View>
           </View>
@@ -2152,6 +2216,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.dark.textMuted,
     fontWeight: '500' as const,
+  },
+  paywallLegalRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    marginTop: 4,
+  },
+  paywallLegalLink: {
+    fontSize: 12,
+    color: C.accent.primary,
+    fontWeight: '600' as const,
+  },
+  paywallLegalDot: {
+    fontSize: 12,
+    color: C.dark.textMuted,
+  },
+  paywallLegalNote: {
+    fontSize: 11,
+    color: C.dark.textMuted,
+    textAlign: 'center' as const,
+    marginTop: 8,
+    paddingHorizontal: 16,
+    lineHeight: 16,
   },
   livePill: {
     backgroundColor: 'rgba(139,0,0,0.35)',

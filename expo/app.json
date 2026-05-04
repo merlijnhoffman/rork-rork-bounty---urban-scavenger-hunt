@@ -11,16 +11,12 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A0A0A"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.rork-bounty-urban-scavenger-hunt",
+      "bundleIdentifier": "app.bounty.scavengerhunt",
       "infoPlist": {
-        "CFBundleAllowMixedLocalizations": true,
-        "CFBundleLocalizations": [
-          "fr"
-        ],
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
         "NSLocationAlwaysUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
         "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
@@ -35,9 +31,9 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0A0A0A"
       },
-      "package": "app.rork.rork-bounty-urban-scavenger-hunt",
+      "package": "app.bounty.scavengerhunt",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
@@ -90,8 +86,7 @@
           ],
           "enableBackgroundRemoteNotifications": false
         }
-      ],
-      "expo-maps"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

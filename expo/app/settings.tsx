@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Linking,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,22 +20,77 @@ import {
   Info,
   Trash2,
   HelpCircle,
+  RefreshCw,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePayment } from '@/contexts/PaymentContext';
+import { supabase } from '@/lib/supabase';
 
 const C = Colors;
+
+const TERMS_URL = 'https://bounty.app/terms';
+const PRIVACY_URL = 'https://bounty.app/privacy';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
+  const { restorePurchases, isRestoring, hasHuntAccess } = usePayment();
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
+  const handleRestore = useCallback(async () => {
+    try {
+      await restorePurchases();
+      Alert.alert(
+        hasHuntAccess ? 'Purchases Restored' : 'No Purchases Found',
+        hasHuntAccess
+          ? 'Your previous purchases have been restored to this account.'
+          : 'No previous purchases were found for this account.',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not restore purchases.';
+      Alert.alert('Restore Failed', message);
+    }
+  }, [restorePurchases, hasHuntAccess]);
+
+  const performDelete = useCallback(async () => {
+    try {
+      setIsDeleting(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        throw new Error('You must be signed in to delete your account.');
+      }
+
+      const { error } = await supabase.functions.invoke('delete-account', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (error) {
+        throw new Error(error.message || 'Failed to delete account');
+      }
+
+      await supabase.auth.signOut();
+      Alert.alert(
+        'Account Deleted',
+        'Your account and personal data have been permanently removed.',
+        [{ text: 'OK', onPress: () => router.replace('/hunt') }],
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete account.';
+      Alert.alert(
+        'Could Not Delete Account',
+        `${message}\n\nIf this keeps happening, contact support@bounty.app.`,
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }, []);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
       'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
+      'This permanently deletes your account, profile, and tickets. This cannot be undone. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -42,14 +98,18 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: () => {
             Alert.alert(
-              'Contact Support',
-              'To delete your account, please contact our support team at support@bounty.app',
+              'Are you absolutely sure?',
+              'All your data will be erased immediately. This action is irreversible.',
+              [
+                { text: 'Keep Account', style: 'cancel' },
+                { text: 'Delete Forever', style: 'destructive', onPress: performDelete },
+              ],
             );
           },
         },
       ],
     );
-  }, []);
+  }, [performDelete]);
 
   const handleSignOut = useCallback(async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -69,19 +129,20 @@ export default function SettingsScreen() {
     icon: React.ReactNode,
     title: string,
     onPress: () => void,
-    danger?: boolean,
+    options?: { danger?: boolean; right?: React.ReactNode; disabled?: boolean },
   ) => (
     <TouchableOpacity
-      style={styles.settingRow}
+      style={[styles.settingRow, options?.disabled && styles.settingRowDisabled]}
       onPress={onPress}
       activeOpacity={0.7}
+      disabled={options?.disabled}
       key={title}
     >
-      <View style={[styles.settingIconWrap, danger && styles.settingIconDanger]}>{icon}</View>
+      <View style={[styles.settingIconWrap, options?.danger && styles.settingIconDanger]}>{icon}</View>
       <View style={styles.settingContent}>
-        <Text style={[styles.settingTitle, danger && styles.settingTitleDanger]}>{title}</Text>
+        <Text style={[styles.settingTitle, options?.danger && styles.settingTitleDanger]}>{title}</Text>
       </View>
-      <ChevronRight color={danger ? C.status.danger : C.dark.textMuted} size={18} />
+      {options?.right ?? <ChevronRight color={options?.danger ? C.status.danger : C.dark.textMuted} size={18} />}
     </TouchableOpacity>
   ), []);
 
@@ -110,6 +171,25 @@ export default function SettingsScreen() {
         >
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
+              <RefreshCw color={C.accent.primary} size={16} />
+              <Text style={styles.sectionTitle}>Purchases</Text>
+            </View>
+            <View style={styles.card}>
+              {renderLink(
+                isRestoring ? (
+                  <ActivityIndicator color={C.accent.primary} size="small" />
+                ) : (
+                  <RefreshCw color={C.dark.textSecondary} size={18} />
+                ),
+                isRestoring ? 'Restoring...' : 'Restore Purchases',
+                handleRestore,
+                { disabled: isRestoring },
+              )}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
               <Info color={C.accent.primary} size={16} />
               <Text style={styles.sectionTitle}>About</Text>
             </View>
@@ -117,13 +197,13 @@ export default function SettingsScreen() {
               {renderLink(
                 <FileText color={C.dark.textSecondary} size={18} />,
                 'Terms of Service',
-                () => Linking.openURL('https://bounty.app/terms'),
+                () => Linking.openURL(TERMS_URL),
               )}
               <View style={styles.rowDivider} />
               {renderLink(
                 <Shield color={C.dark.textSecondary} size={18} />,
                 'Privacy Policy',
-                () => Linking.openURL('https://bounty.app/privacy'),
+                () => Linking.openURL(PRIVACY_URL),
               )}
               <View style={styles.rowDivider} />
               {renderLink(
@@ -145,14 +225,18 @@ export default function SettingsScreen() {
                   <ExternalLink color={C.status.danger} size={18} />,
                   'Sign Out',
                   handleSignOut,
-                  true,
+                  { danger: true },
                 )}
                 <View style={styles.rowDivider} />
                 {renderLink(
-                  <Trash2 color={C.status.danger} size={18} />,
-                  'Delete Account',
+                  isDeleting ? (
+                    <ActivityIndicator color={C.status.danger} size="small" />
+                  ) : (
+                    <Trash2 color={C.status.danger} size={18} />
+                  ),
+                  isDeleting ? 'Deleting...' : 'Delete Account',
                   handleDeleteAccount,
-                  true,
+                  { danger: true, disabled: isDeleting },
                 )}
               </View>
             </View>
@@ -232,6 +316,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
   },
+  settingRowDisabled: {
+    opacity: 0.5,
+  },
   settingIconWrap: {
     width: 36,
     height: 36,
@@ -253,11 +340,6 @@ const styles = StyleSheet.create({
   },
   settingTitleDanger: {
     color: C.status.danger,
-  },
-  settingSubtitle: {
-    fontSize: 12,
-    color: C.dark.textMuted,
-    marginTop: 2,
   },
   rowDivider: {
     height: 1,
