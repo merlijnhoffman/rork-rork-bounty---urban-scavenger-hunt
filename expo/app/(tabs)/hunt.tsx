@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, CalendarPlus } from 'lucide-react-native';
+import { Clock, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -392,7 +392,7 @@ export default function HuntScreen() {
     setShowHintConfirm(null);
   }, [showHintConfirm, hintTokens]);
 
-  const handleAddToCalendar = useCallback(async () => {
+  const performAddToCalendar = useCallback(async () => {
     try {
       const startISO = currentEvent?.startTime;
       const startDate = startISO ? new Date(startISO) : null;
@@ -439,6 +439,21 @@ export default function HuntScreen() {
       Alert.alert('Error', 'Failed to add the event to your calendar.');
     }
   }, [currentEvent]);
+
+  const handleDateTimePress = useCallback(() => {
+    if (!currentEvent?.startTime) {
+      Alert.alert('No event scheduled', 'There is no upcoming hunt to add yet.');
+      return;
+    }
+    Alert.alert(
+      'Add to Calendar?',
+      'Would you like to add this hunt to your calendar?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Add', onPress: () => { void performAddToCalendar(); } },
+      ]
+    );
+  }, [currentEvent, performAddToCalendar]);
 
   const handleDistanceMeter = async () => {
     if (distanceMeterUsed) {
@@ -978,19 +993,17 @@ export default function HuntScreen() {
                 )}
 
                 <View style={styles.eventDetails}>
-                  <View style={styles.eventDateTimeRow}>
+                  <TouchableOpacity
+                    style={styles.eventDateTimeRow}
+                    onPress={handleDateTimePress}
+                    activeOpacity={0.7}
+                    testID="event-datetime-add-calendar"
+                  >
                     <View style={styles.eventDateTimeItem}>
                       <Clock color="rgba(255,255,255,0.7)" size={13} />
                       <Text style={styles.eventDateTimeText} numberOfLines={1}>SAT, JAN 18  ·  12:00 PM CET</Text>
                     </View>
-                    <TouchableOpacity
-                      style={styles.addToCalendarButton}
-                      onPress={handleAddToCalendar}
-                      activeOpacity={0.7}
-                    >
-                      <CalendarPlus color={Colors.accent.primary} size={15} />
-                    </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 </View>
 
                 {!isLoggedIn && (
@@ -1386,14 +1399,6 @@ const styles = StyleSheet.create({
     height: 16,
     backgroundColor: 'rgba(255,255,255,0.2)',
     marginHorizontal: 2,
-  },
-  addToCalendarButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   eventDateTimeText: {
     fontSize: 13,
