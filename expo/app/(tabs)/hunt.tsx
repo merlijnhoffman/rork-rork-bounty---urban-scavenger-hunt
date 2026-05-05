@@ -440,6 +440,54 @@ export default function HuntScreen() {
     }
   }, [currentEvent]);
 
+  const eventTimeZone = useMemo<string>(() => {
+    const city = (currentEvent?.city || '').trim().toLowerCase();
+    const map: Record<string, string> = {
+      amsterdam: 'Europe/Amsterdam',
+      rotterdam: 'Europe/Amsterdam',
+      utrecht: 'Europe/Amsterdam',
+      'the hague': 'Europe/Amsterdam',
+      london: 'Europe/London',
+      paris: 'Europe/Paris',
+      berlin: 'Europe/Berlin',
+      madrid: 'Europe/Madrid',
+      barcelona: 'Europe/Madrid',
+      rome: 'Europe/Rome',
+      milan: 'Europe/Rome',
+      lisbon: 'Europe/Lisbon',
+      dublin: 'Europe/Dublin',
+      brussels: 'Europe/Brussels',
+      copenhagen: 'Europe/Copenhagen',
+      stockholm: 'Europe/Stockholm',
+      oslo: 'Europe/Oslo',
+      helsinki: 'Europe/Helsinki',
+      vienna: 'Europe/Vienna',
+      zurich: 'Europe/Zurich',
+      prague: 'Europe/Prague',
+      warsaw: 'Europe/Warsaw',
+      athens: 'Europe/Athens',
+      istanbul: 'Europe/Istanbul',
+      'new york': 'America/New_York',
+      nyc: 'America/New_York',
+      'los angeles': 'America/Los_Angeles',
+      la: 'America/Los_Angeles',
+      'san francisco': 'America/Los_Angeles',
+      chicago: 'America/Chicago',
+      miami: 'America/New_York',
+      toronto: 'America/Toronto',
+      vancouver: 'America/Vancouver',
+      tokyo: 'Asia/Tokyo',
+      seoul: 'Asia/Seoul',
+      singapore: 'Asia/Singapore',
+      'hong kong': 'Asia/Hong_Kong',
+      bangkok: 'Asia/Bangkok',
+      dubai: 'Asia/Dubai',
+      sydney: 'Australia/Sydney',
+      melbourne: 'Australia/Melbourne',
+    };
+    return map[city] || 'Europe/Amsterdam';
+  }, [currentEvent?.city]);
+
   const formattedEventDateTime = useMemo(() => {
     const startISO = currentEvent?.startTime;
     if (!startISO) return 'TBA';
@@ -452,11 +500,23 @@ export default function HuntScreen() {
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
+        timeZone: eventTimeZone,
+        timeZoneName: 'short',
       });
     } catch {
-      return d.toString();
+      try {
+        return d.toLocaleString(undefined, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+      } catch {
+        return d.toString();
+      }
     }
-  }, [currentEvent?.startTime]);
+  }, [currentEvent?.startTime, eventTimeZone]);
 
   const handleDateTimePress = useCallback(() => {
     if (!currentEvent?.startTime) {
