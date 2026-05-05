@@ -440,6 +440,24 @@ export default function HuntScreen() {
     }
   }, [currentEvent]);
 
+  const formattedEventDateTime = useMemo(() => {
+    const startISO = currentEvent?.startTime;
+    if (!startISO) return 'TBA';
+    const d = new Date(startISO);
+    if (isNaN(d.getTime())) return 'TBA';
+    try {
+      return d.toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    } catch {
+      return d.toString();
+    }
+  }, [currentEvent?.startTime]);
+
   const handleDateTimePress = useCallback(() => {
     if (!currentEvent?.startTime) {
       Alert.alert('No event scheduled', 'There is no upcoming hunt to add yet.');
