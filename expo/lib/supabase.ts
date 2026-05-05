@@ -214,7 +214,6 @@ export type Database = {
           id: string;
           city: string;
           date: string;
-          start_time: string;
           price: number;
           is_active: boolean;
           status: 'scheduled' | 'live' | 'completed';
@@ -224,7 +223,6 @@ export type Database = {
           id?: string;
           city: string;
           date: string;
-          start_time: string;
           price: number;
           is_active?: boolean;
           status?: 'scheduled' | 'live' | 'completed';
@@ -234,7 +232,6 @@ export type Database = {
           id?: string;
           city?: string;
           date?: string;
-          start_time?: string;
           price?: number;
           is_active?: boolean;
           status?: 'scheduled' | 'live' | 'completed';

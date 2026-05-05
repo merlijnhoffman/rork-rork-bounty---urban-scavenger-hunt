@@ -79,20 +79,24 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         }
 
         console.log('Event fetched successfully:', data.id);
-        const eventDate = data.date ? new Date(data.date) : new Date();
+        const rawDate: string | null = (data as any).date ?? null;
+        const parsedDate = rawDate ? new Date(rawDate) : null;
+        const validDate = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : null;
         const event: GameEvent = {
           id: data.id,
           city: data.city || 'Amsterdam',
-          date: eventDate.toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          }),
+          date: validDate
+            ? validDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : '',
           ticketPrice: (data as any).ticket_price ?? (data as any).price ?? 25,
           prize: (data as any).prize_amount ?? (data as any).prize ?? 1000,
           registeredPlayers: 189,
-          startTime: data.start_time,
+          startTime: validDate ? validDate.toISOString() : '',
           status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
         };
         return event;
