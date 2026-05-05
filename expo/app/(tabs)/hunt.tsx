@@ -1001,7 +1001,7 @@ export default function HuntScreen() {
                   >
                     <View style={styles.eventDateTimeItem}>
                       <Clock color="rgba(255,255,255,0.7)" size={13} />
-                      <Text style={styles.eventDateTimeText} numberOfLines={1}>SAT, JAN 18  ·  12:00 PM CET</Text>
+                      <Text style={styles.eventDateTimeText} numberOfLines={1}>{formattedEventDateTime}</Text>
                     </View>
                   </TouchableOpacity>
                 </View>
