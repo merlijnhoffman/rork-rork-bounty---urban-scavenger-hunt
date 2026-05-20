@@ -224,6 +224,7 @@ export default function HuntScreen() {
   });
   
   const isLiveWithTicket = !!hasTicket && !!currentEvent && currentEvent.status === 'live' && !!user;
+  const canReceiveClues = !!hasTicket && !!currentEvent && !!user;
 
   const cluesQuery = useQuery({
     queryKey: ['live-clues', currentEvent?.id],
@@ -272,7 +273,7 @@ export default function HuntScreen() {
       console.log('[Clues] Mapped clues with media:', mapped.map(c => ({ id: c.id, hasImage: !!c.imageUrl, hasVideo: !!c.videoUrl, hasAudio: !!c.audioUrl })));
       return mapped;
     },
-    enabled: isLiveWithTicket,
+    enabled: canReceiveClues,
     refetchInterval: 5000,
     staleTime: 2000,
   });
@@ -318,7 +319,7 @@ export default function HuntScreen() {
   }, [cluesQuery.data, fadeAnim]);
 
   useEffect(() => {
-    if (!currentEvent || !user) return;
+    if (!currentEvent || !user || !hasTicket) return;
     
     const channelName = `clues-${currentEvent.id}-${Date.now()}`;
     console.log('[Clues] Setting up realtime subscription on channel:', channelName);
@@ -359,7 +360,7 @@ export default function HuntScreen() {
       console.log('[Clues] Cleaning up realtime subscription:', channelName);
       void subscription.unsubscribe();
     };
-  }, [currentEvent, user, queryClient]);
+  }, [currentEvent, user, queryClient, hasTicket]);
   
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371e3;
