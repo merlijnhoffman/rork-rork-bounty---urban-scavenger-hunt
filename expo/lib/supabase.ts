@@ -24,11 +24,6 @@ export async function sendClueToSupabase({
   releaseTime,
   mediaType,
   mediaUrl,
-  zoneLatitude,
-  zoneLongitude,
-  zoneRadius,
-  zoneName,
-  zoneNarrowed,
 }: {
   eventId: string;
   text: string;
@@ -37,11 +32,6 @@ export async function sendClueToSupabase({
   releaseTime?: string;
   mediaType?: string;
   mediaUrl?: string;
-  zoneLatitude?: number;
-  zoneLongitude?: number;
-  zoneRadius?: number;
-  zoneName?: string;
-  zoneNarrowed?: number | null;
 }) {
   const { data, error } = await supabase
     .from('clues')
@@ -53,11 +43,6 @@ export async function sendClueToSupabase({
       release_time: releaseTime || new Date().toISOString(),
       media_type: mediaType,
       media_url: mediaUrl,
-      zone_latitude: zoneLatitude,
-      zone_longitude: zoneLongitude,
-      zone_radius: zoneRadius,
-      zone_name: zoneName,
-      zone_narrowed: zoneNarrowed ?? null,
     })
     .select()
     .single();
@@ -154,7 +139,6 @@ export type Clue = {
   clue_order: number;
   hint: string | null;
   created_at: string;
-  zone_narrowed: number | null;
 };
 
 export type Database = {
@@ -249,11 +233,6 @@ export type Database = {
           created_at: string;
           media_type?: string;
           media_url?: string;
-          zone_latitude?: number;
-          zone_longitude?: number;
-          zone_radius?: number;
-          zone_name?: string;
-          zone_narrowed?: number | null;
         };
         Insert: {
           id?: string;
@@ -265,11 +244,6 @@ export type Database = {
           created_at?: string;
           media_type?: string;
           media_url?: string;
-          zone_latitude?: number;
-          zone_longitude?: number;
-          zone_radius?: number;
-          zone_name?: string;
-          zone_narrowed?: number | null;
         };
         Update: {
           id?: string;
@@ -281,11 +255,38 @@ export type Database = {
           created_at?: string;
           media_type?: string;
           media_url?: string;
-          zone_latitude?: number;
-          zone_longitude?: number;
-          zone_radius?: number;
-          zone_name?: string;
-          zone_narrowed?: number | null;
+        };
+      };
+      event_zones: {
+        Row: {
+          event_id: string;
+          center_latitude: number;
+          center_longitude: number;
+          initial_radius: number;
+          narrowed_percent: number;
+          zone_name: string | null;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          event_id: string;
+          center_latitude: number;
+          center_longitude: number;
+          initial_radius: number;
+          narrowed_percent?: number;
+          zone_name?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          center_latitude?: number;
+          center_longitude?: number;
+          initial_radius?: number;
+          narrowed_percent?: number;
+          zone_name?: string | null;
+          updated_at?: string;
+          created_at?: string;
         };
       };
       connection_codes: {

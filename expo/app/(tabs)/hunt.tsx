@@ -14,13 +14,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, AlertCircle, LogIn, Target, MapPin, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock } from 'lucide-react-native';
+import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import HuntMap from '@/components/HuntMap';
+import EventZoneMap from '@/components/EventZoneMap';
 import ClueMedia from '@/components/ClueMedia';
-import { useGameStore, Clue } from '@/store/game-store';
+import { useGameStore } from '@/store/game-store';
+import { useEventZone } from '@/hooks/useEventZone';
 import { useAuth } from '@/contexts/AuthContext';
 import Colors from '@/constants/colors';
 
@@ -30,16 +31,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { TICKET } from '@/constants/payment';
 import { usePayment } from '@/contexts/PaymentContext';
-
-interface ClueWithLocation extends Clue {
-  location?: {
-    latitude: number;
-    longitude: number;
-    radius: number;
-    fullRadius: number;
-    name: string;
-  };
-}
 
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
@@ -67,8 +58,7 @@ export default function HuntScreen() {
   const [hasTicket, setHasTicket] = useState<boolean>(false);
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
   const queryClient = useQueryClient();
-  const [liveClues, setLiveClues] = useState<Clue[]>([]);
-  const [selectedClueForMap, setSelectedClueForMap] = useState<ClueWithLocation | null>(null);
+  const [liveClues, setLiveClues] = useState<import('@/store/game-store').Clue[]>([]);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
   const slideUpAnim = useMemo(() => new Animated.Value(50), []);
   const opacityAnim = useMemo(() => new Animated.Value(0), []);
@@ -114,16 +104,20 @@ export default function HuntScreen() {
     AsyncStorage.setItem(hintStorageKey, payload).catch(() => {});
   }, [hintTokens, unlockedHints, hintStorageKey, hintsHydrated]);
 
+  const { zone: eventZone, currentRadius: currentZoneRadius } = useEventZone(
+    currentEvent?.id ?? null,
+    !!hasTicket && !!user,
+  );
+
   const bountyLocation = useMemo(() => {
-    const firstWithLocation = liveClues.find(c => c.location);
-    if (firstWithLocation?.location) {
+    if (eventZone) {
       return {
-        latitude: firstWithLocation.location.latitude,
-        longitude: firstWithLocation.location.longitude,
+        latitude: eventZone.centerLatitude,
+        longitude: eventZone.centerLongitude,
       };
     }
     return null;
-  }, [liveClues]);
+  }, [eventZone]);
   
   useEffect(() => {
     Animated.parallel([
@@ -243,14 +237,9 @@ export default function HuntScreen() {
       }
 
       console.log('[Clues] Fetched', data?.length ?? 0, 'clues');
-      const mapped: Clue[] = (data || []).map((c: any) => {
+      const mapped: import('@/store/game-store').Clue[] = (data || []).map((c: any) => {
         const mediaType = c.media_type || null;
         const mediaUrl = c.media_url || null;
-        const fullRadius: number = c.zone_radius || 100;
-        const rawZoneNarrowed: number | null | undefined = c.zone_narrowed;
-        const zoneNarrowed: number | null = typeof rawZoneNarrowed === 'number' && rawZoneNarrowed >= 0 && rawZoneNarrowed <= 100
-          ? rawZoneNarrowed
-          : null;
         return {
           id: c.id,
           text: c.clue_text || c.text || '',
@@ -260,14 +249,6 @@ export default function HuntScreen() {
           imageUrl: mediaType === 'image' ? mediaUrl : undefined,
           videoUrl: mediaType === 'video' ? mediaUrl : undefined,
           audioUrl: mediaType === 'audio' ? mediaUrl : undefined,
-          zoneNarrowed,
-          location: c.zone_latitude && c.zone_longitude ? {
-            latitude: c.zone_latitude,
-            longitude: c.zone_longitude,
-            radius: fullRadius,
-            fullRadius,
-            name: c.zone_name || 'Hunt Zone',
-          } : undefined,
         };
       });
       console.log('[Clues] Mapped clues with media:', mapped.map(c => ({ id: c.id, hasImage: !!c.imageUrl, hasVideo: !!c.videoUrl, hasAudio: !!c.audioUrl })));
@@ -277,17 +258,6 @@ export default function HuntScreen() {
     refetchInterval: 5000,
     staleTime: 2000,
   });
-
-  const effectiveZoneNarrowed = useMemo<number | null>(() => {
-    const sorted = [...liveClues].sort((a, b) => a.order - b.order);
-    for (let i = sorted.length - 1; i >= 0; i--) {
-      const v = sorted[i].zoneNarrowed;
-      if (typeof v === 'number' && v >= 0 && v <= 100) {
-        return v;
-      }
-    }
-    return null;
-  }, [liveClues]);
 
   useEffect(() => {
     if (cluesQuery.data && cluesQuery.data.length > 0) {
@@ -768,6 +738,21 @@ export default function HuntScreen() {
           </View>
           
           <ScrollView style={styles.cluesContainer} showsVerticalScrollIndicator={false}>
+            {eventZone && currentZoneRadius !== null && (
+              <View style={styles.zoneMapWrapper}>
+                <View style={styles.zoneMapHeader}>
+                  <Crosshair color={Colors.accent.primary} size={16} />
+                  <Text style={styles.zoneMapHeaderText}>HUNT ZONE</Text>
+                  <View style={styles.zoneMapLiveDot} />
+                </View>
+                <EventZoneMap
+                  centerLatitude={eventZone.centerLatitude}
+                  centerLongitude={eventZone.centerLongitude}
+                  radiusMeters={currentZoneRadius}
+                  zoneName={eventZone.zoneName ?? undefined}
+                />
+              </View>
+            )}
             {liveClues.length === 0 ? (
               <View style={styles.waitingContainer}>
                 <View style={styles.waitingIconContainer}>
@@ -814,7 +799,7 @@ export default function HuntScreen() {
                     videoUrl={clue.videoUrl}
                     audioUrl={clue.audioUrl}
                   />
-                  
+
                   {clue.hint && (
                     unlockedHints.has(clue.id) ? (
                       <View style={styles.hintRevealed}>
@@ -845,28 +830,6 @@ export default function HuntScreen() {
                         )}
                       </TouchableOpacity>
                     )
-                  )}
-                  
-                  {clue.location && (
-                    <View style={styles.clueActions}>
-                      <TouchableOpacity 
-                        style={styles.mapButton}
-                        onPress={() => setSelectedClueForMap(clue)}
-                        activeOpacity={0.8}
-                      >
-                        <Crosshair color={Colors.accent.primary} size={15} />
-                        <Text style={styles.mapButtonText}>View Hunt Zone</Text>
-                      </TouchableOpacity>
-                      
-                      <View style={styles.radiusIndicator}>
-                        <MapPin color={Colors.dark.textMuted} size={12} />
-                        <Text style={styles.radiusText}>
-                          {effectiveZoneNarrowed !== null
-                            ? Math.max(1, Math.round(clue.location.fullRadius * Math.sqrt(effectiveZoneNarrowed / 100)))
-                            : clue.location.fullRadius}m zone
-                        </Text>
-                      </View>
-                    </View>
                   )}
                 </Animated.View>
               ))
@@ -940,16 +903,6 @@ export default function HuntScreen() {
           </View>
         </Modal>
 
-        {selectedClueForMap && selectedClueForMap.location && (
-          <HuntMap
-            visible={true}
-            onClose={() => setSelectedClueForMap(null)}
-            clueOrder={selectedClueForMap.order}
-            totalClues={liveClues.length}
-            targetLocation={selectedClueForMap.location}
-            zoneNarrowed={effectiveZoneNarrowed}
-          />
-        )}
       </View>
     );
   }
@@ -1820,6 +1773,28 @@ const styles = StyleSheet.create({
   cluesContainer: {
     flex: 1,
     padding: 20,
+  },
+  zoneMapWrapper: {
+    marginBottom: 18,
+  },
+  zoneMapHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  zoneMapHeaderText: {
+    fontSize: 12,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    letterSpacing: 2,
+  },
+  zoneMapLiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.status.success,
   },
   waitingContainer: {
     alignItems: 'center',
