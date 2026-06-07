@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ActivityIndicator, Animated } from 'react-native';
 import { MapPin, Target } from 'lucide-react-native';
 import MapView, { Circle, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -23,6 +23,7 @@ export default function EventZoneMap({
 }: EventZoneMapProps) {
   const mapRef = useRef<MapView | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     let mounted = true;
@@ -40,6 +41,25 @@ export default function EventZoneMap({
   }, []);
 
   useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.3,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim]);
+
+  useEffect(() => {
     if (!mapRef.current) return;
     mapRef.current.animateToRegion(
       {
@@ -55,6 +75,13 @@ export default function EventZoneMap({
   return (
     <View style={styles.container}>
       <View style={styles.mapWrapper}>
+        <Animated.View
+          style={[
+            styles.pulseRing,
+            { opacity: pulseAnim, transform: [{ scale: Animated.add(1, Animated.multiply(pulseAnim, 0.08)) }] },
+          ]}
+          pointerEvents="none"
+        />
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFill}
@@ -148,6 +175,25 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
+  },
+  pulseRing: {
+    position: 'absolute' as const,
+    top: '50%' as const,
+    left: '50%' as const,
+    width: 36,
+    height: 36,
+    marginLeft: -18,
+    marginTop: -18,
+    borderRadius: 18,
+    borderWidth: 2.5,
+    borderColor: AMBER,
+    backgroundColor: 'transparent',
+    zIndex: 10,
+    shadowColor: AMBER,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 5,
   },
   statValue: {
     fontSize: 13,

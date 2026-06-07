@@ -76,6 +76,13 @@ export default function EventZoneMap({
           body { margin: 0; padding: 0; background: #000; }
           #map { width: 100%; height: 100vh; }
           .leaflet-control-attribution { display: none !important; }
+          @keyframes pulse-ring {
+            0% { r: 18; opacity: 0.6; }
+            100% { r: 28; opacity: 0; }
+          }
+          .pulse-ring {
+            animation: pulse-ring 2s ease-out infinite;
+          }
         </style>
       </head>
       <body>
@@ -94,6 +101,17 @@ export default function EventZoneMap({
             weight: 3,
             fillColor: '${AMBER}',
             fillOpacity: 0.15,
+            className: 'pulse-circle',
+          }).addTo(map);
+
+          var pulseRing = L.circleMarker([${centerLatitude}, ${centerLongitude}], {
+            radius: 18,
+            color: '${AMBER}',
+            weight: 2.5,
+            fillColor: 'transparent',
+            fillOpacity: 0,
+            className: 'pulse-ring',
+            interactive: false,
           }).addTo(map);
 
           var targetIcon = L.divIcon({
@@ -131,6 +149,7 @@ export default function EventZoneMap({
               huntCircle.setLatLng([lat, lng]);
               huntCircle.setRadius(r);
               targetMarker.setLatLng([lat, lng]);
+              pulseRing.setLatLng([lat, lng]);
               if (t < 1) rafId = requestAnimationFrame(step);
             }
             rafId = requestAnimationFrame(step);
