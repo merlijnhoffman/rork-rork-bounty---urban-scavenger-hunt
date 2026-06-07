@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { MapPin, Target } from 'lucide-react-native';
 import Colors from '@/constants/colors';
@@ -21,27 +21,34 @@ export default function EventZoneMap({
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const prevRadiusRef = useRef<number>(radiusMeters);
   const initialRadius = useMemo<number>(() => Math.max(1, Math.round(radiusMeters)), []);
 
-  useEffect(() => {
-    if (!mapLoaded) return;
+  const sendMessage = useCallback((data: Record<string, unknown>) => {
     const iframe = iframeRef.current;
-    if (!iframe || !iframe.contentWindow) return;
+    if (!iframe?.contentWindow) return;
     try {
-      iframe.contentWindow.postMessage(
-        {
-          type: 'updateZone',
-          latitude: centerLatitude,
-          longitude: centerLongitude,
-          radius: Math.max(1, Math.round(radiusMeters)),
-          duration: 600,
-        },
-        '*'
-      );
+      iframe.contentWindow.postMessage(data, '*');
     } catch (err) {
       console.error('[EventZoneMap] postMessage failed:', err);
     }
-  }, [centerLatitude, centerLongitude, radiusMeters, mapLoaded]);
+  }, []);
+
+  // Post zone updates to the iframe map
+  useEffect(() => {
+    if (!mapLoaded) return;
+    const radiusChanged = prevRadiusRef.current !== radiusMeters;
+    prevRadiusRef.current = radiusMeters;
+
+    sendMessage({
+      type: 'updateZone',
+      latitude: centerLatitude,
+      longitude: centerLongitude,
+      radius: Math.max(1, Math.round(radiusMeters)),
+      duration: 600,
+      triggerBurst: radiusChanged,
+    });
+  }, [centerLatitude, centerLongitude, radiusMeters, mapLoaded, sendMessage]);
 
   useEffect(() => {
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -80,8 +87,15 @@ export default function EventZoneMap({
             0% { r: 18; opacity: 0.6; }
             100% { r: 28; opacity: 0; }
           }
+          @keyframes burst-ring {
+            0% { r: 18; opacity: 1; stroke-width: 3; }
+            100% { r: 52; opacity: 0; stroke-width: 1; }
+          }
           .pulse-ring {
             animation: pulse-ring 2s ease-out infinite;
+          }
+          .burst-ring {
+            animation: burst-ring 1s ease-out forwards;
           }
         </style>
       </head>
@@ -158,6 +172,18 @@ export default function EventZoneMap({
           window.addEventListener('message', function(e) {
             if (e && e.data && e.data.type === 'updateZone') {
               animateZone(e.data.latitude, e.data.longitude, e.data.radius, e.data.duration || 600);
+
+              // Trigger burst ripple when radius changes (admin adjusts zone)
+              if (e.data.triggerBurst) {
+                var burstEl = pulseRing.getElement();
+                burstEl.classList.remove('burst-ring');
+                void burstEl.offsetWidth; // force reflow
+                burstEl.classList.add('burst-ring');
+                burstEl.addEventListener('animationend', function handler() {
+                  burstEl.removeEventListener('animationend', handler);
+                  burstEl.classList.remove('burst-ring');
+                });
+              }
             }
           });
         </script>

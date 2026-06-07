@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, ActivityIndicator, Animated } from 'react-native';
 import { MapPin, Target } from 'lucide-react-native';
 import MapView, { Circle, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
@@ -23,7 +23,53 @@ export default function EventZoneMap({
 }: EventZoneMapProps) {
   const mapRef = useRef<MapView | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseOpacity = useRef(new Animated.Value(1)).current;
+  const burstScale = useRef(new Animated.Value(1)).current;
+  const burstOpacity = useRef(new Animated.Value(0)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  const startBurst = useCallback(() => {
+    burstScale.setValue(1);
+    burstOpacity.setValue(1);
+    Animated.parallel([
+      Animated.timing(burstScale, {
+        toValue: 2.6,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(burstOpacity, {
+        toValue: 0,
+        duration: 900,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [burstScale, burstOpacity]);
+
+  // Restart the subtle pulse loop whenever radius changes
+  useEffect(() => {
+    loopRef.current?.stop();
+    pulseOpacity.setValue(1);
+    startBurst();
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseOpacity, {
+          toValue: 0.25,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseOpacity, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    loopRef.current = pulse;
+    return () => { pulse.stop(); loopRef.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radiusMeters]);
 
   useEffect(() => {
     let mounted = true;
@@ -41,25 +87,6 @@ export default function EventZoneMap({
   }, []);
 
   useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 0.3,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, [pulseAnim]);
-
-  useEffect(() => {
     if (!mapRef.current) return;
     mapRef.current.animateToRegion(
       {
@@ -75,10 +102,26 @@ export default function EventZoneMap({
   return (
     <View style={styles.container}>
       <View style={styles.mapWrapper}>
+        {/* Burst ripple on radius change */}
         <Animated.View
           style={[
             styles.pulseRing,
-            { opacity: pulseAnim, transform: [{ scale: Animated.add(1, Animated.multiply(pulseAnim, 0.08)) }] },
+            styles.burstRing,
+            {
+              opacity: burstOpacity,
+              transform: [{ scale: burstScale }],
+            },
+          ]}
+          pointerEvents="none"
+        />
+        {/* Subtle continuous pulse */}
+        <Animated.View
+          style={[
+            styles.pulseRing,
+            {
+              opacity: pulseOpacity,
+              transform: [{ scale: Animated.add(1, Animated.multiply(pulseOpacity, 0.08)) }],
+            },
           ]}
           pointerEvents="none"
         />
@@ -194,6 +237,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 5,
+  },
+  burstRing: {
+    borderWidth: 3,
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
   },
   statValue: {
     fontSize: 13,
