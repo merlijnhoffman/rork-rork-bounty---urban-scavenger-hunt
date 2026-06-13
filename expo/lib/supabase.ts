@@ -321,6 +321,26 @@ export type Database = {
           created_at?: string;
         };
       };
+      push_tokens: {
+        Row: {
+          user_id: string;
+          push_token: string;
+          platform: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          push_token: string;
+          platform: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          push_token?: string;
+          platform?: string;
+          updated_at?: string;
+        };
+      };
       player_connections: {
         Row: {
           id: string;

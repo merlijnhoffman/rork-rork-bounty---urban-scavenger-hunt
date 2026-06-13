@@ -3,15 +3,16 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as ScreenCapture from "expo-screen-capture";
 import * as ScreenOrientation from "expo-screen-orientation";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 import Colors from '@/constants/colors';
 import { GameProvider } from '@/store/game-store';
 import { configureRevenueCat } from '@/hooks/useRevenueCat';
+import { useNotificationTapHandler, registerForPushNotificationsAsync, unregisterPushToken } from '@/hooks/useNotifications';
 
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { PaymentWrapper } from '@/contexts/PaymentContext';
 import { LocationProvider } from '@/contexts/LocationContext';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -21,6 +22,30 @@ void SplashScreen.preventAutoHideAsync();
 try { configureRevenueCat(); } catch {}
 
 const queryClient = new QueryClient();
+
+function NotificationRegistrar() {
+  const { user } = useAuth();
+  const lastUserId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const userId = user?.id ?? null;
+    if (userId === lastUserId.current) return;
+    lastUserId.current = userId;
+
+    if (userId) {
+      registerForPushNotificationsAsync(userId).catch((err) => {
+        console.error('[Push] Registration failed:', err);
+      });
+    } else {
+      // Cleanup previous token on logout
+      if (lastUserId.current) {
+        unregisterPushToken(lastUserId.current).catch(() => {});
+      }
+    }
+  }, [user]);
+
+  return null;
+}
 
 function RootLayoutNav() {
   return (
@@ -72,6 +97,8 @@ function ErrorFallback({ error }: { error: Error }) {
 }
 
 export default function RootLayout() {
+  useNotificationTapHandler();
+
   useEffect(() => {
     ScreenCapture.preventScreenCaptureAsync().catch(() => {});
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
@@ -90,6 +117,7 @@ export default function RootLayout() {
             <LocationProvider>
               <GameProvider>
                 <GestureHandlerRootView style={styles.container}>
+                  <NotificationRegistrar />
                   <RootLayoutNav />
                 </GestureHandlerRootView>
               </GameProvider>

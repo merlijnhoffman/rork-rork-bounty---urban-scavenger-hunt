@@ -14,6 +14,9 @@ declare module 'https://deno.land/std@0.168.0/http/server.ts' {
   ): void;
 }
 
+// deno-lint-ignore no-explicit-any
+type SupabaseQueryBuilder = any;
+
 declare module 'https://esm.sh/@supabase/supabase-js@2' {
   export function createClient(
     url: string,
@@ -26,8 +29,6 @@ declare module 'https://esm.sh/@supabase/supabase-js@2' {
         deleteUser(userId: string): Promise<{ error: Error | null }>;
       };
     };
-    from(table: string): {
-      delete(): { eq(field: string, value: string): Promise<{ error: Error | null }> };
-    };
+    from(table: string): SupabaseQueryBuilder;
   };
 }
