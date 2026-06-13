@@ -120,7 +120,13 @@ export default function EventZoneMap({
             styles.pulseRing,
             {
               opacity: pulseOpacity,
-              transform: [{ scale: Animated.add(1, Animated.multiply(pulseOpacity, 0.08)) }],
+              transform: [{
+                scale: pulseOpacity.interpolate({
+                  inputRange: [0.25, 1],
+                  outputRange: [1.02, 1.08],
+                  extrapolate: 'clamp',
+                }),
+              }],
             },
           ]}
           pointerEvents="none"

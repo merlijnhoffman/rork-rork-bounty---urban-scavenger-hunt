@@ -1,18 +1,23 @@
 
 import { Platform } from 'react-native';
 import Purchases, { PurchasesOffering, PurchasesPackage, CustomerInfo } from 'react-native-purchases';
+
+declare const __DEV__: boolean;
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TICKET } from '@/constants/payment';
 
 function getRCApiKey(): string | undefined {
-  if (__DEV__ || Platform.OS === 'web') {
-    return process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY;
+  const testKey = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY;
+  const iosKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
+  const androidKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    return testKey ?? Platform.select({ ios: iosKey, android: androidKey, default: undefined });
   }
-  return Platform.select({
-    ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
-    android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
-    default: process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY,
-  });
+  if (Platform.OS === 'web') {
+    return testKey ?? iosKey ?? androidKey;
+  }
+  return Platform.select({ ios: iosKey, android: androidKey, default: testKey });
 }
 
 let isRCConfigured = false;

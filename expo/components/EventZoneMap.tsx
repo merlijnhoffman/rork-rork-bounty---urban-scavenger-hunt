@@ -22,6 +22,8 @@ export default function EventZoneMap({
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const prevRadiusRef = useRef<number>(radiusMeters);
+  const iframeReadyRef = useRef<boolean>(false);
+  const pendingZoneRef = useRef<Record<string, unknown> | null>(null);
   const initialRadius = useMemo<number>(() => Math.max(1, Math.round(radiusMeters)), []);
 
   const sendMessage = useCallback((data: Record<string, unknown>) => {
@@ -40,15 +42,31 @@ export default function EventZoneMap({
     const radiusChanged = prevRadiusRef.current !== radiusMeters;
     prevRadiusRef.current = radiusMeters;
 
-    sendMessage({
+    const payload = {
       type: 'updateZone',
       latitude: centerLatitude,
       longitude: centerLongitude,
       radius: Math.max(1, Math.round(radiusMeters)),
       duration: 600,
       triggerBurst: radiusChanged,
-    });
+    };
+
+    if (iframeReadyRef.current) {
+      sendMessage(payload);
+    } else {
+      pendingZoneRef.current = payload;
+    }
   }, [centerLatitude, centerLongitude, radiusMeters, mapLoaded, sendMessage]);
+
+  // Send user location to iframe when available (doesn't trigger iframe reload)
+  useEffect(() => {
+    if (!userLocation || !iframeReadyRef.current) return;
+    sendMessage({
+      type: 'userLocation',
+      latitude: userLocation.latitude,
+      longitude: userLocation.longitude,
+    });
+  }, [userLocation, sendMessage]);
 
   useEffect(() => {
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
@@ -65,6 +83,34 @@ export default function EventZoneMap({
       );
     }
   }, []);
+
+  // Listen for iframe 'ready' signal and flush pending messages
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data?.type !== 'zoneMapReady') return;
+      iframeReadyRef.current = true;
+
+      // Flush any pending zone update
+      if (pendingZoneRef.current) {
+        sendMessage(pendingZoneRef.current);
+        pendingZoneRef.current = null;
+      }
+
+      // Re-send user location if available
+      if (userLocation) {
+        sendMessage({
+          type: 'userLocation',
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+        });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [sendMessage, userLocation]);
 
   useEffect(() => {
     const timer = setTimeout(() => setMapLoaded(true), 200);
@@ -137,15 +183,12 @@ export default function EventZoneMap({
           var targetMarker = L.marker([${centerLatitude}, ${centerLongitude}], { icon: targetIcon }).addTo(map);
 
           var userMarker = null;
-          ${userLocation ? `
-            var userIcon = L.divIcon({
-              className: 'user-marker',
-              html: '<div style="width:14px;height:14px;border-radius:50%;background:#10B981;border:3px solid #FFF;box-shadow:0 0 8px rgba(16,185,129,0.6);"></div>',
-              iconSize: [14, 14],
-              iconAnchor: [7, 7],
-            });
-            userMarker = L.marker([${userLocation.latitude}, ${userLocation.longitude}], { icon: userIcon }).addTo(map);
-          ` : ''}
+          var userIcon = L.divIcon({
+            className: 'user-marker',
+            html: '<div style="width:14px;height:14px;border-radius:50%;background:#10B981;border:3px solid #FFF;box-shadow:0 0 8px rgba(16,185,129,0.6);"></div>',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+          });
 
           var rafId = null;
           function easeInOut(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
@@ -170,7 +213,8 @@ export default function EventZoneMap({
           }
 
           window.addEventListener('message', function(e) {
-            if (e && e.data && e.data.type === 'updateZone') {
+            if (!e || !e.data) return;
+            if (e.data.type === 'updateZone') {
               animateZone(e.data.latitude, e.data.longitude, e.data.radius, e.data.duration || 600);
 
               // Trigger burst ripple when radius changes (admin adjusts zone)
@@ -184,13 +228,22 @@ export default function EventZoneMap({
                   burstEl.classList.remove('burst-ring');
                 });
               }
+            } else if (e.data.type === 'userLocation') {
+              if (!userMarker) {
+                userMarker = L.marker([e.data.latitude, e.data.longitude], { icon: userIcon }).addTo(map);
+              } else {
+                userMarker.setLatLng([e.data.latitude, e.data.longitude]);
+              }
             }
           });
+
+          // Signal parent that iframe is ready to receive messages
+          window.parent.postMessage({ type: 'zoneMapReady' }, '*');
         </script>
       </body>
       </html>
     `;
-  }, [initialRadius, userLocation]);
+  }, [initialRadius]);
 
   const mapDataUri = `data:text/html;charset=utf-8,${encodeURIComponent(mapHtml)}`;
 

@@ -16,7 +16,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 
 void SplashScreen.preventAutoHideAsync();
 
-configureRevenueCat();
+try { configureRevenueCat(); } catch {}
 
 const queryClient = new QueryClient();
 
