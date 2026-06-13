@@ -136,7 +136,7 @@ serve(async (req: Request) => {
  * 1. Create the push_tokens table in your Supabase SQL editor:
  *
  *    CREATE TABLE IF NOT EXISTS push_tokens (
- *      user_id TEXT PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+ *      user_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
  *      push_token TEXT NOT NULL,
  *      platform TEXT NOT NULL,
  *      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
