@@ -39,7 +39,6 @@ export default function EventZoneMap({
   // Post zone updates to the iframe map
   useEffect(() => {
     if (!mapLoaded) return;
-    const radiusChanged = prevRadiusRef.current !== radiusMeters;
     prevRadiusRef.current = radiusMeters;
 
     const payload = {
@@ -48,7 +47,6 @@ export default function EventZoneMap({
       longitude: centerLongitude,
       radius: Math.max(1, Math.round(radiusMeters)),
       duration: 600,
-      triggerBurst: radiusChanged,
     };
 
     if (iframeReadyRef.current) {
@@ -126,28 +124,53 @@ export default function EventZoneMap({
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
-          body { margin: 0; padding: 0; background: #000; }
+          body { margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
           #map { width: 100%; height: 100vh; }
           .leaflet-control-attribution { display: none !important; }
-          @keyframes pulse-ring {
-            0% { r: 18; opacity: 0.6; }
-            100% { r: 28; opacity: 0; }
+          .map-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
           }
-          @keyframes burst-ring {
-            0% { r: 18; opacity: 1; stroke-width: 3; }
-            100% { r: 52; opacity: 0; stroke-width: 1; }
+          .map-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid rgba(255,255,255,0.15);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #F59E0B;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0;
+            transition: background 0.15s;
           }
-          .pulse-ring {
-            animation: pulse-ring 2s ease-out infinite;
-          }
-          .burst-ring {
-            animation: burst-ring 1s ease-out forwards;
-          }
+          .map-btn:hover { background: rgba(0,0,0,0.85); }
+          .map-btn.btn-locate { color: #10B981; }
         </style>
       </head>
       <body>
         <div id="map"></div>
+        <div class="map-controls">
+          <button class="map-btn" id="btnCenterZone" title="Center on hunt zone">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+          </button>
+          <button class="map-btn btn-locate" id="btnCenterUser" title="Center on my location">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="8" opacity="0.35"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/></svg>
+          </button>
+        </div>
         <script>
+          var ZONE_LAT = ${centerLatitude};
+          var ZONE_LNG = ${centerLongitude};
+          var ZONE_RAD = ${initialRadius};
+
           var map = L.map('map', { zoomControl: true, attributionControl: false })
             .setView([${centerLatitude}, ${centerLongitude}], 14);
 
@@ -161,26 +184,7 @@ export default function EventZoneMap({
             weight: 3,
             fillColor: '${AMBER}',
             fillOpacity: 0.15,
-            className: 'pulse-circle',
           }).addTo(map);
-
-          var pulseRing = L.circleMarker([${centerLatitude}, ${centerLongitude}], {
-            radius: 18,
-            color: '${AMBER}',
-            weight: 2.5,
-            fillColor: 'transparent',
-            fillOpacity: 0,
-            className: 'pulse-ring',
-            interactive: false,
-          }).addTo(map);
-
-          var targetIcon = L.divIcon({
-            className: 'target-marker',
-            html: '<div style="width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,0.25);border:2px solid ${AMBER};display:flex;align-items:center;justify-content:center;"><div style="width:10px;height:10px;border-radius:50%;background:${AMBER};"></div></div>',
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
-          });
-          var targetMarker = L.marker([${centerLatitude}, ${centerLongitude}], { icon: targetIcon }).addTo(map);
 
           var userMarker = null;
           var userIcon = L.divIcon({
@@ -190,6 +194,7 @@ export default function EventZoneMap({
             iconAnchor: [7, 7],
           });
 
+          // --- Animate zone changes ---
           var rafId = null;
           function easeInOut(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
           function animateZone(targetLat, targetLng, targetRadius, duration) {
@@ -205,29 +210,33 @@ export default function EventZoneMap({
               var r = startRadius + (targetRadius - startRadius) * e;
               huntCircle.setLatLng([lat, lng]);
               huntCircle.setRadius(r);
-              targetMarker.setLatLng([lat, lng]);
-              pulseRing.setLatLng([lat, lng]);
+              ZONE_LAT = targetLat;
+              ZONE_LNG = targetLng;
+              ZONE_RAD = targetRadius;
               if (t < 1) rafId = requestAnimationFrame(step);
             }
             rafId = requestAnimationFrame(step);
           }
 
+          // --- Center buttons ---
+          document.getElementById('btnCenterZone').addEventListener('click', function() {
+            var d = Math.max(0.005, (ZONE_RAD / 50000) * 2);
+            map.flyTo([ZONE_LAT, ZONE_LNG], Math.max(13, map.getZoom()), { duration: 0.6 });
+          });
+
+          document.getElementById('btnCenterUser').addEventListener('click', function() {
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(function(pos) {
+                map.flyTo([pos.coords.latitude, pos.coords.longitude], Math.max(14, map.getZoom()), { duration: 0.6 });
+              });
+            }
+          });
+
+          // --- Message bridge ---
           window.addEventListener('message', function(e) {
             if (!e || !e.data) return;
             if (e.data.type === 'updateZone') {
               animateZone(e.data.latitude, e.data.longitude, e.data.radius, e.data.duration || 600);
-
-              // Trigger burst ripple when radius changes (admin adjusts zone)
-              if (e.data.triggerBurst) {
-                var burstEl = pulseRing.getElement();
-                burstEl.classList.remove('burst-ring');
-                void burstEl.offsetWidth; // force reflow
-                burstEl.classList.add('burst-ring');
-                burstEl.addEventListener('animationend', function handler() {
-                  burstEl.removeEventListener('animationend', handler);
-                  burstEl.classList.remove('burst-ring');
-                });
-              }
             } else if (e.data.type === 'userLocation') {
               if (!userMarker) {
                 userMarker = L.marker([e.data.latitude, e.data.longitude], { icon: userIcon }).addTo(map);
@@ -237,7 +246,7 @@ export default function EventZoneMap({
             }
           });
 
-          // Signal parent that iframe is ready to receive messages
+          // Signal parent that iframe is ready
           window.parent.postMessage({ type: 'zoneMapReady' }, '*');
         </script>
       </body>

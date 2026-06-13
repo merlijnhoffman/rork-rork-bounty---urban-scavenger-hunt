@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, Animated } from 'react-native';
-import { MapPin, Target } from 'lucide-react-native';
-import MapView, { Circle, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { MapPin, Target, Crosshair, LocateFixed } from 'lucide-react-native';
+import MapView, { Circle, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Colors from '@/constants/colors';
 
@@ -23,60 +23,19 @@ export default function EventZoneMap({
 }: EventZoneMapProps) {
   const mapRef = useRef<MapView | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const pulseOpacity = useRef(new Animated.Value(1)).current;
-  const burstScale = useRef(new Animated.Value(1)).current;
-  const burstOpacity = useRef(new Animated.Value(0)).current;
-  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
-
-  const startBurst = useCallback(() => {
-    burstScale.setValue(1);
-    burstOpacity.setValue(1);
-    Animated.parallel([
-      Animated.timing(burstScale, {
-        toValue: 2.6,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.timing(burstOpacity, {
-        toValue: 0,
-        duration: 900,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [burstScale, burstOpacity]);
-
-  // Restart the subtle pulse loop whenever radius changes
-  useEffect(() => {
-    loopRef.current?.stop();
-    pulseOpacity.setValue(1);
-    startBurst();
-
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseOpacity, {
-          toValue: 0.25,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseOpacity, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    pulse.start();
-    loopRef.current = pulse;
-    return () => { pulse.stop(); loopRef.current = null; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [radiusMeters]);
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted' || !mounted) return;
+        if (status === 'granted' && mounted) {
+          const loc = await Location.getLastKnownPositionAsync({});
+          if (loc && mounted) {
+            setUserCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+          }
+        }
       } catch (err) {
         if (__DEV__) console.warn('[EventZoneMap] location permission error:', err);
       } finally {
@@ -99,38 +58,38 @@ export default function EventZoneMap({
     );
   }, [centerLatitude, centerLongitude, radiusMeters]);
 
+  const centerOnZone = () => {
+    mapRef.current?.animateToRegion(
+      {
+        latitude: centerLatitude,
+        longitude: centerLongitude,
+        latitudeDelta: Math.max(0.005, (radiusMeters / 50000) * 2),
+        longitudeDelta: Math.max(0.005, (radiusMeters / 50000) * 2),
+      },
+      600
+    );
+  };
+
+  const centerOnUser = async () => {
+    try {
+      const loc = await Location.getCurrentPositionAsync({});
+      mapRef.current?.animateToRegion(
+        {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          latitudeDelta: Math.max(0.005, (radiusMeters / 50000) * 2),
+          longitudeDelta: Math.max(0.005, (radiusMeters / 50000) * 2),
+        },
+        600
+      );
+    } catch (err) {
+      if (__DEV__) console.warn('[EventZoneMap] getCurrentPosition error:', err);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.mapWrapper}>
-        {/* Burst ripple on radius change */}
-        <Animated.View
-          style={[
-            styles.pulseRing,
-            styles.burstRing,
-            {
-              opacity: burstOpacity,
-              transform: [{ scale: burstScale }],
-            },
-          ]}
-          pointerEvents="none"
-        />
-        {/* Subtle continuous pulse */}
-        <Animated.View
-          style={[
-            styles.pulseRing,
-            {
-              opacity: pulseOpacity,
-              transform: [{
-                scale: pulseOpacity.interpolate({
-                  inputRange: [0.25, 1],
-                  outputRange: [1.02, 1.08],
-                  extrapolate: 'clamp',
-                }),
-              }],
-            },
-          ]}
-          pointerEvents="none"
-        />
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFill}
@@ -151,12 +110,17 @@ export default function EventZoneMap({
             strokeColor={AMBER}
             strokeWidth={3}
           />
-          <Marker
-            coordinate={{ latitude: centerLatitude, longitude: centerLongitude }}
-            title={zoneName ?? 'Hunt Zone'}
-            pinColor={AMBER}
-          />
         </MapView>
+
+        {/* Map control buttons */}
+        <View style={styles.mapControls}>
+          <TouchableOpacity style={styles.mapBtn} onPress={centerOnZone} activeOpacity={0.7}>
+            <Crosshair color={AMBER} size={18} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.mapBtn} onPress={centerOnUser} activeOpacity={0.7}>
+            <LocateFixed color="#10B981" size={18} />
+          </TouchableOpacity>
+        </View>
 
         {isLoading && (
           <View style={styles.loadingOverlay} pointerEvents="none">
@@ -198,6 +162,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden' as const,
     backgroundColor: C.dark.background,
   },
+  mapControls: {
+    position: 'absolute' as const,
+    top: 10,
+    right: 10,
+    gap: 6,
+    zIndex: 20,
+  },
+  mapBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center' as const,
@@ -224,30 +205,6 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
-  },
-  pulseRing: {
-    position: 'absolute' as const,
-    top: '50%' as const,
-    left: '50%' as const,
-    width: 36,
-    height: 36,
-    marginLeft: -18,
-    marginTop: -18,
-    borderRadius: 18,
-    borderWidth: 2.5,
-    borderColor: AMBER,
-    backgroundColor: 'transparent',
-    zIndex: 10,
-    shadowColor: AMBER,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  burstRing: {
-    borderWidth: 3,
-    shadowOpacity: 0.9,
-    shadowRadius: 12,
   },
   statValue: {
     fontSize: 13,
