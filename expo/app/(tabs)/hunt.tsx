@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock } from 'lucide-react-native';
+import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -72,6 +72,7 @@ export default function HuntScreen() {
   const [unlockedHints, setUnlockedHints] = useState<Set<string>>(new Set());
   const [showHintConfirm, setShowHintConfirm] = useState<string | null>(null);
   const [hintsHydrated, setHintsHydrated] = useState<boolean>(false);
+  const cluesScrollRef = useRef<ScrollView>(null);
 
   const hintStorageKey = currentEvent ? `hints:${currentEvent.id}` : null;
 
@@ -678,6 +679,10 @@ export default function HuntScreen() {
     }
   };
 
+  const scrollToZone = useCallback(() => {
+    cluesScrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, []);
+
   if (shouldShowHunt) {
     return (
       <View style={styles.container}>
@@ -770,7 +775,11 @@ export default function HuntScreen() {
             
           </View>
           
-          <ScrollView style={styles.cluesContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            ref={cluesScrollRef}
+            style={styles.cluesContainer}
+            showsVerticalScrollIndicator={false}
+          >
             {eventZone && currentZoneRadius !== null && (
               <View style={styles.zoneMapWrapper}>
                 <View style={styles.zoneMapHeader}>
@@ -878,6 +887,19 @@ export default function HuntScreen() {
                 </Text>
               </View>
             )}
+
+            {liveClues.length > 1 && (
+              <TouchableOpacity
+                style={styles.scrollToZoneButton}
+                onPress={scrollToZone}
+                activeOpacity={0.7}
+              >
+                <Crosshair color={Colors.accent.primary} size={16} />
+                <Text style={styles.scrollToZoneText}>Back to Hunt Zone</Text>
+                <ChevronUp color={Colors.accent.primary} size={16} />
+              </TouchableOpacity>
+            )}
+
             <View style={{ height: 40 }} />
           </ScrollView>
           
@@ -1950,6 +1972,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.dark.textSecondary,
     textAlign: 'center',
+  },
+  scrollToZoneButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    marginTop: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.18)',
+  },
+  scrollToZoneText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: C.accent.primary,
+    letterSpacing: 0.5,
   },
   newClueNotification: {
     position: 'absolute',
