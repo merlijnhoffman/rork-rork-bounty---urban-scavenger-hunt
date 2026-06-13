@@ -578,9 +578,42 @@ export default function HuntScreen() {
   const isHuntActive = currentEvent?.status === 'live';
   const shouldShowHunt = hasTicket && isHuntActive && joinedLiveHunt;
 
+  const handleClaimFreeTicket = async () => {
+    if (!user || !currentEvent) return;
+    const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const { error } = await supabase
+      .from('tickets')
+      .insert({
+        user_id: user.id,
+        event_id: currentEvent.id,
+        status: 'active',
+        verification_code: verificationCode,
+      });
+
+    if (error) {
+      console.error('[FreeTicket] Error inserting ticket:', error.message);
+      Alert.alert('Error', 'Failed to claim ticket. Please try again.');
+      return;
+    }
+
+    await ticketQuery.refetch();
+    Alert.alert(
+      'Ticket Claimed!',
+      'You\'re in! Check your profile for your verification code.',
+      [
+        { text: 'View Profile', onPress: () => router.push('/profile') },
+        { text: 'OK' },
+      ]
+    );
+  };
+
   const handlePurchaseTicket = () => {
     if (!isLoggedIn) {
       router.push('/signup');
+      return;
+    }
+    if (TICKET.isFree) {
+      void handleClaimFreeTicket();
       return;
     }
     setShowPaywall(true);
@@ -1093,8 +1126,8 @@ export default function HuntScreen() {
               <View style={styles.firstEventBanner}>
                 <Zap color={Colors.accent.primary} size={20} />
                 <View style={styles.firstEventTextContainer}>
-                  <Text style={styles.firstEventText}>{TICKET.currency} {TICKET.price.toFixed(2)} PER TICKET</Text>
-                  <Text style={styles.firstEventSubtext}>One-time purchase. Includes all hunt features and prize eligibility.</Text>
+                  <Text style={styles.firstEventText}>{TICKET.isFree ? 'FREE TICKET' : `${TICKET.currency} ${TICKET.price.toFixed(2)} PER TICKET`}</Text>
+                  <Text style={styles.firstEventSubtext}>{TICKET.isFree ? 'Claim your free ticket to join the hunt and compete for the prize.' : 'One-time purchase. Includes all hunt features and prize eligibility.'}</Text>
                 </View>
               </View>
             </Animated.View>
@@ -1112,7 +1145,7 @@ export default function HuntScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.ticketButtonText}>
-                  {isLoading || isPurchasing ? 'PROCESSING...' : `BUY TICKET - ${offering?.availablePackages?.[0]?.product?.priceString ?? `${TICKET.currency} ${TICKET.price.toFixed(2)}`}`}
+                  {isLoading || isPurchasing ? 'PROCESSING...' : TICKET.isFree ? 'CLAIM FREE TICKET' : `BUY TICKET - ${offering?.availablePackages?.[0]?.product?.priceString ?? `${TICKET.currency} ${TICKET.price.toFixed(2)}`}`}
                 </Text>
                 {!isLoading && (
                   <ChevronRight color={'#000'} size={18} />
@@ -1127,7 +1160,7 @@ export default function HuntScreen() {
             <View style={styles.stepsContainer}>
               {[
                 { num: '1', text: 'Create your secure account (one ticket per account)', icon: LogIn },
-                { num: '2', text: `Purchase your ticket for \u20AC${TICKET.price.toFixed(2)}`, icon: Zap },
+                { num: '2', text: TICKET.isFree ? 'Claim your free ticket' : `Purchase your ticket for \u20AC${TICKET.price.toFixed(2)}`, icon: Zap },
                 { num: '3', text: 'Receive real-time clues during the live event', icon: Eye },
                 { num: '4', text: 'Find the target first and claim the prize', icon: Trophy },
               ].map((step, i) => (
