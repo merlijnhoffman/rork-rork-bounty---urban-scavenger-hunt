@@ -43,6 +43,7 @@
     "expo-notifications": "~0.32.12",
     "expo-router": "~6.0.14",
     "expo-screen-capture": "~8.0.9",
+    "expo-screen-orientation": "~9.0.9",
     "expo-splash-screen": "~31.0.10",
     "expo-status-bar": "~3.0.8",
     "expo-symbols": "~1.0.7",
