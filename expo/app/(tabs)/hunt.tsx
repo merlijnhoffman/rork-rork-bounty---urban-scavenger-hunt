@@ -931,11 +931,15 @@ export default function HuntScreen() {
           <View style={styles.hintModalOverlay}>
             <View style={styles.hintModalContent}>
               <View style={styles.hintModalIcon}>
-                <Lightbulb color={Colors.accent.primary} size={32} />
+                <Lightbulb color={Colors.accent.primary} size={36} />
               </View>
-              <Text style={styles.hintModalTitle}>Use Hint Token?</Text>
+              <Text style={styles.hintModalTitle}>Reveal a Hint?</Text>
+              <View style={styles.hintModalTokenBadge}>
+                <Text style={styles.hintModalTokenCount}>{hintTokens}</Text>
+                <Text style={styles.hintModalTokenLabel}>token{hintTokens !== 1 ? 's' : ''} left</Text>
+              </View>
               <Text style={styles.hintModalDesc}>
-                Spend 1 hint token to reveal an extra clue for this riddle. You have {hintTokens} token{hintTokens !== 1 ? 's' : ''} remaining.
+                Spending a token will unlock additional clues to help you solve this riddle.
               </Text>
               <View style={styles.hintModalActions}>
                 <TouchableOpacity
@@ -943,7 +947,7 @@ export default function HuntScreen() {
                   onPress={() => setShowHintConfirm(null)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.hintModalCancelText}>Keep Token</Text>
+                  <Text style={styles.hintModalCancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.hintModalConfirm}
@@ -951,7 +955,7 @@ export default function HuntScreen() {
                   activeOpacity={0.8}
                 >
                   <Unlock color="#000" size={16} />
-                  <Text style={styles.hintModalConfirmText}>Unlock Hint</Text>
+                  <Text style={styles.hintModalConfirmText}>Reveal</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2533,59 +2537,84 @@ const styles = StyleSheet.create({
     borderColor: C.dark.border,
   },
   hintModalIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 72,
+    height: 72,
+    borderRadius: 22,
     backgroundColor: C.accent.primaryMuted,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    marginBottom: 18,
+    marginBottom: 20,
   },
   hintModalTitle: {
     fontSize: 20,
     fontWeight: '800' as const,
     color: C.dark.text,
-    marginBottom: 10,
+    marginBottom: 12,
     textAlign: 'center' as const,
+  },
+  hintModalTokenBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'baseline' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    marginBottom: 14,
+    backgroundColor: C.dark.card,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  hintModalTokenCount: {
+    fontSize: 22,
+    fontWeight: '800' as const,
+    color: C.accent.primary,
+  },
+  hintModalTokenLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: C.dark.textSecondary,
   },
   hintModalDesc: {
     fontSize: 14,
     color: C.dark.textSecondary,
     textAlign: 'center' as const,
     lineHeight: 21,
-    marginBottom: 24,
+    marginBottom: 22,
+    paddingHorizontal: 4,
   },
   hintModalActions: {
     flexDirection: 'row' as const,
-    gap: 12,
+    gap: 10,
     width: '100%' as const,
   },
   hintModalCancel: {
     flex: 1,
     backgroundColor: C.dark.card,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 15,
+    borderRadius: 14,
     alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     borderWidth: 1,
     borderColor: C.dark.border,
   },
   hintModalCancelText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600' as const,
     color: C.dark.textSecondary,
   },
   hintModalConfirm: {
     flex: 1,
     backgroundColor: C.accent.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 15,
+    borderRadius: 14,
     alignItems: 'center' as const,
-    flexDirection: 'row' as const,
     justifyContent: 'center' as const,
-    gap: 6,
+    flexDirection: 'row' as const,
+    gap: 7,
   },
   hintModalConfirmText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700' as const,
     color: '#000',
   },
