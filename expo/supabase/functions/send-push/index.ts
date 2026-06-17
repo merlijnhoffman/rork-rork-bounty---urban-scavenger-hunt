@@ -145,7 +145,7 @@ serve(async (req: Request) => {
  *    ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
  *
  *    CREATE POLICY "Users can upsert their own token" ON push_tokens
- *      FOR ALL USING (auth.uid()::text = user_id);
+ *      FOR ALL USING (auth.uid() = user_id);
  *
  * 2. Set up Database Webhooks in the Supabase Dashboard:
  *    (Recommended for push notifications to work when the app is in background)
