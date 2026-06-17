@@ -153,25 +153,26 @@ serve(async (req: Request) => {
  *    Webhook 1 — Event Published:
  *      Table: events
  *      Events: INSERT
- *      URL: https://<project>.supabase.co/functions/v1/send-push
+ *      URL: https://jmlqcdcegejeunblzemh.supabase.co/functions/v1/send-push
  *      HTTP Method: POST
  *      Payload: { "type": "event_published", "eventId": "{{record.id}}", "city": "{{record.city}}" }
  *
  *    Webhook 2 — Event Started:
  *      Table: events
  *      Events: UPDATE (filter: status = 'live')
- *      URL: https://<project>.supabase.co/functions/v1/send-push
+ *      URL: https://jmlqcdcegejeunblzemh.supabase.co/functions/v1/send-push
  *      HTTP Method: POST
  *      Payload: { "type": "event_started", "eventId": "{{record.id}}", "city": "{{record.city}}" }
  *
  *    Webhook 3 — New Clue:
  *      Table: clues
  *      Events: INSERT
- *      URL: https://<project>.supabase.co/functions/v1/send-push
+ *      URL: https://jmlqcdcegejeunblzemh.supabase.co/functions/v1/send-push
  *      HTTP Method: POST
  *      Payload: { "type": "new_clue", "eventId": "{{record.event_id}}", "clueText": "{{record.clue_text}}" }
  *
- * Until webhooks are configured, push notifications still work when the app
- * detects changes via realtime (foreground) — see hunt.tsx triggerPushForNewClue.
+ * Foreground fallback: the app detects new clues via realtime (hunt.tsx) and
+ * shows an in-app "New clue received!" banner. Database webhooks (above) handle
+ * push notifications when the app is in the background.
  * =============================================================================
  */
