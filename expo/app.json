@@ -54,6 +54,14 @@
     },
     "plugins": [
       [
+        "expo-build-properties",
+        {
+          "ios": {
+            "privacyManifestPath": "./PrivacyInfo.xcprivacy"
+          }
+        }
+      ],
+      [
         "expo-router",
         {
           "origin": "https://rork.com/"
@@ -86,7 +94,8 @@
           ],
           "enableBackgroundRemoteNotifications": false
         }
-      ]
+      ],
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true

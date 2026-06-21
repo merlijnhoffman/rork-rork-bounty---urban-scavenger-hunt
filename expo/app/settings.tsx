@@ -21,6 +21,10 @@ import {
   Trash2,
   HelpCircle,
   RefreshCw,
+  Download,
+  ToggleLeft,
+  ToggleRight,
+  ClipboardList,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Colors from '@/constants/colors';
@@ -31,13 +35,16 @@ import { supabase } from '@/lib/supabase';
 const C = Colors;
 
 const TERMS_URL = 'https://bounty.app/terms';
-const PRIVACY_URL = 'https://bounty.app/privacy';
+const SUPPORT_EMAIL = 'privacy@bounty.app';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const { restorePurchases, isRestoring, hasHuntAccess } = usePayment();
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [locationConsent, setLocationConsent] = useState<boolean>(true);
+  const [diagnosticConsent, setDiagnosticConsent] = useState<boolean>(true);
 
   const handleRestore = useCallback(async () => {
     try {
@@ -110,6 +117,71 @@ export default function SettingsScreen() {
       ],
     );
   }, [performDelete]);
+
+  const handleExportData = useCallback(async () => {
+    try {
+      setIsExporting(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        throw new Error('You must be signed in to export your data.');
+      }
+
+      const { data, error } = await supabase.functions.invoke('export-data', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to export data');
+      }
+
+      Alert.alert(
+        'Data Export Requested',
+        'Your personal data export has been requested. We will process it and send it to your registered email within 30 days, as required by GDPR Art. 12(3).',
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to export data.';
+      Alert.alert('Export Failed', `${message}\n\nContact ${SUPPORT_EMAIL} for assistance.`);
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
+
+  const handleToggleConsent = useCallback((type: 'location' | 'diagnostic') => {
+    const label = type === 'location' ? 'Location Data' : 'Diagnostic Data';
+    Alert.alert(
+      `Withdraw ${label} Consent`,
+      `Withdrawing consent may limit app functionality. You can re-enable it at any time.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Withdraw',
+          style: 'destructive',
+          onPress: () => {
+            if (type === 'location') {
+              setLocationConsent(false);
+            } else {
+              setDiagnosticConsent(false);
+            }
+            Alert.alert(
+              'Consent Updated',
+              'Your consent preference has been saved. Some features may be limited.',
+              [{ text: 'OK' }],
+            );
+          },
+        },
+      ],
+    );
+  }, []);
+
+  const handleReenableConsent = useCallback((type: 'location' | 'diagnostic') => {
+    if (type === 'location') {
+      setLocationConsent(true);
+    } else {
+      setDiagnosticConsent(true);
+    }
+    Alert.alert('Consent Restored', 'Your consent has been re-enabled.');
+  }, []);
 
   const handleSignOut = useCallback(async () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -188,6 +260,85 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {user && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <ClipboardList color={C.accent.primary} size={16} />
+                <Text style={styles.sectionTitle}>Data &amp; Privacy</Text>
+              </View>
+              <View style={styles.card}>
+                {renderLink(
+                  <Shield color={C.dark.textSecondary} size={18} />,
+                  'Privacy Policy (GDPR)',
+                  () => router.push('/privacy' as any),
+                )}
+                <View style={styles.rowDivider} />
+                {renderLink(
+                  isExporting ? (
+                    <ActivityIndicator color={C.accent.primary} size="small" />
+                  ) : (
+                    <Download color={C.dark.textSecondary} size={18} />
+                  ),
+                  isExporting ? 'Exporting...' : 'Export My Data (Art. 15 &amp; 20)',
+                  handleExportData,
+                  { disabled: isExporting, right: <ChevronRight color={C.dark.textMuted} size={18} /> },
+                )}
+                <View style={styles.rowDivider} />
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  onPress={() =>
+                    locationConsent
+                      ? handleToggleConsent('location')
+                      : handleReenableConsent('location')
+                  }
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.settingIconWrap}>
+                    {locationConsent ? (
+                      <ToggleRight color={C.status.success} size={22} />
+                    ) : (
+                      <ToggleLeft color={C.dark.textMuted} size={22} />
+                    )}
+                  </View>
+                  <View style={styles.settingContent}>
+                    <Text style={styles.settingTitle}>Location Data Consent</Text>
+                    <Text style={styles.settingSubtitle}>
+                      {locationConsent
+                        ? 'Required for hunt functionality'
+                        : 'Withdrawn \u2013 hunts will not track your location'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <View style={styles.rowDivider} />
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  onPress={() =>
+                    diagnosticConsent
+                      ? handleToggleConsent('diagnostic')
+                      : handleReenableConsent('diagnostic')
+                  }
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.settingIconWrap}>
+                    {diagnosticConsent ? (
+                      <ToggleRight color={C.status.success} size={22} />
+                    ) : (
+                      <ToggleLeft color={C.dark.textMuted} size={22} />
+                    )}
+                  </View>
+                  <View style={styles.settingContent}>
+                    <Text style={styles.settingTitle}>Diagnostic Data</Text>
+                    <Text style={styles.settingSubtitle}>
+                      {diagnosticConsent
+                        ? 'Helps us improve the app'
+                        : 'Withdrawn \u2013 no crash reports or analytics'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Info color={C.accent.primary} size={16} />
@@ -203,13 +354,13 @@ export default function SettingsScreen() {
               {renderLink(
                 <Shield color={C.dark.textSecondary} size={18} />,
                 'Privacy Policy',
-                () => Linking.openURL(PRIVACY_URL),
+                () => router.push('/privacy' as any),
               )}
               <View style={styles.rowDivider} />
               {renderLink(
                 <HelpCircle color={C.dark.textSecondary} size={18} />,
-                'Help & Support',
-                () => Linking.openURL('mailto:support@bounty.app'),
+                'Contact DPO / Support',
+                () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`),
               )}
             </View>
           </View>
@@ -340,6 +491,11 @@ const styles = StyleSheet.create({
   },
   settingTitleDanger: {
     color: C.status.danger,
+  },
+  settingSubtitle: {
+    fontSize: 12,
+    color: C.dark.textMuted,
+    marginTop: 2,
   },
   rowDivider: {
     height: 1,

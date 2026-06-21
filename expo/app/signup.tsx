@@ -17,7 +17,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Mail, Lock, Eye, EyeOff, Phone, ChevronDown, ArrowLeft, Crosshair, Search } from 'lucide-react-native';
+import {
+  Mail, Lock, Eye, EyeOff, Phone, ChevronDown, ArrowLeft, Crosshair, Search, Check, Square,
+} from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 const C = Colors;
@@ -254,6 +256,8 @@ export default function SignupScreen() {
   const [showCountryPicker, setShowCountryPicker] = useState<boolean>(false);
   const [codeSent, setCodeSent] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [ageConfirmed, setAgeConfirmed] = useState<boolean>(false);
+  const [privacyConsent, setPrivacyConsent] = useState<boolean>(false);
 
   const validateEmail = (emailStr: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -283,6 +287,16 @@ export default function SignupScreen() {
 
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (!ageConfirmed) {
+      Alert.alert('Age Verification Required', 'You must confirm that you are at least 16 years old to create an account.');
+      return;
+    }
+
+    if (!privacyConsent) {
+      Alert.alert('Consent Required', 'You must agree to the Privacy Policy and data processing to create an account.');
       return;
     }
 
@@ -607,10 +621,53 @@ export default function SignupScreen() {
                     </TouchableOpacity>
                   </View>
 
+                  <View style={styles.consentSection}>
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() => setAgeConfirmed(!ageConfirmed)}
+                      activeOpacity={0.7}
+                      testID="age-checkbox"
+                    >
+                      {ageConfirmed ? (
+                        <Check size={20} color={C.accent.primary} />
+                      ) : (
+                        <Square size={20} color={C.dark.textMuted} />
+                      )}
+                      <Text style={styles.checkboxLabel}>
+                        I confirm that I am at least 16 years old
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.checkboxRow}
+                      onPress={() => setPrivacyConsent(!privacyConsent)}
+                      activeOpacity={0.7}
+                      testID="privacy-consent-checkbox"
+                    >
+                      {privacyConsent ? (
+                        <Check size={20} color={C.accent.primary} />
+                      ) : (
+                        <Square size={20} color={C.dark.textMuted} />
+                      )}
+                      <Text style={styles.checkboxLabel}>
+                        I consent to the processing of my personal data as described in the{' '}
+                        <Text
+                          style={styles.checkboxLink}
+                          onPress={() => router.push('/privacy' as any)}
+                        >
+                          Privacy Policy
+                        </Text>
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
                   <TouchableOpacity
-                    style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+                    style={[
+                      styles.primaryButton,
+                      (loading || !ageConfirmed || !privacyConsent) && styles.primaryButtonDisabled,
+                    ]}
                     onPress={handleStep1Continue}
-                    disabled={loading}
+                    disabled={loading || !ageConfirmed || !privacyConsent}
                     activeOpacity={0.8}
                     testID="continue-button"
                   >
@@ -928,6 +985,24 @@ const styles = StyleSheet.create({
     color: C.accent.primary,
     fontSize: 14,
     fontWeight: '600' as const,
+  },
+  consentSection: {
+    gap: 12,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: C.dark.textSecondary,
+    lineHeight: 19,
+  },
+  checkboxLink: {
+    color: C.accent.primary,
+    textDecorationLine: 'underline' as const,
   },
   pickerOverlay: {
     flex: 1,
