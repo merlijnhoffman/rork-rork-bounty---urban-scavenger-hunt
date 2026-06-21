@@ -4,7 +4,5 @@
     "lib": ["deno.window"],
     "strict": false
   },
-  "imports": {
-    "stripe": "npm:stripe@^17.5.0"
-  }
+  "imports": {}
 }
