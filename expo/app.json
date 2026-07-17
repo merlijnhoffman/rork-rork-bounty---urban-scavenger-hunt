@@ -17,9 +17,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.rork.rork-bounty-urban-scavenger-hunt",
       "infoPlist": {
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
-        "NSLocationAlwaysUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
-        "NSLocationWhenInUseUsageDescription": "Allow $(PRODUCT_NAME) to use your location.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Bounty uses your location to guide you to hunt zones, measure distance to the target, and show your position on the map.",
+        "NSLocationAlwaysUsageDescription": "Bounty uses your location to guide you to hunt zones, measure distance to the target, and show your position on the map.",
+        "NSLocationWhenInUseUsageDescription": "Bounty uses your location to guide you to hunt zones, measure distance to the target, and show your position on the map.",
         "UIBackgroundModes": [
           "location"
         ]
@@ -73,14 +73,14 @@
           "isAndroidForegroundServiceEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,
           "isIosBackgroundLocationEnabled": true,
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Bounty uses your location to guide you to hunt zones, measure distance to the target, and show your position on the map."
         }
       ],
       [
         "expo-maps",
         {
           "requestLocationPermission": true,
-          "locationPermission": "Allow $(PRODUCT_NAME) to use your location"
+          "locationPermission": "Bounty uses your location to guide you to hunt zones, measure distance to the target, and show your position on the map."
         }
       ],
       [

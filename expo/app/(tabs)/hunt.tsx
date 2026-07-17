@@ -518,8 +518,8 @@ export default function HuntScreen() {
       
       if (status !== 'granted') {
         Alert.alert(
-          'Location Permission Required',
-          'Please enable location permissions to use the distance meter.'
+          'Location Needed',
+          'Turn on location to measure your distance to the Bounty.'
         );
         setIsCalculatingDistance(false);
         return;
@@ -547,8 +547,8 @@ export default function HuntScreen() {
     } catch (error) {
       if (__DEV__) console.error('Error getting location:', error);
       Alert.alert(
-        'Error',
-        'Failed to get your location. Please make sure location services are enabled.'
+        'Couldn\'t Get Location',
+        'Make sure location services are turned on in your device settings.'
       );
     } finally {
       setIsCalculatingDistance(false);
