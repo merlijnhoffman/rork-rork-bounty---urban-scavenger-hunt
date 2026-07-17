@@ -2,16 +2,14 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
-import { Alert } from 'react-native';
 import { router } from 'expo-router';
 
 export interface AuthState {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>;
-  verifyPhone: (phoneNumber: string, code: string) => Promise<{ success: boolean; error?: string }>;
-  signIn: (phoneNumber: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -22,8 +20,7 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
 
   useEffect(() => {
     let isMounted = true;
-    
-    // Get initial session asynchronously - don't block render
+
     const initSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -36,7 +33,6 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
       }
     };
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -47,7 +43,6 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
       }
     });
 
-    // Initialize session after setting up listener
     initSession();
 
     return () => {
@@ -56,142 +51,119 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
     };
   }, []);
 
-  const signUp = useCallback(async (phoneNumber: string) => {
-    try {
-      console.log('Sending OTP to:', phoneNumber);
-      
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: phoneNumber,
-      });
-
-      if (error) {
-        console.error('OTP send error:', error);
-        let errorMessage = error.message;
-        
-        if (error.message.includes('not a valid phone number')) {
-          errorMessage = 'Invalid phone number format. Please use format: +1234567890';
-        } else if (error.message.includes('sms_send_failed')) {
-          errorMessage = 'Failed to send SMS. Please check your phone number and try again.';
-        }
-        
-        return { success: false, error: errorMessage };
-      }
-
-      console.log('OTP sent successfully');
-      return { success: true };
-    } catch (error) {
-      console.error('Unexpected OTP send error:', error);
-      return { success: false, error: 'An unexpected error occurred. Please try again.' };
-    }
-  }, []);
-
-  const verifyPhone = useCallback(async (phoneNumber: string, code: string) => {
+  const signUp = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
-      console.log('Verifying OTP for:', phoneNumber);
-      
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: phoneNumber,
-        token: code,
-        type: 'sms',
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
       });
 
       if (error) {
-        console.error('OTP verification error:', error);
+        console.error('Sign up error:', error);
         let errorMessage = error.message;
-        
-        if (error.message.includes('expired')) {
-          errorMessage = 'Verification code has expired. Please request a new one.';
-        } else if (error.message.includes('invalid')) {
-          errorMessage = 'Invalid verification code. Please try again.';
+        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+          errorMessage = 'An account with this email already exists. Try signing in instead.';
+        } else if (error.message.includes('rate limit')) {
+          errorMessage = 'Too many attempts. Please wait a few minutes before trying again.';
         }
-        
         return { success: false, error: errorMessage };
       }
 
+      // Create profile row if user was created
       if (data.user) {
-        console.log('User verified successfully:', data.user.id);
-        
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
             id: data.user.id,
-            phone_number: phoneNumber,
-          }, {
-            onConflict: 'id',
-          });
+            email: email.trim(),
+          }, { onConflict: 'id' });
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          return { success: false, error: 'Account created but profile setup failed. Please contact support.' };
         }
-        
-        console.log('Profile created/updated successfully');
       }
 
       return { success: true };
     } catch (error) {
-      console.error('Unexpected verification error:', error);
+      console.error('Unexpected sign up error:', error);
       return { success: false, error: 'An unexpected error occurred. Please try again.' };
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const signIn = useCallback(async (phoneNumber: string, code: string) => {
-    return verifyPhone(phoneNumber, code);
-  }, [verifyPhone]);
+  const signIn = useCallback(async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
+      if (error) {
+        console.error('Sign in error:', error);
+        let errorMessage = error.message;
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please try again.';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'Please confirm your email before signing in. Check your inbox for a confirmation link.';
+        }
+        return { success: false, error: errorMessage };
+      }
 
+      if (data.user) {
+        // Update profile email in case it changed
+        await supabase
+          .from('profiles')
+          .upsert({ id: data.user.id, email: email.trim() }, { onConflict: 'id' });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected sign in error:', error);
+      return { success: false, error: 'An unexpected error occurred. Please try again.' };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const signOut = useCallback(async () => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
-      
       if (error) {
         console.error('Sign out error:', error);
-        Alert.alert('Error', 'Failed to sign out');
-        return;
       }
-      
-      // Redirect to home screen after successful sign out
       router.replace('/hunt');
     } catch (error) {
       console.error('Unexpected sign out error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   }, []);
-
-
 
   return useMemo(() => ({
     user,
     session,
     loading,
     signUp,
-    verifyPhone,
     signIn,
     signOut,
-  }), [user, session, loading, signUp, verifyPhone, signIn, signOut]);
+  }), [user, session, loading, signUp, signIn, signOut]);
 });
 
-// Safe wrapper hook that ensures the context is available
 export function useAuth() {
   const context = useAuthInternal();
   if (!context) {
-    // Return default values instead of throwing error to prevent crashes
     return {
       user: null,
       session: null,
       loading: false,
       signUp: async () => ({ success: false, error: 'Auth context not available' }),
-      verifyPhone: async () => ({ success: false, error: 'Auth context not available' }),
       signIn: async () => ({ success: false, error: 'Auth context not available' }),
       signOut: async () => {},
-    };
+    } satisfies AuthState;
   }
   return context;
 }

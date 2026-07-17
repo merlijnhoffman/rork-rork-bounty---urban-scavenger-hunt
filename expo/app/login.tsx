@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, Crosshair } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
@@ -22,6 +22,7 @@ const C = Colors;
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -53,37 +54,16 @@ export default function LoginScreen() {
       return;
     }
 
-    try {
-      setLoading(true);
-      console.log('Signing in with email:', email);
+    setLoading(true);
+    const result = await signIn(email, password);
+    setLoading(false);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
-      });
-
-      if (error) {
-        console.error('Sign in error:', error);
-        let errorMessage = error.message;
-        
-        if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password. Please try again.';
-        }
-        
-        Alert.alert('Sign In Failed', errorMessage);
-        return;
-      }
-
-      if (data.user) {
-        console.log('User signed in successfully:', data.user.id);
-        router.replace('/' as any);
-      }
-    } catch (error) {
-      console.error('Unexpected sign in error:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setLoading(false);
+    if (!result.success) {
+      Alert.alert('Sign In Failed', result.error || 'Something went wrong. Please try again.');
+      return;
     }
+
+    router.replace('/' as any);
   };
 
   return (
