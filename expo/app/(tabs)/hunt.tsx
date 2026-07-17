@@ -503,7 +503,7 @@ export default function HuntScreen() {
     const d = new Date(startISO);
     if (isNaN(d.getTime())) return 'TBA';
     try {
-      return d.toLocaleString(undefined, {
+      return d.toLocaleString('en-GB', {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -515,7 +515,7 @@ export default function HuntScreen() {
       });
     } catch {
       try {
-        return d.toLocaleString(undefined, {
+        return d.toLocaleString('en-GB', {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
