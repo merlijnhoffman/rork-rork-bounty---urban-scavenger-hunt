@@ -499,8 +499,9 @@ export default function HuntScreen() {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
-        hour: 'numeric',
+        hour: '2-digit',
         minute: '2-digit',
+        hour12: false,
         timeZone: eventTimeZone,
         timeZoneName: 'short',
       });
@@ -510,8 +511,9 @@ export default function HuntScreen() {
           weekday: 'short',
           month: 'short',
           day: 'numeric',
-          hour: 'numeric',
+          hour: '2-digit',
           minute: '2-digit',
+          hour12: false,
         });
       } catch {
         return d.toString();
@@ -736,7 +738,7 @@ export default function HuntScreen() {
             <View style={styles.huntInfoRow}>
               <Text style={styles.huntLocation}>AMSTERDAM</Text>
               <Text style={styles.huntTimeSeparator}>|</Text>
-              <Text style={styles.huntTime}>Started at 3:00 PM CET</Text>
+              <Text style={styles.huntTime}>Started at 15:00 CET</Text>
             </View>
             
             <View style={styles.hintTokensBar}>
@@ -869,9 +871,10 @@ export default function HuntScreen() {
                     <View style={styles.clueTimestamp}>
                       <Clock color={Colors.dark.textMuted} size={13} />
                       <Text style={styles.timestampText}>
-                        {new Date(clue.timestamp).toLocaleTimeString('en-US', {
+                        {new Date(clue.timestamp).toLocaleTimeString('en-GB', {
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
+                          hour12: false
                         })}
                       </Text>
                     </View>
