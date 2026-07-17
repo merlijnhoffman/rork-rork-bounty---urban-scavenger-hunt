@@ -1174,24 +1174,33 @@ export default function HuntScreen() {
           )}
 
           <View style={styles.howItWorks}>
-            <Text style={styles.sectionTitle}>How It Works</Text>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionAccent} />
+              <View>
+                <Text style={styles.sectionTitle}>The Hunt</Text>
+                <Text style={styles.sectionSubtitle}>Four steps to the bounty</Text>
+              </View>
+            </View>
             
             <View style={styles.stepsContainer}>
               {[
-                { num: '1', text: 'Create your secure account (one ticket per account)', icon: LogIn },
-                { num: '2', text: TICKET.isFree ? 'Claim your free ticket' : `Purchase your ticket for \u20AC${TICKET.price.toFixed(2)}`, icon: Zap },
-                { num: '3', text: 'Receive real-time clues during the live event', icon: Eye },
-                { num: '4', text: 'Find the target first and claim the prize', icon: Trophy },
+                { num: '01', title: 'Gear Up', text: 'Create your hunter profile. One ticket per account keeps the chase fair.', icon: LogIn },
+                { num: '02', title: 'Lock It In', text: TICKET.isFree ? 'Claim your free ticket and secure your spot in the field.' : `Grab your ticket for \u20AC${TICKET.price.toFixed(2)} \u2014 your entry to the chase.`, icon: Zap },
+                { num: '03', title: 'Chase the Clues', text: 'Clues drop in real-time during the live hunt. Photos, videos, audio \u2014 follow every lead.', icon: Eye },
+                { num: '04', title: 'Claim the Bounty', text: 'Be the first hunter to track down the target and walk away with the cash prize.', icon: Trophy },
               ].map((step, i) => (
-                <View key={step.num} style={styles.step}>
+                <View key={step.num} style={styles.stepCard}>
+                  <View style={styles.stepNumberWatermark}>
+                    <Text style={styles.stepNumberWatermarkText}>{step.num}</Text>
+                  </View>
                   <View style={styles.stepIconContainer}>
-                    <step.icon color={Colors.accent.primary} size={18} />
+                    <step.icon color={Colors.accent.primary} size={20} />
                   </View>
                   <View style={styles.stepContent}>
-                    <Text style={styles.stepLabel}>STEP {step.num}</Text>
+                    <Text style={styles.stepTitle}>{step.title}</Text>
                     <Text style={styles.stepText}>{step.text}</Text>
                   </View>
-                  {i < 3 && <View style={styles.stepConnector} />}
+                  {i < 3 && <View style={styles.stepConnectorDot} />}
                 </View>
               ))}
             </View>
@@ -1702,53 +1711,92 @@ const styles = StyleSheet.create({
   howItWorks: {
     marginTop: 8,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 14,
+    marginBottom: 24,
+  },
+  sectionAccent: {
+    width: 4,
+    height: 44,
+    borderRadius: 2,
+    backgroundColor: C.accent.primary,
+  },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '800' as const,
+    fontSize: 26,
+    fontWeight: '900' as const,
     color: C.dark.text,
-    marginBottom: 20,
+    letterSpacing: 1,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: C.dark.textMuted,
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
   stepsContainer: {
-    gap: 0,
+    gap: 12,
   },
-  step: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  stepCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    backgroundColor: C.dark.card,
+    borderRadius: 16,
+    padding: 18,
     position: 'relative' as const,
-    paddingBottom: 24,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+    overflow: 'hidden',
+  },
+  stepNumberWatermark: {
+    position: 'absolute' as const,
+    top: -8,
+    right: -4,
+  },
+  stepNumberWatermarkText: {
+    fontSize: 64,
+    fontWeight: '900' as const,
+    color: 'rgba(245, 158, 11, 0.06)',
+    letterSpacing: -2,
   },
   stepIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: C.accent.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     marginRight: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.2)',
   },
   stepContent: {
     flex: 1,
     paddingTop: 2,
   },
-  stepLabel: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    color: C.accent.primary,
-    letterSpacing: 1.5,
+  stepTitle: {
+    fontSize: 17,
+    fontWeight: '800' as const,
+    color: C.dark.text,
     marginBottom: 4,
+    letterSpacing: 0.3,
   },
   stepText: {
-    fontSize: 15,
+    fontSize: 14,
     color: C.dark.textSecondary,
-    lineHeight: 22,
+    lineHeight: 21,
   },
-  stepConnector: {
-    position: 'absolute',
-    left: 19,
-    top: 44,
-    bottom: 4,
-    width: 2,
-    backgroundColor: C.dark.border,
+  stepConnectorDot: {
+    position: 'absolute' as const,
+    left: 38,
+    bottom: -7,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.dark.borderLight,
+    zIndex: 1,
   },
   huntHeader: {
     paddingHorizontal: 20,
