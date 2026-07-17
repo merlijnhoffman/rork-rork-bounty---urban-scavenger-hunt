@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings } from 'lucide-react-native';
+import { User, Mail, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings, RadioTower, ChevronRight } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
@@ -267,6 +267,23 @@ export default function ProfileScreen() {
               </Text>
             </View>
           )}
+
+          <TouchableOpacity
+            style={styles.bountyModeCard}
+            onPress={() => router.push('/bounty-mode')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.bountyModeIconContainer}>
+              <RadioTower color={C.accent.teal} size={22} />
+            </View>
+            <View style={styles.bountyModeContent}>
+              <Text style={styles.bountyModeTitle}>Bounty Mode</Text>
+              <Text style={styles.bountyModeSubtitle}>
+                Are you the one hiding? Broadcast your live position here
+              </Text>
+            </View>
+            <ChevronRight color={C.dark.textMuted} size={20} />
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.signOutButton}
@@ -605,6 +622,39 @@ const styles = StyleSheet.create({
     color: C.dark.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  bountyModeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.dark.card,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(20, 184, 166, 0.2)',
+    gap: 14,
+  },
+  bountyModeIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: C.accent.tealMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bountyModeContent: {
+    flex: 1,
+  },
+  bountyModeTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+    marginBottom: 2,
+  },
+  bountyModeSubtitle: {
+    fontSize: 12,
+    color: C.dark.textSecondary,
+    lineHeight: 17,
   },
 
 });

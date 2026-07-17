@@ -137,12 +137,20 @@ export default function HuntScreen() {
     void connectionsQuery.refetch();
   }, [connectionsQuery]);
 
-  const { zone: eventZone, currentRadius: currentZoneRadius } = useEventZone(
+  const { zone: eventZone, currentRadius: currentZoneRadius, bountyLocation: liveBountyLocation, isBountyActive } = useEventZone(
     currentEvent?.id ?? null,
     !!hasTicket && !!user,
   );
 
+  // Prefer the live bounty position (moving target) when available;
+  // fall back to the zone center (static) otherwise.
   const bountyLocation = useMemo(() => {
+    if (liveBountyLocation) {
+      return {
+        latitude: liveBountyLocation.latitude,
+        longitude: liveBountyLocation.longitude,
+      };
+    }
     if (eventZone) {
       return {
         latitude: eventZone.centerLatitude,
@@ -150,7 +158,7 @@ export default function HuntScreen() {
       };
     }
     return null;
-  }, [eventZone]);
+  }, [eventZone, liveBountyLocation]);
   
   useEffect(() => {
     if (!currentEvent) {
@@ -576,7 +584,9 @@ export default function HuntScreen() {
       
       Alert.alert(
         'Distance Measured',
-        `You are ${Math.round(distance)} meters away from the Bounty!`,
+        isBountyActive
+          ? `You are ${Math.round(distance)}m from the Bounty. They're moving — this was their position just now.`
+          : `You are ${Math.round(distance)} meters away from the Bounty!`,
         [{ text: 'OK' }]
       );
     } catch (error) {
@@ -800,6 +810,12 @@ export default function HuntScreen() {
                   <Text style={styles.distanceResultText}>
                     {measuredDistance}m away
                   </Text>
+                  {isBountyActive && (
+                    <View style={styles.liveTrackingBadge}>
+                      <View style={styles.liveTrackingDot} />
+                      <Text style={styles.liveTrackingText}>LIVE</Text>
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -2174,6 +2190,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900' as const,
     color: C.accent.primary,
+    letterSpacing: 1,
+  },
+  liveTrackingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginLeft: 4,
+  },
+  liveTrackingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.status.success,
+  },
+  liveTrackingText: {
+    fontSize: 10,
+    fontWeight: '900' as const,
+    color: C.status.success,
     letterSpacing: 1,
   },
   connectButton: {

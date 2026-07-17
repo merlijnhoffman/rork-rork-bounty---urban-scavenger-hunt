@@ -57,6 +57,7 @@ function RootLayoutNav() {
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="privacy" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="bounty-mode" options={{ headerShown: false }} />
       </Stack>
     </>
   );

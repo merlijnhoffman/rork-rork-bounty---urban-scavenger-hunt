@@ -201,6 +201,7 @@ export type Database = {
           price: number;
           is_active: boolean;
           status: 'scheduled' | 'live' | 'completed';
+          bounty_access_code: string | null;
           created_at: string;
         };
         Insert: {
@@ -210,6 +211,7 @@ export type Database = {
           price: number;
           is_active?: boolean;
           status?: 'scheduled' | 'live' | 'completed';
+          bounty_access_code?: string | null;
           created_at?: string;
         };
         Update: {
@@ -219,6 +221,42 @@ export type Database = {
           price?: number;
           is_active?: boolean;
           status?: 'scheduled' | 'live' | 'completed';
+          bounty_access_code?: string | null;
+          created_at?: string;
+        };
+      };
+      bounty_locations: {
+        Row: {
+          event_id: string;
+          latitude: number;
+          longitude: number;
+          accuracy: number | null;
+          heading: number | null;
+          speed: number | null;
+          is_active: boolean;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          event_id: string;
+          latitude: number;
+          longitude: number;
+          accuracy?: number | null;
+          heading?: number | null;
+          speed?: number | null;
+          is_active?: boolean;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          event_id?: string;
+          latitude?: number;
+          longitude?: number;
+          accuracy?: number | null;
+          heading?: number | null;
+          speed?: number | null;
+          is_active?: boolean;
+          updated_at?: string;
           created_at?: string;
         };
       };
