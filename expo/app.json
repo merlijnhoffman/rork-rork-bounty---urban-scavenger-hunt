@@ -20,6 +20,7 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Bounty uses your location to guide you to hunt zones, measure distance to the target, and show your position on the map.",
         "NSLocationAlwaysUsageDescription": "Bounty uses your location to guide you to hunt zones, measure distance to the target, and show your position on the map.",
         "NSLocationWhenInUseUsageDescription": "Bounty uses your location to guide you to hunt zones, measure distance to the target, and show your position on the map.",
+        "NSCameraUsageDescription": "Bounty uses the camera to scan QR codes when connecting with other hunters during a live event.",
         "UIBackgroundModes": [
           "location"
         ]
@@ -53,6 +54,12 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Bounty uses the camera to scan QR codes when connecting with other hunters during a live event."
+        }
+      ],
       [
         "expo-build-properties",
         {

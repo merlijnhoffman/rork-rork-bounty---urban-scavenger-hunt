@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp } from 'lucide-react-native';
+import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Colors from '@/constants/colors';
 
 import { supabase } from '@/lib/supabase';
+import ConnectModal from '@/components/ConnectModal';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
@@ -71,6 +72,8 @@ export default function HuntScreen() {
   const [unlockedHints, setUnlockedHints] = useState<Set<string>>(new Set());
   const [showHintConfirm, setShowHintConfirm] = useState<string | null>(null);
   const [hintsHydrated, setHintsHydrated] = useState<boolean>(false);
+  const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
+  const [connectionsCount, setConnectionsCount] = useState<number>(0);
   const cluesScrollRef = useRef<ScrollView>(null);
 
   const hintStorageKey = currentEvent ? `hints:${currentEvent.id}` : null;
@@ -103,6 +106,36 @@ export default function HuntScreen() {
     const payload = JSON.stringify({ tokens: hintTokens, unlocked: Array.from(unlockedHints) });
     AsyncStorage.setItem(hintStorageKey, payload).catch(() => {});
   }, [hintTokens, unlockedHints, hintStorageKey, hintsHydrated]);
+
+  // Fetch existing connections count for this event
+  const connectionsQuery = useQuery({
+    queryKey: ['player-connections', user?.id, currentEvent?.id],
+    queryFn: async () => {
+      if (!user || !currentEvent) return 0;
+      const { count, error } = await supabase
+        .from('player_connections')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', currentEvent.id)
+        .or(`generator_user_id.eq.${user.id},scanner_user_id.eq.${user.id}`);
+      if (error) {
+        console.error('[Connect] Error fetching connections:', error.message);
+        return 0;
+      }
+      return count ?? 0;
+    },
+    enabled: !!user && !!currentEvent && hasTicket,
+    staleTime: 10000,
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    setConnectionsCount(connectionsQuery.data ?? 0);
+  }, [connectionsQuery.data]);
+
+  const handleConnectionMade = useCallback(() => {
+    setHintTokens(prev => prev + 1);
+    void connectionsQuery.refetch();
+  }, [connectionsQuery]);
 
   const { zone: eventZone, currentRadius: currentZoneRadius } = useEventZone(
     currentEvent?.id ?? null,
@@ -767,6 +800,20 @@ export default function HuntScreen() {
                   </Text>
                 </View>
               )}
+
+              <TouchableOpacity
+                style={styles.connectButton}
+                onPress={() => setShowConnectModal(true)}
+                activeOpacity={0.8}
+              >
+                <Users color="#000" size={18} />
+                <Text style={styles.connectButtonText}>Connect with Hunters</Text>
+                {connectionsCount > 0 && (
+                  <View style={styles.connectBadge}>
+                    <Text style={styles.connectBadgeText}>{connectionsCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
             
           </View>
@@ -918,6 +965,13 @@ export default function HuntScreen() {
           </Animated.View>
         </LinearGradient>
         
+        <ConnectModal
+          visible={showConnectModal}
+          onClose={() => setShowConnectModal(false)}
+          eventId={currentEvent?.id ?? ''}
+          onConnectionMade={handleConnectionMade}
+        />
+
         <Modal
           visible={showHintConfirm !== null}
           transparent={true}
@@ -2118,6 +2172,43 @@ const styles = StyleSheet.create({
     fontWeight: '900' as const,
     color: C.accent.primary,
     letterSpacing: 1,
+  },
+  connectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.dark.card,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    position: 'relative',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: C.accent.primary,
+  },
+  connectButtonText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#000',
+    letterSpacing: 0.5,
+  },
+  connectBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: C.accent.primary,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 2,
+    borderColor: C.dark.background,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  connectBadgeText: {
+    fontSize: 11,
+    fontWeight: '900' as const,
+    color: '#000',
   },
   modalOverlay: {
     flex: 1,
