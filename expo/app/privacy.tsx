@@ -107,10 +107,6 @@ export default function PrivacyScreen() {
                 login, and service communications.
               </Text>
               <Text style={styles.bullet}>
-                <Text style={styles.bold}>Phone number</Text> &ndash; for two-factor
-                authentication and account verification.
-              </Text>
-              <Text style={styles.bullet}>
                 <Text style={styles.bold}>Precise &amp; coarse location</Text> &ndash; core
                 hunt functionality: tracking your position during active scavenger hunts.
                 Location is only collected while the app is in use or, with your permission,
@@ -140,7 +136,7 @@ export default function PrivacyScreen() {
               </Text>
               <Text style={styles.bullet}>
                 <Text style={styles.bold}>Contractual necessity (Art. 6(1)(b))</Text> &ndash;
-                Email, phone number, and User ID are required to provide the scavenger hunt
+                Email and User ID are required to provide the scavenger hunt
                 service you requested.
               </Text>
               <Text style={styles.bullet}>
@@ -186,7 +182,7 @@ export default function PrivacyScreen() {
           >
             <View style={styles.bulletList}>
               <Text style={styles.bullet}>
-                <Text style={styles.bold}>Account data</Text> (email, phone, User ID): Retained
+                <Text style={styles.bold}>Account data</Text> (email, User ID): Retained
                 while your account is active. Deleted within 30 days of account deletion.
               </Text>
               <Text style={styles.bullet}>

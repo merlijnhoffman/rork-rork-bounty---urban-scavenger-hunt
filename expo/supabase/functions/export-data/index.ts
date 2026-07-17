@@ -47,7 +47,6 @@ serve(async (req: Request) => {
       user_id: userId,
       account: {
         email: user.email ?? null,
-        phone: user.phone ?? null,
         created_at: user.created_at ?? null,
         last_sign_in: user.last_sign_in_at ?? null,
       },

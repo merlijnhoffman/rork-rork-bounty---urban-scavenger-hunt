@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Phone, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings } from 'lucide-react-native';
+import { User, Mail, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings } from 'lucide-react-native';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
@@ -171,20 +171,6 @@ export default function ProfileScreen() {
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>Email</Text>
                 <Text style={styles.detailValue}>{user.email}</Text>
-              </View>
-            </View>
-
-            <View style={styles.detailDivider} />
-
-            <View style={styles.detailRow}>
-              <View style={styles.detailIconContainer}>
-                <Phone color={C.dark.textMuted} size={18} />
-              </View>
-              <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Phone</Text>
-                <Text style={styles.detailValue}>
-                  {profileQuery.data?.phone_number || user.phone || user.user_metadata?.phone_number || 'Not provided'}
-                </Text>
               </View>
             </View>
 
