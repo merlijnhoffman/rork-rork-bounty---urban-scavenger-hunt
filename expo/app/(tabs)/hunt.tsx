@@ -60,7 +60,6 @@ export default function HuntScreen() {
   const queryClient = useQueryClient();
   const [liveClues, setLiveClues] = useState<import('@/store/game-store').Clue[]>([]);
   const fadeAnim = useMemo(() => new Animated.Value(0), []);
-  const slideUpAnim = useMemo(() => new Animated.Value(50), []);
   const opacityAnim = useMemo(() => new Animated.Value(0), []);
   const [distanceMeterUsed, setDistanceMeterUsed] = useState<boolean>(false);
   const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
@@ -121,19 +120,16 @@ export default function HuntScreen() {
   }, [eventZone]);
   
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(slideUpAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [slideUpAnim, opacityAnim]);
+    if (!currentEvent) {
+      opacityAnim.setValue(0);
+      return;
+    }
+    Animated.timing(opacityAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, [currentEvent, opacityAnim]);
   
   useEffect(() => {
     const updateCountdown = () => {
@@ -1021,10 +1017,7 @@ export default function HuntScreen() {
             <Animated.View 
               style={[
                 styles.eventCard,
-                {
-                  opacity: opacityAnim,
-                  transform: [{ translateY: slideUpAnim }]
-                }
+                { opacity: opacityAnim }
               ]}
             >
               <LinearGradient
