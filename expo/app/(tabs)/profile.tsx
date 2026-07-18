@@ -1,14 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   ScrollView,
+  Animated,
+  Easing,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings, RadioTower, ChevronRight, ScanLine } from 'lucide-react-native';
+import { User, Mail, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings, ScanLine } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
@@ -84,6 +87,37 @@ export default function ProfileScreen() {
       eventId: currentEvent.id,
     });
   }, [user, currentEvent, verificationCode]);
+
+  // Hidden Bounty Mode access: long-press the profile avatar for 10 seconds.
+  const HOLD_DURATION = 10000;
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressAnim = useRef<Animated.Value>(new Animated.Value(0)).current;
+  const [holdProgress, setHoldProgress] = useState(0);
+
+  const startHold = useCallback(() => {
+    holdTimerRef.current = setTimeout(() => {
+      router.push('/bounty-mode');
+      setHoldProgress(0);
+      progressAnim.setValue(0);
+    }, HOLD_DURATION);
+    setHoldProgress(1);
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: HOLD_DURATION,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    }).start();
+  }, [progressAnim]);
+
+  const cancelHold = useCallback(() => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    setHoldProgress(0);
+    progressAnim.stopAnimation();
+    progressAnim.setValue(0);
+  }, [progressAnim]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -165,8 +199,31 @@ export default function ProfileScreen() {
             >
               <Settings color={C.dark.textSecondary} size={22} />
             </TouchableOpacity>
-            <View style={styles.avatarLarge}>
-              <User color={C.accent.primary} size={36} />
+            <View style={styles.avatarHoldWrapper}>
+              <Pressable
+                onPressIn={startHold}
+                onPressOut={cancelHold}
+                delayLongPress={HOLD_DURATION}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel="Profile avatar"
+              >
+                <View style={styles.avatarLarge}>
+                  <User color={C.accent.primary} size={36} />
+                </View>
+                {holdProgress > 0 && (
+                  <Animated.View
+                    style={[
+                      styles.avatarHoldProgress,
+                      {
+                        width: progressAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0%', '100%'],
+                        }),
+                      },
+                    ]}
+                  />
+                )}
+              </Pressable>
             </View>
             <Text style={styles.welcomeText}>Welcome back!</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
@@ -297,23 +354,6 @@ export default function ProfileScreen() {
               </Text>
             </View>
           )}
-
-          <TouchableOpacity
-            style={styles.bountyModeCard}
-            onPress={() => router.push('/bounty-mode')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.bountyModeIconContainer}>
-              <RadioTower color={C.accent.teal} size={22} />
-            </View>
-            <View style={styles.bountyModeContent}>
-              <Text style={styles.bountyModeTitle}>Bounty Mode</Text>
-              <Text style={styles.bountyModeSubtitle}>
-                Are you the one hiding? Broadcast your live position here
-              </Text>
-            </View>
-            <ChevronRight color={C.dark.textMuted} size={20} />
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.signOutButton}
@@ -458,6 +498,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  avatarHoldWrapper: {
+    position: 'relative' as const,
+    marginBottom: 16,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  avatarHoldProgress: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    height: 3,
+    backgroundColor: C.accent.teal,
+    borderRadius: 2,
   },
   welcomeText: {
     fontSize: 24,
@@ -673,38 +727,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  bountyModeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.dark.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(20, 184, 166, 0.2)',
-    gap: 14,
-  },
-  bountyModeIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: C.accent.tealMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bountyModeContent: {
-    flex: 1,
-  },
-  bountyModeTitle: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: C.dark.text,
-    marginBottom: 2,
-  },
-  bountyModeSubtitle: {
-    fontSize: 12,
-    color: C.dark.textSecondary,
-    lineHeight: 17,
-  },
-
 });
