@@ -302,6 +302,8 @@ export type Database = {
           center_longitude: number;
           initial_radius: number;
           narrowed_percent: number;
+          /** Explicit current radius (supports expanding above initial). */
+          current_radius: number | null;
           zone_name: string | null;
           updated_at: string;
           created_at: string;
@@ -312,6 +314,7 @@ export type Database = {
           center_longitude: number;
           initial_radius: number;
           narrowed_percent?: number;
+          current_radius?: number | null;
           zone_name?: string | null;
           updated_at?: string;
           created_at?: string;
@@ -322,6 +325,7 @@ export type Database = {
           center_longitude?: number;
           initial_radius?: number;
           narrowed_percent?: number;
+          current_radius?: number | null;
           zone_name?: string | null;
           updated_at?: string;
           created_at?: string;

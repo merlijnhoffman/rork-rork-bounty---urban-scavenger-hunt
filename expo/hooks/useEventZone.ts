@@ -8,6 +8,12 @@ export interface EventZone {
   centerLongitude: number;
   initialRadius: number;
   narrowedPercent: number;
+  /**
+   * Explicit current radius, set by the admin app when it supports
+   * expanding the zone above the initial radius. When null/absent,
+   * `currentRadius` falls back to the narrowed-formula value.
+   */
+  currentRadius: number | null;
   zoneName: string | null;
   updatedAt: string;
 }
@@ -41,7 +47,7 @@ export function useEventZone(eventId: string | null | undefined, enabled: boolea
       if (!eventId) return null;
       const { data, error } = await supabase
         .from('event_zones')
-        .select('event_id, center_latitude, center_longitude, initial_radius, narrowed_percent, zone_name, updated_at')
+        .select('event_id, center_latitude, center_longitude, initial_radius, narrowed_percent, current_radius, zone_name, updated_at')
         .eq('event_id', eventId)
         .maybeSingle();
 
@@ -51,12 +57,17 @@ export function useEventZone(eventId: string | null | undefined, enabled: boolea
       }
       if (!data) return null;
 
+      const rawCurrentRadius = (data as any).current_radius;
       const zone: EventZone = {
         eventId: (data as any).event_id,
         centerLatitude: Number((data as any).center_latitude),
         centerLongitude: Number((data as any).center_longitude),
         initialRadius: Number((data as any).initial_radius),
         narrowedPercent: Math.max(0, Math.min(100, Number((data as any).narrowed_percent ?? 0))),
+        currentRadius:
+          rawCurrentRadius != null && !isNaN(Number(rawCurrentRadius))
+            ? Math.max(1, Math.round(Number(rawCurrentRadius)))
+            : null,
         zoneName: (data as any).zone_name ?? null,
         updatedAt: (data as any).updated_at,
       };
@@ -155,8 +166,13 @@ export function useEventZone(eventId: string | null | undefined, enabled: boolea
   }, [eventId, enabled, queryClient]);
 
   const zone = query.data ?? null;
+  // Prefer the explicit current_radius written by the admin app (supports
+  // expanding above the initial radius). Fall back to the narrowed formula
+  // for admin apps that only support shrinking the zone.
   const currentRadius = zone
-    ? Math.max(1, Math.round(zone.initialRadius * Math.max(0, 1 - zone.narrowedPercent / 100)))
+    ? zone.currentRadius != null
+      ? zone.currentRadius
+      : Math.max(1, Math.round(zone.initialRadius * Math.max(0, 1 - zone.narrowedPercent / 100)))
     : null;
 
   const bountyLocation = bountyQuery.data ?? null;
