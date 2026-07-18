@@ -63,8 +63,10 @@ export function useEventZone(eventId: string | null | undefined, enabled: boolea
       return zone;
     },
     enabled: !!eventId && enabled,
-    refetchInterval: 15000,
-    staleTime: 5000,
+    // Poll frequently so the bounty sees zone changes quickly even if
+    // realtime publication isn't enabled for event_zones.
+    refetchInterval: 5000,
+    staleTime: 2000,
   });
 
   // --- Live bounty location ---

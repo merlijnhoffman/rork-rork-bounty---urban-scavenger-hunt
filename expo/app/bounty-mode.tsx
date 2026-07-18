@@ -111,10 +111,18 @@ export default function BountyModeScreen() {
   }, [accessCode]);
 
   // Fetch the hunt zone for this event so the bounty can see if they're in it
-  const { zone: eventZone, currentRadius: currentZoneRadius } = useEventZone(
+  const { zone: eventZone, currentRadius: currentZoneRadius, refetch: refetchZone } = useEventZone(
     currentEvent?.id,
     !!currentEvent,
   );
+
+  // Refetch the zone the moment broadcasting goes live, so the bounty sees
+  // the current zone immediately rather than waiting for the next poll.
+  useEffect(() => {
+    if (broadcastState === 'live') {
+      void refetchZone();
+    }
+  }, [broadcastState, refetchZone]);
 
   // Pulse animation when live
   useEffect(() => {
