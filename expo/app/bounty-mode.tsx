@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Audio } from 'expo-av';
 import {
   ArrowLeft,
   Crosshair,
@@ -96,6 +97,13 @@ export default function BountyModeScreen() {
   const watchSubRef = useRef<Location.LocationSubscription | null>(null);
   const isBroadcastingRef = useRef<boolean>(false);
   const accessCodeRef = useRef<string>('');
+
+  // Zone boundary alert state
+  const [isOutsideZone, setIsOutsideZone] = useState<boolean | null>(null);
+  const [showOutsideAlert, setShowOutsideAlert] = useState<boolean>(false);
+  const wasOutsideRef = useRef<boolean>(false);
+  const alertSoundRef = useRef<Audio.Sound | null>(null);
+  const lastAlertAtRef = useRef<number>(0);
 
   // Keep refs in sync
   useEffect(() => {
@@ -321,6 +329,9 @@ export default function BountyModeScreen() {
 
     setBroadcastState('starting');
     setErrorMsg(null);
+    setIsOutsideZone(null);
+    wasOutsideRef.current = false;
+    setShowOutsideAlert(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
 
     try {
@@ -431,6 +442,10 @@ export default function BountyModeScreen() {
         void watchSubRef.current.remove();
         watchSubRef.current = null;
       }
+      if (alertSoundRef.current) {
+        void alertSoundRef.current.unloadAsync().catch(() => {});
+        alertSoundRef.current = null;
+      }
     };
   }, []);
 
@@ -462,6 +477,117 @@ export default function BountyModeScreen() {
   const hasError = broadcastState === 'error';
   const isPaused = broadcastState === 'paused';
   const showCodeEntry = broadcastState === 'idle' || hasError || isPaused;
+
+  // Preload the boundary-alert sound when broadcasting starts; unload on stop
+  useEffect(() => {
+    if (!isLive) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
+        });
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/notification_sound.wav'),
+        );
+        if (cancelled) {
+          void sound.unloadAsync();
+          return;
+        }
+        alertSoundRef.current = sound;
+      } catch (err) {
+        console.warn('[BountyMode] Could not preload alert sound:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (alertSoundRef.current) {
+        void alertSoundRef.current.unloadAsync().catch(() => {});
+        alertSoundRef.current = null;
+      }
+    };
+  }, [isLive]);
+
+  // Haversine distance between two coords in meters
+  const haversineMeters = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number => {
+    const R = 6371000;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  };
+
+  // Fire the boundary-exit alert: strong haptic pattern + sound + banner
+  const fireBoundaryAlert = useCallback(() => {
+    const now = Date.now();
+    // Throttle to once per 10s even if effect re-runs
+    if (now - lastAlertAtRef.current < 10000) return;
+    lastAlertAtRef.current = now;
+
+    setShowOutsideAlert(true);
+
+    // Heavy haptic pattern: warning + error
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    setTimeout(() => {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+    }, 350);
+
+    // Play the alert sound (reload if it failed before)
+    (async () => {
+      try {
+        const sound = alertSoundRef.current;
+        if (sound) {
+          await sound.setPositionAsync(0);
+          await sound.playAsync();
+        } else {
+          const { sound: newSound } = await Audio.Sound.createAsync(
+            require('../assets/notification_sound.wav'),
+          );
+          alertSoundRef.current = newSound;
+          await newSound.playAsync();
+        }
+      } catch (err) {
+        console.warn('[BountyMode] Alert sound playback failed:', err);
+      }
+    })();
+  }, []);
+
+  // Watch the bounty's position against the zone boundary and fire an alert on exit
+  useEffect(() => {
+    if (!isLive || !currentLocation || !eventZone || currentZoneRadius === null) {
+      setIsOutsideZone(null);
+      wasOutsideRef.current = false;
+      return;
+    }
+
+    const distance = haversineMeters(
+      currentLocation.latitude,
+      currentLocation.longitude,
+      eventZone.centerLatitude,
+      eventZone.centerLongitude,
+    );
+    const outside = distance > currentZoneRadius;
+    setIsOutsideZone(outside);
+
+    if (outside && !wasOutsideRef.current) {
+      // Transition: inside -> outside
+      fireBoundaryAlert();
+    } else if (!outside && wasOutsideRef.current) {
+      // Transition: outside -> inside, clear the banner
+      setShowOutsideAlert(false);
+    }
+    wasOutsideRef.current = outside;
+  }, [isLive, currentLocation, eventZone, currentZoneRadius, fireBoundaryAlert]);
 
   // Parse the verification QR payload scanned from a player's screen
   const parseVerificationPayload = (raw: string): VerificationPayload | null => {
@@ -699,6 +825,33 @@ export default function BountyModeScreen() {
                 : 'Enter your access code to start broadcasting'}
             </Text>
           </View>
+
+          {/* Outside-Zone Boundary Alert */}
+          {isLive && showOutsideAlert && isOutsideZone && (
+            <Animated.View style={[styles.zoneAlertBanner]}>
+              <View style={styles.zoneAlertIconRow}>
+                <Animated.View style={{ opacity: pulseAnim }}>
+                  <AlertCircle color={C.status.danger} size={24} />
+                </Animated.View>
+                <Text style={styles.zoneAlertTitle}>YOU LEFT THE HUNT ZONE</Text>
+              </View>
+              <Text style={styles.zoneAlertBody}>
+                You're no longer in play. Move back inside the amber circle on the map
+                to resume the hunt. Hunters can still see your distance but you're
+                outside the active area.
+              </Text>
+            </Animated.View>
+          )}
+
+          {/* Inside-Zone reassurance banner (subtle, only when live & back inside after being out) */}
+          {isLive && isOutsideZone === false && wasOutsideRef.current && (
+            <View style={styles.zoneReassuranceBanner}>
+              <CheckCircle2 color={C.status.success} size={18} />
+              <Text style={styles.zoneReassuranceText}>
+                Back inside the hunt zone — you're in play again.
+              </Text>
+            </View>
+          )}
 
           {/* Access Code Entry */}
           {showCodeEntry && (
@@ -1182,6 +1335,53 @@ const styles = StyleSheet.create({
     color: C.dark.textMuted,
     lineHeight: 17,
     marginTop: 10,
+  },
+  // Zone boundary alert banner
+  zoneAlertBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(239, 68, 68, 0.5)',
+    padding: 18,
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  zoneAlertIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  zoneAlertTitle: {
+    fontSize: 14,
+    fontWeight: '900' as const,
+    color: C.status.danger,
+    letterSpacing: 1,
+  },
+  zoneAlertBody: {
+    fontSize: 13,
+    color: C.dark.textSecondary,
+    lineHeight: 18,
+  },
+  // Reassurance banner (back inside)
+  zoneReassuranceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  zoneReassuranceText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: C.status.success,
+    flex: 1,
   },
   // Coords card
   coordsCard: {
