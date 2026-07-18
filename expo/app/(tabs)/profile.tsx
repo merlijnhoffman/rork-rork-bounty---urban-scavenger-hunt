@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,7 +8,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { User, Mail, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings, RadioTower, ChevronRight } from 'lucide-react-native';
+import { User, Mail, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint, Settings, RadioTower, ChevronRight, ScanLine } from 'lucide-react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
@@ -73,7 +74,17 @@ export default function ProfileScreen() {
   
   const hasTicket = ticketQuery.data?.hasTicket || false;
   const verificationCode = ticketQuery.data?.ticket?.verification_code || null;
-  
+
+  // QR payload the bounty person scans to declare this player the winner.
+  const verificationQrPayload = useMemo(() => {
+    if (!user || !currentEvent || !verificationCode) return '';
+    return JSON.stringify({
+      userId: user.id,
+      verificationCode,
+      eventId: currentEvent.id,
+    });
+  }, [user, currentEvent, verificationCode]);
+
   const handleSignOut = async () => {
     await signOut();
   };
@@ -239,13 +250,32 @@ export default function ProfileScreen() {
                   <QrCode color="#FFF" size={22} />
                   <Text style={styles.verificationTitle}>Verification Code</Text>
                 </View>
-                
+
+                <View style={styles.verificationQrWrapper}>
+                  <View style={styles.verificationQrBg}>
+                    {!!verificationQrPayload && (
+                      <QRCode
+                        value={verificationQrPayload}
+                        size={180}
+                        color={C.dark.background}
+                        backgroundColor="#FFFFFF"
+                      />
+                    )}
+                  </View>
+                  <View style={styles.verificationQrHintRow}>
+                    <ScanLine color="#FFF" size={14} />
+                    <Text style={styles.verificationQrHintText}>
+                      Show this to the bounty to win
+                    </Text>
+                  </View>
+                </View>
+
                 <View style={styles.codeContainer}>
                   <Text style={styles.verificationCode}>{verificationCode}</Text>
                 </View>
                 
                 <Text style={styles.verificationNote}>
-                  Present this code to claim your prize if you find the target first!
+                  Present this code (or let the bounty scan the QR) to claim your prize if you find the target first!
                 </Text>
                 
                 <View style={styles.secureNotice}>
@@ -542,6 +572,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
+  },
+  verificationQrWrapper: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  verificationQrBg: {
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 10,
+  },
+  verificationQrHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  verificationQrHintText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#FFF',
   },
   verificationCode: {
     fontSize: 24,

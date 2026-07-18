@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users } from 'lucide-react-native';
+import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users, Crown } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -74,6 +74,11 @@ export default function HuntScreen() {
   const [hintsHydrated, setHintsHydrated] = useState<boolean>(false);
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [connectionsCount, setConnectionsCount] = useState<number>(0);
+  const [eventWinner, setEventWinner] = useState<{
+    winnerUserId: string;
+    winnerEmail: string | null;
+    declaredAt: string;
+  } | null>(null);
   const cluesScrollRef = useRef<ScrollView>(null);
 
   const hintStorageKey = currentEvent ? `hints:${currentEvent.id}` : null;
@@ -131,6 +136,82 @@ export default function HuntScreen() {
   useEffect(() => {
     setConnectionsCount(connectionsQuery.data ?? 0);
   }, [connectionsQuery.data]);
+
+  // Fetch the event winner (if any) and subscribe to realtime INSERTs so the
+  // banner appears on every player's screen the instant the bounty declares.
+  const winnerQuery = useQuery({
+    queryKey: ['event-winner', currentEvent?.id],
+    queryFn: async () => {
+      if (!currentEvent) return null;
+      const { data, error } = await supabase
+        .from('event_winners')
+        .select('winner_user_id, winner_email, declared_at')
+        .eq('event_id', currentEvent.id)
+        .maybeSingle();
+      if (error) {
+        console.error('[Winner] Error fetching:', error.message);
+        return null;
+      }
+      if (!data) return null;
+      return {
+        winnerUserId: (data as any).winner_user_id,
+        winnerEmail: (data as any).winner_email ?? null,
+        declaredAt: (data as any).declared_at,
+      };
+    },
+    enabled: !!currentEvent,
+    staleTime: 10000,
+    refetchInterval: 20000,
+  });
+
+  useEffect(() => {
+    if (winnerQuery.data) {
+      setEventWinner(winnerQuery.data);
+    }
+  }, [winnerQuery.data]);
+
+  // Realtime: event_winners INSERT + events UPDATE (status -> completed)
+  useEffect(() => {
+    if (!currentEvent) return;
+    const channelName = `hunt-winner-${currentEvent.id}-${Date.now()}`;
+    const sub = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'event_winners',
+          filter: `event_id=eq.${currentEvent.id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          setEventWinner({
+            winnerUserId: row.winner_user_id,
+            winnerEmail: row.winner_email ?? null,
+            declaredAt: row.declared_at,
+          });
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'events',
+          filter: `id=eq.${currentEvent.id}`,
+        },
+        () => {
+          void winnerQuery.refetch();
+          void queryClient.invalidateQueries({ queryKey: ['current-event'] });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void sub.unsubscribe();
+    };
+  }, [currentEvent, queryClient, winnerQuery]);
 
   const handleConnectionMade = useCallback(() => {
     setHintTokens(prev => prev + 1);
@@ -744,6 +825,29 @@ export default function HuntScreen() {
                 <Text style={styles.statusPillText}>ACTIVE</Text>
               </View>
             </View>
+
+            {/* Winner banner — shown to all players when a winner is declared */}
+            {eventWinner && (
+              <View style={styles.winnerBanner}>
+                <View style={styles.winnerBannerTop}>
+                  <Crown color={Colors.accent.primary} size={22} />
+                  <Text style={styles.winnerBannerTitle}>WE HAVE A WINNER</Text>
+                </View>
+                <Text style={styles.winnerBannerEmail} numberOfLines={1}>
+                  {eventWinner.winnerEmail || 'A hunter'} found the bounty!
+                </Text>
+                {eventWinner.winnerUserId === user?.id ? (
+                  <View style={styles.winnerYouBadge}>
+                    <Trophy color="#000" size={12} />
+                    <Text style={styles.winnerYouBadgeText}>THAT'S YOU — CONGRATS!</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.winnerBannerSubtext}>
+                    The hunt has ended. Thanks for playing!
+                  </Text>
+                )}
+              </View>
+            )}
             
             <View style={styles.huntInfoRow}>
               <Text style={styles.huntLocation}>AMSTERDAM</Text>
@@ -1921,6 +2025,55 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700' as const,
     color: C.status.success,
+    letterSpacing: 1,
+  },
+  // Winner banner (live hunt)
+  winnerBanner: {
+    backgroundColor: C.accent.primaryMuted,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.35)',
+    marginBottom: 14,
+    alignItems: 'center',
+  },
+  winnerBannerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  winnerBannerTitle: {
+    fontSize: 13,
+    fontWeight: '900' as const,
+    color: C.accent.primary,
+    letterSpacing: 1.5,
+  },
+  winnerBannerEmail: {
+    fontSize: 16,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  winnerBannerSubtext: {
+    fontSize: 13,
+    color: C.dark.textSecondary,
+    textAlign: 'center',
+  },
+  winnerYouBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: C.accent.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  winnerYouBadgeText: {
+    fontSize: 11,
+    fontWeight: '900' as const,
+    color: '#000',
     letterSpacing: 1,
   },
   huntInfoRow: {

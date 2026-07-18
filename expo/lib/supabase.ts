@@ -408,6 +408,35 @@ export type Database = {
           created_at?: string;
         };
       };
+      event_winners: {
+        Row: {
+          id: string;
+          event_id: string;
+          winner_user_id: string;
+          winner_email: string | null;
+          verification_code: string;
+          declared_at: string;
+          declare_distance_m: number | null;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          winner_user_id: string;
+          winner_email?: string | null;
+          verification_code: string;
+          declared_at?: string;
+          declare_distance_m?: number | null;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          winner_user_id?: string;
+          winner_email?: string | null;
+          verification_code?: string;
+          declared_at?: string;
+          declare_distance_m?: number | null;
+        };
+      };
     };
   };
 };

@@ -10,11 +10,13 @@ import {
   TextInput,
   Platform,
   Linking,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import {
   ArrowLeft,
   Crosshair,
@@ -29,6 +31,11 @@ import {
   AlertCircle,
   Zap,
   Shield,
+  ScanLine,
+  Trophy,
+  X,
+  Crown,
+  Loader,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Colors from '@/constants/colors';
@@ -42,6 +49,20 @@ const UPDATE_INTERVAL_MS = 8000;
 const STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
 type BroadcastState = 'idle' | 'starting' | 'live' | 'paused' | 'error';
+
+type WinnerScanState = 'idle' | 'scanning' | 'verifying' | 'success' | 'error';
+
+type VerificationPayload = {
+  userId: string;
+  verificationCode: string;
+  eventId: string;
+};
+
+type WinnerInfo = {
+  winnerUserId: string;
+  winnerEmail: string | null;
+  declaredAt: string;
+} | null;
 
 export default function BountyModeScreen() {
   const insets = useSafeAreaInsets();
@@ -60,6 +81,14 @@ export default function BountyModeScreen() {
   const [lastUpdate, setLastUpdate] = useState<number | null>(null);
   const [updateCount, setUpdateCount] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Winner declaration state (QR scanner shown while broadcasting)
+  const [showWinnerScanner, setShowWinnerScanner] = useState<boolean>(false);
+  const [winnerScanState, setWinnerScanState] = useState<WinnerScanState>('idle');
+  const [winnerScanError, setWinnerScanError] = useState<string>('');
+  const [declaredWinner, setDeclaredWinner] = useState<WinnerInfo>(null);
+  const [hasScanned, setHasScanned] = useState<boolean>(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const pulseAnim = useRef(new Animated.Value(0.3)).current;
   const watchSubRef = useRef<Location.LocationSubscription | null>(null);
@@ -131,6 +160,82 @@ export default function BountyModeScreen() {
     enabled: !!currentEvent,
     staleTime: 5000,
   });
+
+  // Check if a winner has already been declared for this event
+  const winnerQuery = useQuery<WinnerInfo>({
+    queryKey: ['event-winner', currentEvent?.id],
+    queryFn: async () => {
+      if (!currentEvent) return null;
+      const { data, error } = await supabase
+        .from('event_winners')
+        .select('winner_user_id, winner_email, declared_at')
+        .eq('event_id', currentEvent.id)
+        .maybeSingle();
+      if (error) {
+        console.error('[BountyMode] Error fetching winner:', error.message);
+        return null;
+      }
+      if (!data) return null;
+      return {
+        winnerUserId: (data as any).winner_user_id,
+        winnerEmail: (data as any).winner_email ?? null,
+        declaredAt: (data as any).declared_at,
+      };
+    },
+    enabled: !!currentEvent,
+    staleTime: 10000,
+    refetchInterval: 15000,
+  });
+
+  useEffect(() => {
+    if (winnerQuery.data) {
+      setDeclaredWinner(winnerQuery.data);
+    }
+  }, [winnerQuery.data]);
+
+  // Realtime: listen for a winner being declared while broadcasting
+  useEffect(() => {
+    if (!currentEvent) return;
+    const channelName = `bounty-winner-${currentEvent.id}-${Date.now()}`;
+    const sub = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'event_winners',
+          filter: `event_id=eq.${currentEvent.id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          setDeclaredWinner({
+            winnerUserId: row.winner_user_id,
+            winnerEmail: row.winner_email ?? null,
+            declaredAt: row.declared_at,
+          });
+          setShowWinnerScanner(false);
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'events',
+          filter: `id=eq.${currentEvent.id}`,
+        },
+        () => {
+          // Event status changed (likely to completed) — refetch winner
+          void winnerQuery.refetch();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void sub.unsubscribe();
+    };
+  }, [currentEvent, winnerQuery]);
 
   const sendLocationUpdate = useCallback(
     async (loc: {
@@ -350,6 +455,146 @@ export default function BountyModeScreen() {
   const isPaused = broadcastState === 'paused';
   const showCodeEntry = broadcastState === 'idle' || hasError || isPaused;
 
+  // Parse the verification QR payload scanned from a player's screen
+  const parseVerificationPayload = (raw: string): VerificationPayload | null => {
+    const trimmed = raw.trim();
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (
+        parsed &&
+        typeof parsed.userId === 'string' &&
+        typeof parsed.verificationCode === 'string' &&
+        typeof parsed.eventId === 'string'
+      ) {
+        return parsed as VerificationPayload;
+      }
+    } catch {
+      // Not JSON — fall through
+    }
+    return null;
+  };
+
+  const handleWinnerScanned = useCallback(
+    async (result: { type: string; data: string }) => {
+      if (hasScanned || winnerScanState === 'verifying') return;
+
+      const payload = parseVerificationPayload(result.data);
+      if (!payload) {
+        setWinnerScanState('error');
+        setWinnerScanError('That QR code is not a player verification code. Scan the QR on a hunter\'s Profile screen.');
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setTimeout(() => setWinnerScanState('scanning'), 1800);
+        return;
+      }
+
+      if (!currentEvent || payload.eventId !== currentEvent.id) {
+        setWinnerScanState('error');
+        setWinnerScanError('This QR code is for a different event.');
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setTimeout(() => setWinnerScanState('scanning'), 1800);
+        return;
+      }
+
+      setHasScanned(true);
+      setWinnerScanState('verifying');
+      setWinnerScanError('');
+
+      const code = accessCodeRef.current;
+      const loc = currentLocation;
+
+      if (!code) {
+        setWinnerScanState('error');
+        setWinnerScanError('Access code missing. Restart your broadcast and try again.');
+        setHasScanned(false);
+        return;
+      }
+
+      if (!loc) {
+        setWinnerScanState('error');
+        setWinnerScanError('Could not read your current GPS position. Try again.');
+        setHasScanned(false);
+        return;
+      }
+
+      try {
+        const endpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/declare-winner`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accessCode: code,
+            eventId: currentEvent.id,
+            playerUserId: payload.userId,
+            verificationCode: payload.verificationCode,
+            bountyLatitude: loc.latitude,
+            bountyLongitude: loc.longitude,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          setWinnerScanState('success');
+          setDeclaredWinner({
+            winnerUserId: data.winnerUserId,
+            winnerEmail: data.winnerEmail ?? null,
+            declaredAt: data.declaredAt,
+          });
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          // Realtime will propagate to all players; also stop broadcasting.
+          setTimeout(() => {
+            setShowWinnerScanner(false);
+            void stopBroadcast();
+          }, 2200);
+        } else {
+          setWinnerScanState('error');
+          setWinnerScanError(data.error || 'Could not declare a winner.');
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          setHasScanned(false);
+          setTimeout(() => setWinnerScanState('scanning'), 2200);
+        }
+      } catch (err) {
+        console.error('[BountyMode] Declare winner error:', err);
+        setWinnerScanState('error');
+        setWinnerScanError('Network error. Check your connection and try again.');
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setHasScanned(false);
+        setTimeout(() => setWinnerScanState('scanning'), 2000);
+      }
+    },
+    [hasScanned, winnerScanState, currentEvent, currentLocation, stopBroadcast],
+  );
+
+  const openWinnerScanner = useCallback(async () => {
+    if (!isLive) {
+      Alert.alert('Not Broadcasting', 'You must be broadcasting to declare a winner.');
+      return;
+    }
+    if (declaredWinner) {
+      Alert.alert('Winner Already Declared', 'A winner has already been declared for this event.');
+      return;
+    }
+    if (!cameraPermission?.granted) {
+      const { status } = await requestCameraPermission();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Camera Needed',
+          'Bounty Mode needs camera access to scan a player\'s verification QR code.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+    }
+    setWinnerScanState('scanning');
+    setWinnerScanError('');
+    setHasScanned(false);
+    setShowWinnerScanner(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  }, [isLive, declaredWinner, cameraPermission, requestCameraPermission]);
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -531,6 +776,41 @@ export default function BountyModeScreen() {
             </View>
           )}
 
+          {/* Winner Declaration Section (only while broadcasting) */}
+          {isLive && currentEvent && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>DECLARE WINNER</Text>
+              {declaredWinner ? (
+                <View style={styles.winnerDeclaredCard}>
+                  <View style={styles.winnerCrownRow}>
+                    <Crown color={C.accent.primary} size={26} />
+                    <Text style={styles.winnerDeclaredTitle}>Winner Declared!</Text>
+                  </View>
+                  <Text style={styles.winnerDeclaredEmail} numberOfLines={1}>
+                    {declaredWinner.winnerEmail || 'A hunter'}
+                  </Text>
+                  <Text style={styles.winnerDeclaredSubtext}>
+                    The hunt has ended. Every player now sees this winner on their screen.
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.declareWinnerButton}
+                  onPress={openWinnerScanner}
+                  activeOpacity={0.8}
+                >
+                  <ScanLine color="#000" size={20} />
+                  <Text style={styles.declareWinnerButtonText}>Scan Winner's QR Code</Text>
+                </TouchableOpacity>
+              )}
+              {!declaredWinner && (
+                <Text style={styles.declareHelperText}>
+                  When a hunter finds you, scan the QR code on their Profile screen to declare them the winner. The bounty and the winner must be physically close.
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* Event Info */}
           {currentEvent && (
             <View style={styles.section}>
@@ -612,6 +892,127 @@ export default function BountyModeScreen() {
           )}
         </View>
       </LinearGradient>
+
+      {/* Winner Scanner Modal */}
+      <Modal
+        visible={showWinnerScanner}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowWinnerScanner(false)}
+      >
+        <View style={styles.winnerOverlay}>
+          <View style={[styles.winnerSheet, { paddingBottom: insets.bottom + 16 }]}>
+            {/* Header */}
+            <View style={styles.winnerHeader}>
+              <View style={styles.winnerHeaderLeft}>
+                <View style={styles.winnerHeaderIcon}>
+                  <Trophy color={C.accent.primary} size={20} />
+                </View>
+                <View>
+                  <Text style={styles.winnerHeaderTitle}>Declare Winner</Text>
+                  <Text style={styles.winnerHeaderSubtitle}>
+                    Scan the hunter's verification QR
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowWinnerScanner(false)}
+                style={styles.winnerCloseButton}
+                activeOpacity={0.7}
+              >
+                <X color={C.dark.textSecondary} size={20} />
+              </TouchableOpacity>
+            </View>
+
+            {winnerScanState === 'success' ? (
+              <View style={styles.winnerSuccessState}>
+                <View style={styles.winnerSuccessIcon}>
+                  <Crown color={C.status.success} size={48} />
+                </View>
+                <Text style={styles.winnerSuccessTitle}>Winner Declared!</Text>
+                <Text style={styles.winnerSuccessText} numberOfLines={2}>
+                  {declaredWinner?.winnerEmail || 'A hunter'} found the bounty first. All players are being notified now.
+                </Text>
+              </View>
+            ) : winnerScanState === 'verifying' ? (
+              <View style={styles.winnerVerifyingState}>
+                <Loader color={C.accent.primary} size={40} />
+                <Text style={styles.winnerVerifyingTitle}>Verifying hunter...</Text>
+                <Text style={styles.winnerVerifyingText}>
+                  Checking ticket, verification code, and proximity
+                </Text>
+              </View>
+            ) : !cameraPermission?.granted ? (
+              <View style={styles.winnerPermissionState}>
+                <ScanLine color={C.accent.primary} size={40} />
+                <Text style={styles.winnerPermissionTitle}>Camera Access Needed</Text>
+                <Text style={styles.winnerPermissionText}>
+                  Allow camera access to scan a hunter's verification QR code.
+                </Text>
+                <TouchableOpacity
+                  style={styles.winnerGrantButton}
+                  onPress={requestCameraPermission}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.winnerGrantButtonText}>Allow Camera</Text>
+                </TouchableOpacity>
+                {cameraPermission && !cameraPermission.granted && cameraPermission.canAskAgain === false && (
+                  <TouchableOpacity
+                    style={styles.winnerSettingsLink}
+                    onPress={() => Linking.openSettings()}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.winnerSettingsLinkText}>Open Settings</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={styles.winnerCameraContainer}>
+                <View style={styles.winnerCameraWrapper}>
+                  <CameraView
+                    style={styles.winnerCamera}
+                    facing="back"
+                    onBarcodeScanned={hasScanned ? undefined : handleWinnerScanned}
+                    barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                  />
+                  <View style={styles.winnerScanOverlay} pointerEvents="none">
+                    <View style={styles.winnerScanFrame}>
+                      <View style={[styles.winnerScanCorner, styles.winnerScanCornerTL]} />
+                      <View style={[styles.winnerScanCorner, styles.winnerScanCornerTR]} />
+                      <View style={[styles.winnerScanCorner, styles.winnerScanCornerBL]} />
+                      <View style={[styles.winnerScanCorner, styles.winnerScanCornerBR]} />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.winnerScanInstructions}>
+                  <ScanLine color={C.accent.primary} size={20} />
+                  <Text style={styles.winnerScanInstructionsTitle}>
+                    Point at the hunter's verification QR
+                  </Text>
+                  <Text style={styles.winnerScanInstructionsText}>
+                    Find it on their Profile screen
+                  </Text>
+                </View>
+
+                {winnerScanState === 'error' && winnerScanError ? (
+                  <View style={styles.winnerScanError}>
+                    <AlertCircle color={C.status.danger} size={14} />
+                    <Text style={styles.winnerScanErrorText}>{winnerScanError}</Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+
+            <View style={styles.winnerFooter}>
+              <Shield color={C.dark.textMuted} size={12} />
+              <Text style={styles.winnerFooterText}>
+                Anti-cheat: ticket, verification code, and GPS proximity verified.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -876,5 +1277,305 @@ const styles = StyleSheet.create({
     fontWeight: '800' as const,
     color: '#FFF',
     letterSpacing: 0.5,
+  },
+  // Declare winner section
+  declareWinnerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: C.accent.primary,
+    paddingVertical: 16,
+    borderRadius: 14,
+  },
+  declareWinnerButtonText: {
+    fontSize: 15,
+    fontWeight: '800' as const,
+    color: '#000',
+    letterSpacing: 0.3,
+  },
+  declareHelperText: {
+    fontSize: 12,
+    color: C.dark.textMuted,
+    lineHeight: 17,
+    marginTop: 10,
+  },
+  winnerDeclaredCard: {
+    backgroundColor: C.accent.primaryMuted,
+    borderRadius: 14,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.3)',
+    alignItems: 'center',
+    gap: 8,
+  },
+  winnerCrownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  winnerDeclaredTitle: {
+    fontSize: 17,
+    fontWeight: '800' as const,
+    color: C.accent.primary,
+  },
+  winnerDeclaredEmail: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+  },
+  winnerDeclaredSubtext: {
+    fontSize: 12,
+    color: C.dark.textSecondary,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  // Winner Scanner Modal
+  winnerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.88)',
+    justifyContent: 'flex-end',
+  },
+  winnerSheet: {
+    backgroundColor: C.dark.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    maxHeight: '92%',
+    borderWidth: 1,
+    borderColor: C.dark.border,
+    borderBottomWidth: 0,
+  },
+  winnerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  winnerHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  winnerHeaderIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  winnerHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    letterSpacing: 0.3,
+  },
+  winnerHeaderSubtitle: {
+    fontSize: 12,
+    color: C.dark.textMuted,
+    marginTop: 2,
+  },
+  winnerCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: C.dark.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Success state
+  winnerSuccessState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  winnerSuccessIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 28,
+    backgroundColor: C.status.successMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.25)',
+  },
+  winnerSuccessTitle: {
+    fontSize: 24,
+    fontWeight: '900' as const,
+    color: C.status.success,
+    marginBottom: 10,
+    letterSpacing: 0.5,
+  },
+  winnerSuccessText: {
+    fontSize: 15,
+    color: C.dark.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+  },
+  // Verifying state
+  winnerVerifyingState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  winnerVerifyingTitle: {
+    fontSize: 17,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  winnerVerifyingText: {
+    fontSize: 14,
+    color: C.dark.textSecondary,
+  },
+  // Permission state
+  winnerPermissionState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  winnerPermissionTitle: {
+    fontSize: 18,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  winnerPermissionText: {
+    fontSize: 14,
+    color: C.dark.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 280,
+    marginBottom: 24,
+  },
+  winnerGrantButton: {
+    backgroundColor: C.accent.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 14,
+  },
+  winnerGrantButtonText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#000',
+  },
+  winnerSettingsLink: {
+    marginTop: 12,
+  },
+  winnerSettingsLinkText: {
+    fontSize: 14,
+    color: C.accent.primary,
+    fontWeight: '600' as const,
+  },
+  // Camera container
+  winnerCameraContainer: {
+    flex: 1,
+  },
+  winnerCameraWrapper: {
+    position: 'relative',
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 300,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+  },
+  winnerCamera: {
+    flex: 1,
+  },
+  winnerScanOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  winnerScanFrame: {
+    width: 200,
+    height: 200,
+    position: 'relative',
+  },
+  winnerScanCorner: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderColor: C.accent.primary,
+  },
+  winnerScanCornerTL: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 3,
+    borderLeftWidth: 3,
+    borderTopLeftRadius: 8,
+  },
+  winnerScanCornerTR: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 3,
+    borderRightWidth: 3,
+    borderTopRightRadius: 8,
+  },
+  winnerScanCornerBL: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderBottomLeftRadius: 8,
+  },
+  winnerScanCornerBR: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderBottomRightRadius: 8,
+  },
+  winnerScanInstructions: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  winnerScanInstructionsTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: C.dark.text,
+  },
+  winnerScanInstructionsText: {
+    fontSize: 13,
+    color: C.dark.textSecondary,
+  },
+  winnerScanError: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: C.status.dangerMuted,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 14,
+  },
+  winnerScanErrorText: {
+    flex: 1,
+    fontSize: 13,
+    color: C.status.danger,
+    fontWeight: '500' as const,
+  },
+  winnerFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingTop: 16,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: C.dark.border,
+  },
+  winnerFooterText: {
+    fontSize: 12,
+    color: C.dark.textMuted,
+    fontWeight: '500' as const,
   },
 });
