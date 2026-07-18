@@ -42,6 +42,8 @@ import Colors from '@/constants/colors';
 import { useGameStore } from '@/store/game-store';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import { useEventZone } from '@/hooks/useEventZone';
+import EventZoneMap from '@/components/EventZoneMap';
 
 const C = Colors;
 
@@ -99,6 +101,12 @@ export default function BountyModeScreen() {
   useEffect(() => {
     accessCodeRef.current = accessCode;
   }, [accessCode]);
+
+  // Fetch the hunt zone for this event so the bounty can see if they're in it
+  const { zone: eventZone, currentRadius: currentZoneRadius } = useEventZone(
+    currentEvent?.id,
+    !!currentEvent,
+  );
 
   // Pulse animation when live
   useEffect(() => {
@@ -776,6 +784,23 @@ export default function BountyModeScreen() {
             </View>
           )}
 
+          {/* Zone Map — let the bounty see if they're inside the hunt zone */}
+          {isLive && eventZone && currentZoneRadius !== null && (
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>HUNT ZONE</Text>
+              <EventZoneMap
+                centerLatitude={eventZone.centerLatitude}
+                centerLongitude={eventZone.centerLongitude}
+                radiusMeters={currentZoneRadius}
+                zoneName={eventZone.zoneName ?? undefined}
+              />
+              <Text style={styles.zoneHelperText}>
+                Stay inside the amber circle. If you leave the zone, hunters can see
+                your distance but you're no longer in the hunt area.
+              </Text>
+            </View>
+          )}
+
           {/* Winner Declaration Section (only while broadcasting) */}
           {isLive && currentEvent && (
             <View style={styles.section}>
@@ -1151,6 +1176,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600' as const,
     color: C.accent.primary,
+  },
+  zoneHelperText: {
+    fontSize: 12,
+    color: C.dark.textMuted,
+    lineHeight: 17,
+    marginTop: 10,
   },
   // Coords card
   coordsCard: {
