@@ -412,6 +412,26 @@ export type Database = {
           created_at?: string;
         };
       };
+      user_sessions: {
+        Row: {
+          user_id: string;
+          session_token: string;
+          device_info: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          session_token: string;
+          device_info?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          session_token?: string;
+          device_info?: string | null;
+          updated_at?: string;
+        };
+      };
       event_winners: {
         Row: {
           id: string;
