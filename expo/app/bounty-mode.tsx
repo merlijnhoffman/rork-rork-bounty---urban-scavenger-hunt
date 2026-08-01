@@ -93,6 +93,9 @@ export default function BountyModeScreen() {
   const [hasScanned, setHasScanned] = useState<boolean>(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
+  // Stable ref so the realtime effect doesn't re-run on every query re-render
+  const winnerRefetchRef = useRef<(() => void) | null>(null);
+
   const pulseAnim = useRef(new Animated.Value(0.3)).current;
   const watchSubRef = useRef<Location.LocationSubscription | null>(null);
   const isBroadcastingRef = useRef<boolean>(false);
@@ -217,6 +220,12 @@ export default function BountyModeScreen() {
     }
   }, [winnerQuery.data]);
 
+  // Keep the refetch ref in sync so the realtime subscription can call it
+  // without depending on the entire winnerQuery object (which changes every render)
+  useEffect(() => {
+    winnerRefetchRef.current = () => void winnerQuery.refetch();
+  }, [winnerQuery]);
+
   // Realtime: listen for a winner being declared while broadcasting
   useEffect(() => {
     if (!currentEvent) return;
@@ -251,7 +260,7 @@ export default function BountyModeScreen() {
         },
         () => {
           // Event status changed (likely to completed) — refetch winner
-          void winnerQuery.refetch();
+          winnerRefetchRef.current?.();
         },
       )
       .subscribe();
@@ -259,7 +268,7 @@ export default function BountyModeScreen() {
     return () => {
       void sub.unsubscribe();
     };
-  }, [currentEvent, winnerQuery]);
+  }, [currentEvent]);
 
   const sendLocationUpdate = useCallback(
     async (loc: {
