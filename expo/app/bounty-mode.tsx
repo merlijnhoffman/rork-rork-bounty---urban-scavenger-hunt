@@ -628,13 +628,17 @@ export default function BountyModeScreen() {
   const handleWinnerScanned = useCallback(
     async (result: { type: string; data: string }) => {
       if (hasScanned || winnerScanState === 'verifying') return;
+      setHasScanned(true); // Debounce immediately — prevent rapid-fire callbacks
 
       const payload = parseVerificationPayload(result.data);
       if (!payload) {
         setWinnerScanState('error');
         setWinnerScanError('That QR code is not a player verification code. Scan the QR on a hunter\'s Profile screen.');
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setTimeout(() => setWinnerScanState('scanning'), 1800);
+        setTimeout(() => {
+          setHasScanned(false);
+          setWinnerScanState('scanning');
+        }, 1800);
         return;
       }
 
@@ -642,11 +646,13 @@ export default function BountyModeScreen() {
         setWinnerScanState('error');
         setWinnerScanError('This QR code is for a different event.');
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setTimeout(() => setWinnerScanState('scanning'), 1800);
+        setTimeout(() => {
+          setHasScanned(false);
+          setWinnerScanState('scanning');
+        }, 1800);
         return;
       }
 
-      setHasScanned(true);
       setWinnerScanState('verifying');
       setWinnerScanError('');
 
@@ -1088,37 +1094,67 @@ export default function BountyModeScreen() {
         </View>
       </LinearGradient>
 
-      {/* Winner Scanner Modal */}
+      {/* Winner Scanner Modal — full-screen camera */}
       <Modal
         visible={showWinnerScanner}
         transparent={true}
         animationType="slide"
         onRequestClose={() => setShowWinnerScanner(false)}
       >
-        <View style={styles.winnerOverlay}>
-          <View style={[styles.winnerSheet, { paddingBottom: insets.bottom + 16 }]}>
-            {/* Header */}
-            <View style={styles.winnerHeader}>
-              <View style={styles.winnerHeaderLeft}>
-                <View style={styles.winnerHeaderIcon}>
-                  <Trophy color={C.accent.primary} size={20} />
-                </View>
-                <View>
-                  <Text style={styles.winnerHeaderTitle}>Declare Winner</Text>
-                  <Text style={styles.winnerHeaderSubtitle}>
-                    Scan the hunter's verification QR
-                  </Text>
+        <View style={styles.winnerScannerRoot}>
+          {/* Camera fills the entire screen */}
+          {cameraPermission?.granted &&
+            winnerScanState !== 'success' &&
+            winnerScanState !== 'verifying' &&
+            winnerScanState !== 'idle' ? (
+            <CameraView
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              onBarcodeScanned={hasScanned ? undefined : handleWinnerScanned}
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+            />
+          ) : null}
+
+          {/* Dark overlay for non-camera states */}
+          {(winnerScanState === 'success' ||
+            winnerScanState === 'verifying' ||
+            !cameraPermission?.granted) && (
+            <View style={styles.winnerScannerDimmer} />
+          )}
+
+          {/* Top bar — close button + title */}
+          <View style={[styles.winnerScannerTopBar, { paddingTop: insets.top + 8 }]}>
+            <TouchableOpacity
+              onPress={() => setShowWinnerScanner(false)}
+              style={styles.winnerScannerCloseBtn}
+              activeOpacity={0.7}
+            >
+              <X color="#FFFFFF" size={24} />
+            </TouchableOpacity>
+            <View style={styles.winnerScannerTitleContainer}>
+              <Trophy color={C.accent.primary} size={16} />
+              <Text style={styles.winnerScannerTitle}>Declare Winner</Text>
+            </View>
+            <View style={styles.winnerScannerCloseBtn} pointerEvents="none" />
+          </View>
+
+          {/* Scan frame overlay (only when camera is active) */}
+          {cameraPermission?.granted &&
+            winnerScanState !== 'success' &&
+            winnerScanState !== 'verifying' &&
+            winnerScanState !== 'idle' && (
+              <View style={styles.winnerScannerFrameOverlay} pointerEvents="none">
+                <View style={styles.winnerScannerFrame}>
+                  <View style={[styles.winnerScanCorner, styles.winnerScanCornerTL]} />
+                  <View style={[styles.winnerScanCorner, styles.winnerScanCornerTR]} />
+                  <View style={[styles.winnerScanCorner, styles.winnerScanCornerBL]} />
+                  <View style={[styles.winnerScanCorner, styles.winnerScanCornerBR]} />
                 </View>
               </View>
-              <TouchableOpacity
-                onPress={() => setShowWinnerScanner(false)}
-                style={styles.winnerCloseButton}
-                activeOpacity={0.7}
-              >
-                <X color={C.dark.textSecondary} size={20} />
-              </TouchableOpacity>
-            </View>
+            )}
 
+          {/* Bottom content area */}
+          <View style={[styles.winnerScannerBottom, { paddingBottom: insets.bottom + 16 }]}>
             {winnerScanState === 'success' ? (
               <View style={styles.winnerSuccessState}>
                 <View style={styles.winnerSuccessIcon}>
@@ -1162,34 +1198,14 @@ export default function BountyModeScreen() {
                 )}
               </View>
             ) : (
-              <View style={styles.winnerCameraContainer}>
-                <View style={styles.winnerCameraWrapper}>
-                  <CameraView
-                    style={styles.winnerCamera}
-                    facing="back"
-                    onBarcodeScanned={hasScanned ? undefined : handleWinnerScanned}
-                    barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-                  />
-                  <View style={styles.winnerScanOverlay} pointerEvents="none">
-                    <View style={styles.winnerScanFrame}>
-                      <View style={[styles.winnerScanCorner, styles.winnerScanCornerTL]} />
-                      <View style={[styles.winnerScanCorner, styles.winnerScanCornerTR]} />
-                      <View style={[styles.winnerScanCorner, styles.winnerScanCornerBL]} />
-                      <View style={[styles.winnerScanCorner, styles.winnerScanCornerBR]} />
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.winnerScanInstructions}>
-                  <ScanLine color={C.accent.primary} size={20} />
-                  <Text style={styles.winnerScanInstructionsTitle}>
-                    Point at the hunter's verification QR
-                  </Text>
-                  <Text style={styles.winnerScanInstructionsText}>
-                    Find it on their Profile screen
-                  </Text>
-                </View>
-
+              <View style={styles.winnerScanInstructions}>
+                <ScanLine color={C.accent.primary} size={20} />
+                <Text style={styles.winnerScanInstructionsTitle}>
+                  Point at the hunter's verification QR
+                </Text>
+                <Text style={styles.winnerScanInstructionsText}>
+                  Find it on their Profile screen
+                </Text>
                 {winnerScanState === 'error' && winnerScanError ? (
                   <View style={styles.winnerScanError}>
                     <AlertCircle color={C.status.danger} size={14} />
@@ -1200,7 +1216,7 @@ export default function BountyModeScreen() {
             )}
 
             <View style={styles.winnerFooter}>
-              <Shield color={C.dark.textMuted} size={12} />
+              <Shield color="rgba(255,255,255,0.5)" size={12} />
               <Text style={styles.winnerFooterText}>
                 Anti-cheat: ticket, verification code, and GPS proximity verified.
               </Text>
@@ -1578,65 +1594,66 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 17,
   },
-  // Winner Scanner Modal
-  winnerOverlay: {
+  // Winner Scanner — full-screen camera
+  winnerScannerRoot: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.88)',
-    justifyContent: 'flex-end',
+    backgroundColor: '#000000',
   },
-  winnerSheet: {
+  winnerScannerDimmer: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: C.dark.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    maxHeight: '92%',
-    borderWidth: 1,
-    borderColor: C.dark.border,
-    borderBottomWidth: 0,
   },
-  winnerHeader: {
+  winnerScannerTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
-  winnerHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  winnerHeaderIcon: {
+  winnerScannerCloseBtn: {
     width: 40,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: C.accent.primaryMuted,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  winnerHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '800' as const,
-    color: C.dark.text,
+  winnerScannerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  winnerScannerTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
     letterSpacing: 0.3,
   },
-  winnerHeaderSubtitle: {
-    fontSize: 12,
-    color: C.dark.textMuted,
-    marginTop: 2,
-  },
-  winnerCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: C.dark.card,
+  winnerScannerFrameOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  winnerScannerFrame: {
+    width: 240,
+    height: 240,
+    position: 'relative',
+  },
+  winnerScannerBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   // Success state
   winnerSuccessState: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 20,
   },
   winnerSuccessIcon: {
     width: 80,
@@ -1666,7 +1683,7 @@ const styles = StyleSheet.create({
   // Verifying state
   winnerVerifyingState: {
     alignItems: 'center',
-    paddingVertical: 48,
+    paddingVertical: 24,
   },
   winnerVerifyingTitle: {
     fontSize: 17,
@@ -1682,7 +1699,7 @@ const styles = StyleSheet.create({
   // Permission state
   winnerPermissionState: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 20,
   },
   winnerPermissionTitle: {
     fontSize: 18,
@@ -1718,69 +1735,40 @@ const styles = StyleSheet.create({
     color: C.accent.primary,
     fontWeight: '600' as const,
   },
-  // Camera container
-  winnerCameraContainer: {
-    flex: 1,
-  },
-  winnerCameraWrapper: {
-    position: 'relative',
-    borderRadius: 20,
-    overflow: 'hidden',
-    height: 300,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.dark.border,
-  },
-  winnerCamera: {
-    flex: 1,
-  },
-  winnerScanOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  winnerScanFrame: {
-    width: 200,
-    height: 200,
-    position: 'relative',
-  },
+  // Scan corners (used in full-screen frame)
   winnerScanCorner: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderColor: C.accent.primary,
+    width: 32,
+    height: 32,
+    borderColor: '#FFFFFF',
   },
   winnerScanCornerTL: {
     top: 0,
     left: 0,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderTopLeftRadius: 8,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 10,
   },
   winnerScanCornerTR: {
     top: 0,
     right: 0,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderTopRightRadius: 8,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 10,
   },
   winnerScanCornerBL: {
     bottom: 0,
     left: 0,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: 8,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 10,
   },
   winnerScanCornerBR: {
     bottom: 0,
     right: 0,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: 8,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 10,
   },
   winnerScanInstructions: {
     alignItems: 'center',
@@ -1823,7 +1811,7 @@ const styles = StyleSheet.create({
   },
   winnerFooterText: {
     fontSize: 12,
-    color: C.dark.textMuted,
+    color: 'rgba(255,255,255,0.5)',
     fontWeight: '500' as const,
   },
 });
