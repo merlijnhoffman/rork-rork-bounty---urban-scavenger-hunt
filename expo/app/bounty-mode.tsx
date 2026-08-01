@@ -969,6 +969,9 @@ export default function BountyModeScreen() {
                 centerLongitude={eventZone.centerLongitude}
                 radiusMeters={currentZoneRadius}
                 zoneName={eventZone.zoneName ?? undefined}
+                bountyLatitude={currentLocation?.latitude ?? null}
+                bountyLongitude={currentLocation?.longitude ?? null}
+                bountyActive={isLive}
               />
               <Text style={styles.zoneHelperText}>
                 Stay inside the amber circle. If you leave the zone, hunters can see

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { MapPin, Target, Crosshair, LocateFixed } from 'lucide-react-native';
-import MapView, { Circle, PROVIDER_DEFAULT } from 'react-native-maps';
+import { MapPin, Target, Crosshair, LocateFixed, RadioTower } from 'lucide-react-native';
+import MapView, { Circle, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
 import Colors from '@/constants/colors';
 
@@ -10,6 +10,11 @@ interface EventZoneMapProps {
   centerLongitude: number;
   radiusMeters: number;
   zoneName?: string;
+  /** Live bounty position — when provided, renders a pulsing target marker */
+  bountyLatitude?: number | null;
+  bountyLongitude?: number | null;
+  /** Whether the bounty is actively broadcasting (affects marker styling) */
+  bountyActive?: boolean;
 }
 
 const AMBER = Colors.accent.primary;
@@ -20,6 +25,9 @@ export default function EventZoneMap({
   centerLongitude,
   radiusMeters,
   zoneName,
+  bountyLatitude,
+  bountyLongitude,
+  bountyActive,
 }: EventZoneMapProps) {
   const mapRef = useRef<MapView | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -110,6 +118,21 @@ export default function EventZoneMap({
             strokeColor={AMBER}
             strokeWidth={3}
           />
+
+          {/* Live bounty marker */}
+          {bountyLatitude != null && bountyLongitude != null && (
+            <Marker
+              coordinate={{ latitude: bountyLatitude, longitude: bountyLongitude }}
+              tracksViewChanges={false}
+            >
+              <View style={bountyActive ? styles.bountyMarkerActive : styles.bountyMarkerIdle}>
+                <RadioTower
+                  color={bountyActive ? '#EF4444' : '#6B7280'}
+                  size={18}
+                />
+              </View>
+            </Marker>
+          )}
         </MapView>
 
         {/* Map control buttons */}
@@ -211,5 +234,30 @@ const styles = StyleSheet.create({
     color: C.accent.primary,
     fontWeight: '800' as const,
     marginLeft: 'auto' as const,
+  },
+  bountyMarkerActive: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    borderWidth: 2,
+    borderColor: '#FFF',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  bountyMarkerIdle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(107, 114, 128, 0.85)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.6)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
 });

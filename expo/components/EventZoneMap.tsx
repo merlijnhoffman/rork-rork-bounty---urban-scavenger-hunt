@@ -8,6 +8,11 @@ interface EventZoneMapProps {
   centerLongitude: number;
   radiusMeters: number;
   zoneName?: string;
+  /** Live bounty position — when provided, renders a pulsing target marker */
+  bountyLatitude?: number | null;
+  bountyLongitude?: number | null;
+  /** Whether the bounty is actively broadcasting (affects marker styling) */
+  bountyActive?: boolean;
 }
 
 const AMBER = Colors.accent.primary;
@@ -17,6 +22,9 @@ export default function EventZoneMap({
   centerLongitude,
   radiusMeters,
   zoneName,
+  bountyLatitude,
+  bountyLongitude,
+  bountyActive,
 }: EventZoneMapProps) {
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -55,6 +63,20 @@ export default function EventZoneMap({
       pendingZoneRef.current = payload;
     }
   }, [centerLatitude, centerLongitude, radiusMeters, mapLoaded, sendMessage]);
+
+  // Post bounty location updates to the iframe map
+  useEffect(() => {
+    if (!mapLoaded || bountyLatitude == null || bountyLongitude == null) return;
+    const payload = {
+      type: 'updateBounty',
+      latitude: bountyLatitude,
+      longitude: bountyLongitude,
+      active: !!bountyActive,
+    };
+    if (iframeReadyRef.current) {
+      sendMessage(payload);
+    }
+  }, [bountyLatitude, bountyLongitude, bountyActive, mapLoaded, sendMessage]);
 
   // Send user location to iframe when available (doesn't trigger iframe reload)
   useEffect(() => {
@@ -232,6 +254,21 @@ export default function EventZoneMap({
             }
           });
 
+          // --- Bounty marker ---
+          var bountyMarker = null;
+          var bountyIconActive = L.divIcon({
+            className: 'bounty-marker',
+            html: '<div style="width:32px;height:32px;border-radius:50%;background:rgba(239,68,68,0.9);border:2px solid #FFF;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(239,68,68,0.7);"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 16.1C1 15.2 0 11.8 0 7.6c0-1.3.1-2.5.3-3.7L4.9 16.1z"/><path d="M5 5.5c0 1.6 1.4 2.9 3.1 2.9s3.1-1.3 3.1-2.9c0-1.6-1.4-2.9-3.1-2.9S5 3.9 5 5.5z"/><path d="M12.9 5.5c0 1.6 1.4 2.9 3.1 2.9s3.1-1.3 3.1-2.9c0-1.6-1.4-2.9-3.1-2.9s-3.1 1.3-3.1 2.9z"/><path d="M12.1 19.5c0-3.1 2.5-5.6 5.6-5.6s5.6 2.5 5.6 5.6H12.1z"/><path d="M5 11.5c0 2.8 2.2 5 5 5s5-2.2 5-5"/></svg></div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          });
+          var bountyIconIdle = L.divIcon({
+            className: 'bounty-marker',
+            html: '<div style="width:28px;height:28px;border-radius:50%;background:rgba(107,114,128,0.85);border:2px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 16.1C1 15.2 0 11.8 0 7.6c0-1.3.1-2.5.3-3.7L4.9 16.1z"/><path d="M5 5.5c0 1.6 1.4 2.9 3.1 2.9s3.1-1.3 3.1-2.9c0-1.6-1.4-2.9-3.1-2.9S5 3.9 5 5.5z"/></svg></div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          });
+
           // --- Message bridge ---
           window.addEventListener('message', function(e) {
             if (!e || !e.data) return;
@@ -242,6 +279,14 @@ export default function EventZoneMap({
                 userMarker = L.marker([e.data.latitude, e.data.longitude], { icon: userIcon }).addTo(map);
               } else {
                 userMarker.setLatLng([e.data.latitude, e.data.longitude]);
+              }
+            } else if (e.data.type === 'updateBounty') {
+              var icon = e.data.active ? bountyIconActive : bountyIconIdle;
+              if (!bountyMarker) {
+                bountyMarker = L.marker([e.data.latitude, e.data.longitude], { icon: icon }).addTo(map);
+              } else {
+                bountyMarker.setLatLng([e.data.latitude, e.data.longitude]);
+                bountyMarker.setIcon(icon);
               }
             }
           });

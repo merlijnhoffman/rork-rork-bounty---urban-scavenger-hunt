@@ -92,11 +92,21 @@ export function useEventZone(eventId: string | null | undefined, enabled: boolea
         .maybeSingle();
 
       if (error) {
-        console.error('[useEventZone] bounty fetch error:', error.message);
+        console.error('[useEventZone] bounty fetch error:', error.message, error.code, error.hint);
         // Don't throw — bounty location is optional, zone should still work
         return null;
       }
-      if (!data) return null;
+      if (!data) {
+        console.log('[useEventZone] No bounty_location row for event:', eventId);
+        return null;
+      }
+
+      console.log('[useEventZone] Bounty location fetched:', {
+        lat: (data as any).latitude,
+        lng: (data as any).longitude,
+        is_active: (data as any).is_active,
+        updated_at: (data as any).updated_at,
+      });
 
       const loc: BountyLocation = {
         eventId: (data as any).event_id,
@@ -111,8 +121,8 @@ export function useEventZone(eventId: string | null | undefined, enabled: boolea
       return loc;
     },
     enabled: !!eventId && enabled,
-    refetchInterval: 10000,
-    staleTime: 3000,
+    refetchInterval: 5000,
+    staleTime: 2000,
   });
 
   // Realtime: event_zones
@@ -176,19 +186,23 @@ export function useEventZone(eventId: string | null | undefined, enabled: boolea
     : null;
 
   const bountyLocation = bountyQuery.data ?? null;
-  // Only use the bounty location if it's active and updated recently (within 5 minutes)
+  // Only use the bounty location if it's active and updated recently (within 10 minutes)
   const isBountyActive = (() => {
     if (!bountyLocation || !bountyLocation.isActive) return false;
     const updatedMs = new Date(bountyLocation.updatedAt).getTime();
     if (isNaN(updatedMs)) return false;
-    return Date.now() - updatedMs < 5 * 60 * 1000;
+    return Date.now() - updatedMs < 10 * 60 * 1000;
   })();
 
   return {
     zone,
     currentRadius,
+    /** Filtered bounty location — only non-null when active & fresh */
     bountyLocation: isBountyActive ? bountyLocation : null,
+    /** Raw bounty location — always has data if a row exists, regardless of active/stale state */
+    bountyLocationRaw: bountyLocation,
     isBountyActive,
+    bountyError: bountyQuery.error as Error | null,
     isLoading: query.isLoading,
     error: query.error as Error | null,
     refetch: query.refetch,
