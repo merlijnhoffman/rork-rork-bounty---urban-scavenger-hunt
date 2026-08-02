@@ -48,7 +48,7 @@ import EventZoneMap from '@/components/EventZoneMap';
 
 const C = Colors;
 
-const UPDATE_INTERVAL_MS = 8000;
+const UPDATE_INTERVAL_MS = 5000;
 const STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
 type BroadcastState = 'idle' | 'starting' | 'live' | 'paused' | 'error';
@@ -285,7 +285,11 @@ export default function BountyModeScreen() {
         const endpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-bounty-location`;
         const response = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
           body: JSON.stringify({
             accessCode: code,
             eventId: currentEvent.id,
@@ -300,6 +304,7 @@ export default function BountyModeScreen() {
         const result = await response.json();
 
         if (!response.ok || !result.success) {
+          console.warn('[BountyMode] Location update failed:', response.status, JSON.stringify(result));
           const msg = result.error || 'Failed to update location';
           if (msg.includes('Invalid access code')) {
             setErrorMsg('The access code you entered is incorrect for this event.');
@@ -432,9 +437,13 @@ export default function BountyModeScreen() {
     if (currentEvent && accessCode.trim() && currentLocation) {
       try {
         const endpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-bounty-location`;
-        await fetch(endpoint, {
+        const response = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
           body: JSON.stringify({
             accessCode: accessCode.trim(),
             eventId: currentEvent.id,
@@ -443,6 +452,10 @@ export default function BountyModeScreen() {
             deactivate: true,
           }),
         });
+        if (!response.ok) {
+          const body = await response.text();
+          console.warn('[BountyMode] Deactivate failed:', response.status, body);
+        }
       } catch (err) {
         console.error('[BountyMode] Error deactivating:', err);
       }
@@ -677,7 +690,11 @@ export default function BountyModeScreen() {
         const endpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/declare-winner`;
         const response = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
           body: JSON.stringify({
             accessCode: code,
             eventId: currentEvent.id,
@@ -689,6 +706,10 @@ export default function BountyModeScreen() {
         });
 
         const data = await response.json();
+
+        if (!response.ok) {
+          console.warn('[BountyMode] Declare winner failed:', response.status, JSON.stringify(data));
+        }
 
         if (response.ok && data.success) {
           setWinnerScanState('success');
