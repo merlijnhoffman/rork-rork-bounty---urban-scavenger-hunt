@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users, Crown } from 'lucide-react-native';
 import * as Calendar from 'expo-calendar';
+import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EventZoneMap from '@/components/EventZoneMap';
@@ -72,6 +73,7 @@ export default function HuntScreen() {
   const [unlockedHints, setUnlockedHints] = useState<Set<string>>(new Set());
   const [showHintConfirm, setShowHintConfirm] = useState<string | null>(null);
   const [hintsHydrated, setHintsHydrated] = useState<boolean>(false);
+  const [distanceHydrated, setDistanceHydrated] = useState<boolean>(false);
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
   const [connectionsCount, setConnectionsCount] = useState<number>(0);
   const [eventWinner, setEventWinner] = useState<{
@@ -80,8 +82,11 @@ export default function HuntScreen() {
     declaredAt: string;
   } | null>(null);
   const cluesScrollRef = useRef<ScrollView>(null);
+  const prevEventStatusRef = useRef<string | null>(null);
+  const countedConnectionsRef = useRef<Set<string>>(new Set());
 
   const hintStorageKey = currentEvent ? `hints:${currentEvent.id}` : null;
+  const distanceStorageKey = currentEvent ? `distance:${currentEvent.id}` : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +116,66 @@ export default function HuntScreen() {
     const payload = JSON.stringify({ tokens: hintTokens, unlocked: Array.from(unlockedHints) });
     AsyncStorage.setItem(hintStorageKey, payload).catch(() => {});
   }, [hintTokens, unlockedHints, hintStorageKey, hintsHydrated]);
+
+  // Bug 1: Persist distance meter state across app restarts
+  useEffect(() => {
+    let cancelled = false;
+    if (!distanceStorageKey) {
+      setDistanceMeterUsed(false);
+      setMeasuredDistance(null);
+      setDistanceHydrated(true);
+      return;
+    }
+    setDistanceHydrated(false);
+    AsyncStorage.getItem(distanceStorageKey)
+      .then((raw) => {
+        if (cancelled) return;
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw) as { used?: boolean; distance?: number | null };
+            if (typeof parsed.used === 'boolean') setDistanceMeterUsed(parsed.used);
+            if (parsed.distance === null || typeof parsed.distance === 'number') setMeasuredDistance(parsed.distance ?? null);
+          } catch {}
+        }
+        setDistanceHydrated(true);
+      })
+      .catch(() => setDistanceHydrated(true));
+    return () => { cancelled = true; };
+  }, [distanceStorageKey]);
+
+  useEffect(() => {
+    if (!distanceHydrated || !distanceStorageKey) return;
+    const payload = JSON.stringify({ used: distanceMeterUsed, distance: measuredDistance });
+    AsyncStorage.setItem(distanceStorageKey, payload).catch(() => {});
+  }, [distanceMeterUsed, measuredDistance, distanceStorageKey, distanceHydrated]);
+
+  // Bug 3 & 4: When the event status transitions FROM 'completed' to another status,
+  // the admin has reset the hunt — clear all local stats and clues.
+  useEffect(() => {
+    const currentStatus = currentEvent?.status ?? null;
+    const prevStatus = prevEventStatusRef.current;
+    const eventId = currentEvent?.id;
+
+    if (prevStatus === 'completed' && currentStatus && currentStatus !== 'completed' && eventId) {
+      console.log('[Hunt] Event reset detected (completed → ' + currentStatus + ') — clearing local stats');
+      setHintTokens(3);
+      setUnlockedHints(new Set());
+      setDistanceMeterUsed(false);
+      setMeasuredDistance(null);
+      setLiveClues([]);
+      setConnectionsCount(0);
+      setJoinedLiveHunt(false);
+      setEventWinner(null);
+      countedConnectionsRef.current = new Set();
+      AsyncStorage.removeItem(`hints:${eventId}`).catch(() => {});
+      AsyncStorage.removeItem(`distance:${eventId}`).catch(() => {});
+      void queryClient.invalidateQueries({ queryKey: ['live-clues', eventId] });
+      void queryClient.invalidateQueries({ queryKey: ['player-connections', user?.id, eventId] });
+      void queryClient.invalidateQueries({ queryKey: ['event-winner', eventId] });
+    }
+
+    prevEventStatusRef.current = currentStatus;
+  }, [currentEvent?.status, currentEvent?.id, queryClient, user?.id]);
 
   // Fetch existing connections count for this event
   const connectionsQuery = useQuery({
@@ -376,7 +441,18 @@ export default function HuntScreen() {
       console.log('[Clues] Fetched', data?.length ?? 0, 'clues');
       const mapped: import('@/store/game-store').Clue[] = (data || []).map((c: any) => {
         const mediaType = c.media_type || null;
-        const mediaUrl = c.media_url || null;
+        let mediaUrl = c.media_url || null;
+        // Bug 2: If media_url is a storage path (not a full URL), construct the public URL
+        if (mediaUrl && !mediaUrl.startsWith('http')) {
+          try {
+            const urlResult = supabase.storage.from('clue-media').getPublicUrl(mediaUrl);
+            if (urlResult?.data?.publicUrl) {
+              mediaUrl = urlResult.data.publicUrl;
+            }
+          } catch (e) {
+            console.log('[Clues] Failed to construct public URL for media path:', mediaUrl, e);
+          }
+        }
         return {
           id: c.id,
           text: c.clue_text || c.text || '',
@@ -468,6 +544,44 @@ export default function HuntScreen() {
       void subscription.unsubscribe();
     };
   }, [currentEvent, user, queryClient, hasTicket]);
+
+  // Bug 6: Realtime subscription on player_connections so the QR *generator*
+  // gets their bonus hint token when someone scans their code.
+  // (The scanner already gets theirs via onConnectionMade in ConnectModal.)
+  useEffect(() => {
+    if (!currentEvent || !user || !hasTicket) return;
+
+    const channelName = `player-connections-rt-${currentEvent.id}-${Date.now()}`;
+    const sub = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'player_connections',
+          filter: `event_id=eq.${currentEvent.id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          // Only react if the current user is the generator (scanner gets hint via onConnectionMade)
+          if (row.generator_user_id === user.id) {
+            const connId = row.id as string;
+            if (countedConnectionsRef.current.has(connId)) return;
+            countedConnectionsRef.current.add(connId);
+            console.log('[Connect] Generator received a connection — awarding bonus hint');
+            setHintTokens(prev => prev + 1);
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            void connectionsQuery.refetch();
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void sub.unsubscribe();
+    };
+  }, [currentEvent, user, hasTicket, connectionsQuery]);
   
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371e3;

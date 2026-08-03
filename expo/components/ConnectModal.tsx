@@ -590,28 +590,31 @@ export default function ConnectModal({
                   <View style={styles.permissionIconContainer}>
                     <ScanLine color={Colors.accent.primary} size={40} />
                   </View>
-                  <Text style={styles.permissionTitle}>Camera Access Needed</Text>
+                  <Text style={styles.permissionTitle}>Camera Access Required</Text>
                   <Text style={styles.permissionText}>
-                    Allow camera access to scan another hunter's QR code.
+                    Camera access is required to scan another hunter's QR code. {cameraPermission?.canAskAgain === false ? 'Please enable it in your device settings to use Hunter Connect.' : 'Allow camera access to continue.'}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.generateButton}
-                    onPress={requestCameraPermission}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.generateButtonText}>Allow Camera</Text>
-                  </TouchableOpacity>
-                  {cameraPermission && !cameraPermission.granted && cameraPermission.canAskAgain === false && (
+                  {cameraPermission?.canAskAgain !== false ? (
                     <TouchableOpacity
-                      style={styles.settingsLink}
+                      style={styles.generateButton}
+                      onPress={requestCameraPermission}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.generateButtonText}>Allow Camera</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.generateButton}
                       onPress={() => {
                         if (Platform.OS === 'ios') {
                           Linking.openURL('app-settings:');
+                        } else {
+                          Linking.openSettings();
                         }
                       }}
-                      activeOpacity={0.7}
+                      activeOpacity={0.8}
                     >
-                      <Text style={styles.settingsLinkText}>Open Settings</Text>
+                      <Text style={styles.generateButtonText}>Open Settings</Text>
                     </TouchableOpacity>
                   )}
                 </View>
