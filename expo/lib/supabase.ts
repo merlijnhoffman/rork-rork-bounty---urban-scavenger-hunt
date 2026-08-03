@@ -432,6 +432,38 @@ export type Database = {
           updated_at?: string;
         };
       };
+      hunter_locations: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          latitude: number;
+          longitude: number;
+          heading: number | null;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          user_id: string;
+          latitude: number;
+          longitude: number;
+          heading?: number | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          latitude?: number;
+          longitude?: number;
+          heading?: number | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+      };
       event_winners: {
         Row: {
           id: string;

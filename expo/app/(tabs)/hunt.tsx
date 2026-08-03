@@ -15,6 +15,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users, Crown } from 'lucide-react-native';
+import HunterRadar from '@/components/HunterRadar';
+import RecapScreen from '@/components/RecapScreen';
+import HuntHistory from '@/components/HuntHistory';
+import { useHunterRadar } from '@/hooks/useHunterRadar';
 import * as Calendar from 'expo-calendar';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
@@ -75,6 +79,8 @@ export default function HuntScreen() {
   const [hintsHydrated, setHintsHydrated] = useState<boolean>(false);
   const [distanceHydrated, setDistanceHydrated] = useState<boolean>(false);
   const [showConnectModal, setShowConnectModal] = useState<boolean>(false);
+  const [showRecap, setShowRecap] = useState<boolean>(false);
+  const [recapShownKey, setRecapShownKey] = useState<string | null>(null);
   const [connectionsCount, setConnectionsCount] = useState<number>(0);
   const [eventWinner, setEventWinner] = useState<{
     winnerUserId: string;
@@ -421,6 +427,31 @@ export default function HuntScreen() {
   
   const isLiveWithTicket = !!hasTicket && !!currentEvent && currentEvent.status === 'live' && !!user;
   const canReceiveClues = !!hasTicket && !!currentEvent && !!user;
+
+  // Hunter Radar — broadcast GPS and fetch nearby hunters during live hunt
+  const { nearbyHunters, nearbyCount } = useHunterRadar(
+    currentEvent?.id ?? null,
+    user?.id ?? null,
+    isLiveWithTicket && joinedLiveHunt,
+  );
+
+  // Auto-show recap when event transitions to completed with a winner (once per event)
+  useEffect(() => {
+    if (!currentEvent || currentEvent.status !== 'completed' || !eventWinner) return;
+    const recapKey = `recap:${currentEvent.id}`;
+    if (recapShownKey === recapKey) return;
+    AsyncStorage.getItem(recapKey)
+      .then((shown) => {
+        if (!shown) {
+          setShowRecap(true);
+          setRecapShownKey(recapKey);
+          AsyncStorage.setItem(recapKey, '1').catch(() => {});
+        } else {
+          setRecapShownKey(recapKey);
+        }
+      })
+      .catch(() => {});
+  }, [currentEvent, eventWinner, recapShownKey]);
 
   const cluesQuery = useQuery({
     queryKey: ['live-clues', currentEvent?.id],
@@ -1095,6 +1126,10 @@ export default function HuntScreen() {
                 />
               </View>
             )}
+
+            {isLiveWithTicket && (
+              <HunterRadar nearbyCount={nearbyCount} nearbyHunters={nearbyHunters} />
+            )}
             {liveClues.length === 0 ? (
               <View style={styles.waitingContainer}>
                 <View style={styles.waitingIconContainer}>
@@ -1223,6 +1258,18 @@ export default function HuntScreen() {
           </Animated.View>
         </LinearGradient>
         
+        <RecapScreen
+          visible={showRecap}
+          onClose={() => setShowRecap(false)}
+          winnerEmail={eventWinner?.winnerEmail ?? null}
+          isWinner={eventWinner?.winnerUserId === user?.id}
+          closestDistance={measuredDistance}
+          cluesSolved={liveClues.length}
+          connectionsMade={connectionsCount}
+          hintTokensLeft={hintTokens}
+          cityName={currentEvent?.city ?? ''}
+        />
+
         <ConnectModal
           visible={showConnectModal}
           onClose={() => setShowConnectModal(false)}
@@ -1517,6 +1564,10 @@ export default function HuntScreen() {
               ))}
             </View>
           </View>
+
+          {isLoggedIn && (
+            <HuntHistory userId={user?.id ?? null} />
+          )}
 
           <View style={{ height: 40 }} />
         </ScrollView>
