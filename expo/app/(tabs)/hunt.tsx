@@ -1087,6 +1087,21 @@ export default function HuntScreen() {
                       </View>
                     )}
                   </TouchableOpacity>
+
+                  {measuredDistance !== null && (
+                    <View style={styles.distanceResult}>
+                      <Target color={Colors.accent.primary} size={16} />
+                      <Text style={styles.distanceResultText}>
+                        {measuredDistance}m away
+                      </Text>
+                      {isBountyActive && (
+                        <View style={styles.liveTrackingBadge}>
+                          <View style={styles.liveTrackingDot} />
+                          <Text style={styles.liveTrackingText}>LIVE</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </>
               )}
 
@@ -1098,25 +1113,10 @@ export default function HuntScreen() {
                 <ChevronUp
                   color={Colors.accent.primary}
                   size={20}
-                  style={{ transform: [{ rotate: huntMenuOpen ? '180deg' : '0deg' }] }}
+                  style={{ transform: [{ rotate: huntMenuOpen ? '0deg' : '180deg' }] }}
                 />
               </TouchableOpacity>
             </View>
-
-            {measuredDistance !== null && (
-              <View style={styles.distanceResult}>
-                <Target color={Colors.accent.primary} size={16} />
-                <Text style={styles.distanceResultText}>
-                  {measuredDistance}m away
-                </Text>
-                {isBountyActive && (
-                  <View style={styles.liveTrackingBadge}>
-                    <View style={styles.liveTrackingDot} />
-                    <Text style={styles.liveTrackingText}>LIVE</Text>
-                  </View>
-                )}
-              </View>
-            )}
             
           </View>
           
