@@ -1110,6 +1110,9 @@ export default function HuntScreen() {
                 onPress={() => setHuntMenuOpen((prev) => !prev)}
                 activeOpacity={0.8}
               >
+                {!huntMenuOpen && (
+                  <Text style={styles.toolsToggleLabel}>Hunt Tools</Text>
+                )}
                 <ChevronUp
                   color={Colors.accent.primary}
                   size={20}
@@ -2606,9 +2609,17 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   toolsToggleArrow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     paddingVertical: 6,
+  },
+  toolsToggleLabel: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: C.accent.primary,
+    letterSpacing: 0.3,
   },
   modalOverlay: {
     flex: 1,
