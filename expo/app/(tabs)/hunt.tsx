@@ -294,7 +294,6 @@ export default function HuntScreen() {
     zone: eventZone,
     currentRadius: currentZoneRadius,
     bountyLocation: liveBountyLocation,
-    bountyLocationRaw: rawBountyLocation,
     isBountyActive,
   } = useEventZone(
     currentEvent?.id ?? null,
@@ -319,18 +318,7 @@ export default function HuntScreen() {
     return null;
   }, [eventZone, liveBountyLocation]);
 
-  // For the map marker, use the raw bounty location (even if slightly stale)
-  // so the bounty is always visible on the map when a row exists.
-  const mapBountyLocation = useMemo(() => {
-    if (rawBountyLocation) {
-      return {
-        latitude: rawBountyLocation.latitude,
-        longitude: rawBountyLocation.longitude,
-      };
-    }
-    return null;
-  }, [rawBountyLocation]);
-  
+
   useEffect(() => {
     if (!currentEvent) {
       opacityAnim.setValue(0);
@@ -1140,9 +1128,6 @@ export default function HuntScreen() {
                   centerLongitude={eventZone.centerLongitude}
                   radiusMeters={currentZoneRadius}
                   zoneName={eventZone.zoneName ?? undefined}
-                  bountyLatitude={mapBountyLocation?.latitude ?? null}
-                  bountyLongitude={mapBountyLocation?.longitude ?? null}
-                  bountyActive={isBountyActive}
                 />
               </View>
             )}
