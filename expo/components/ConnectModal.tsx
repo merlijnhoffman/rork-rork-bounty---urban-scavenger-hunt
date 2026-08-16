@@ -7,7 +7,6 @@ import {
   Modal,
   Animated,
   Dimensions,
-  Share,
   Linking,
   Platform,
 } from 'react-native';
@@ -28,7 +27,6 @@ import {
   Navigation,
   Zap,
   RefreshCw,
-  Share2,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
@@ -205,17 +203,6 @@ export default function ConnectModal({
       setIsGenerating(false);
     }
   }, [user, eventId]);
-
-  const handleShareCode = useCallback(async () => {
-    if (!connectionCode) return;
-    try {
-      await Share.share({
-        message: `Connect with me on Bounty! Scan my QR code or use code: ${connectionCode}`,
-      });
-    } catch (err) {
-      console.error('[Connect] Share error:', err);
-    }
-  }, [connectionCode]);
 
   const handleBarcodeScanned = useCallback(
     async (result: { type: string; data: string }) => {
@@ -499,14 +486,6 @@ export default function ConnectModal({
                   </View>
 
                   <View style={styles.qrActions}>
-                    <TouchableOpacity
-                      style={styles.qrActionButton}
-                      onPress={handleShareCode}
-                      activeOpacity={0.7}
-                    >
-                      <Share2 color={Colors.accent.primary} size={16} />
-                      <Text style={styles.qrActionButtonText}>Share Code</Text>
-                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.qrActionButton}
                       onPress={generateCode}
