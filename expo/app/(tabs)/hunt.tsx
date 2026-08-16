@@ -1043,73 +1043,65 @@ export default function HuntScreen() {
               </View>
             </View>
 
-            <View style={styles.toolsBar}>
+            <View style={styles.huntActions}>
+              {huntMenuOpen && (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.distanceMeterButton,
+                      (distanceMeterUsed || isCalculatingDistance) && styles.distanceMeterButtonDisabled,
+                    ]}
+                    onPress={handleDistanceMeter}
+                    disabled={distanceMeterUsed || isCalculatingDistance}
+                    activeOpacity={0.8}
+                  >
+                    <Navigation
+                      color={distanceMeterUsed ? Colors.dark.textMuted : '#000'}
+                      size={18}
+                    />
+                    <Text style={[
+                      styles.distanceMeterButtonText,
+                      distanceMeterUsed && styles.distanceMeterButtonTextDisabled,
+                    ]}>
+                      {isCalculatingDistance ? 'Calculating...' :
+                       distanceMeterUsed ? 'Distance Meter Used' :
+                       'Use Distance Meter'}
+                    </Text>
+                    {!distanceMeterUsed && (
+                      <View style={styles.oneTimeUseBadge}>
+                        <Text style={styles.oneTimeUseText}>1x</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.connectButton}
+                    onPress={() => setShowConnectModal(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Users color="#000" size={18} />
+                    <Text style={styles.connectButtonText}>Connect with Hunters</Text>
+                    {connectionsCount > 0 && (
+                      <View style={styles.connectBadge}>
+                        <Text style={styles.connectBadgeText}>{connectionsCount}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
+
               <TouchableOpacity
-                style={styles.toolsDropdownTrigger}
+                style={styles.toolsToggleArrow}
                 onPress={() => setHuntMenuOpen((prev) => !prev)}
                 activeOpacity={0.8}
               >
-                <Zap color="#000" size={16} />
-                <Text style={styles.toolsDropdownTriggerText}>Hunt Tools</Text>
                 <ChevronUp
-                  color="#000"
-                  size={16}
+                  color={Colors.accent.primary}
+                  size={20}
                   style={{ transform: [{ rotate: huntMenuOpen ? '180deg' : '0deg' }] }}
                 />
               </TouchableOpacity>
             </View>
-
-            {huntMenuOpen && (
-              <View style={styles.toolsDropdown}>
-                <TouchableOpacity
-                  style={[
-                    styles.toolOption,
-                    (distanceMeterUsed || isCalculatingDistance) && styles.toolOptionDisabled,
-                  ]}
-                  onPress={() => {
-                    setHuntMenuOpen(false);
-                    handleDistanceMeter();
-                  }}
-                  disabled={distanceMeterUsed || isCalculatingDistance}
-                  activeOpacity={0.8}
-                >
-                  <Navigation
-                    color={distanceMeterUsed ? Colors.dark.textMuted : '#000'}
-                    size={18}
-                  />
-                  <Text style={[
-                    styles.toolOptionText,
-                    distanceMeterUsed && styles.toolOptionTextDisabled,
-                  ]}>
-                    {isCalculatingDistance ? 'Calculating...' :
-                     distanceMeterUsed ? 'Distance Meter Used' :
-                     'Use Distance Meter'}
-                  </Text>
-                  {!distanceMeterUsed && (
-                    <View style={styles.toolBadge}>
-                      <Text style={styles.toolBadgeText}>1x</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.toolOption}
-                  onPress={() => {
-                    setHuntMenuOpen(false);
-                    setShowConnectModal(true);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Users color="#000" size={18} />
-                  <Text style={styles.toolOptionText}>Connect with Hunters</Text>
-                  {connectionsCount > 0 && (
-                    <View style={styles.toolBadge}>
-                      <Text style={styles.toolBadgeText}>{connectionsCount}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
 
             {measuredDistance !== null && (
               <View style={styles.distanceResult}>
@@ -2498,64 +2490,44 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: C.accent.primary,
   },
-  toolsBar: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 2,
+  huntActions: {
+    gap: 10,
   },
-  toolsDropdownTrigger: {
+  distanceMeterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
     backgroundColor: C.accent.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-  },
-  toolsDropdownTriggerText: {
-    fontSize: 13,
-    fontWeight: '800' as const,
-    color: '#000',
-    letterSpacing: 0.3,
-  },
-  toolsDropdown: {
-    backgroundColor: C.dark.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.dark.border,
-    marginTop: 8,
-    overflow: 'hidden',
-  },
-  toolOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     position: 'relative',
+    gap: 8,
   },
-  toolOptionDisabled: {
-    opacity: 0.5,
+  distanceMeterButtonDisabled: {
+    backgroundColor: C.dark.card,
   },
-  toolOptionText: {
-    flex: 1,
+  distanceMeterButtonText: {
     fontSize: 14,
     fontWeight: '700' as const,
-    color: C.dark.text,
-    letterSpacing: 0.3,
+    color: '#000',
+    letterSpacing: 0.5,
   },
-  toolOptionTextDisabled: {
+  distanceMeterButtonTextDisabled: {
     color: C.dark.textMuted,
   },
-  toolBadge: {
+  oneTimeUseBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
     backgroundColor: C.status.danger,
     borderRadius: 10,
     paddingHorizontal: 7,
     paddingVertical: 2,
-    minWidth: 20,
-    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: C.dark.background,
   },
-  toolBadgeText: {
+  oneTimeUseText: {
     fontSize: 10,
     fontWeight: '900' as const,
     color: '#FFF',
@@ -2597,6 +2569,46 @@ const styles = StyleSheet.create({
     fontWeight: '900' as const,
     color: C.status.success,
     letterSpacing: 1,
+  },
+  connectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.accent.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    position: 'relative',
+    gap: 8,
+  },
+  connectButtonText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#000',
+    letterSpacing: 0.5,
+  },
+  connectBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: C.accent.primary,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 2,
+    borderColor: C.dark.background,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  connectBadgeText: {
+    fontSize: 11,
+    fontWeight: '900' as const,
+    color: '#000',
+  },
+  toolsToggleArrow: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
   },
   modalOverlay: {
     flex: 1,
