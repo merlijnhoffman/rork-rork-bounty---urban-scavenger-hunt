@@ -72,6 +72,7 @@ export default function ConnectModal({
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [hasScanned, setHasScanned] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [duplicateConnection, setDuplicateConnection] = useState<boolean>(false);
 
   // Reset everything when modal closes
   useEffect(() => {
@@ -84,6 +85,7 @@ export default function ConnectModal({
       setCodeTimeLeft(0);
       setHasScanned(false);
       setIsVerifying(false);
+      setDuplicateConnection(false);
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
         countdownRef.current = null;
@@ -274,11 +276,16 @@ export default function ConnectModal({
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           onConnectionMade();
         } else {
+          const isDuplicate = data.code === 'ALREADY_CONNECTED';
           setConnectState('error');
           setErrorMessage(data.error || 'Connection failed. Try again.');
+          setDuplicateConnection(isDuplicate);
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          // Allow re-scan after a brief delay
-          setTimeout(() => setHasScanned(false), 2000);
+          // Only allow re-scan for retryable errors (distance, expired code, etc.)
+          // Duplicate connections are permanent for this event — no point re-scanning
+          if (!isDuplicate) {
+            setTimeout(() => setHasScanned(false), 2000);
+          }
         }
       } catch (err) {
         console.error('[Connect] Verify error:', err);
@@ -298,6 +305,7 @@ export default function ConnectModal({
     setConnectState('idle');
     setErrorMessage('');
     setHasScanned(false);
+    setDuplicateConnection(false);
     if (newMode === 'scan' && cameraPermission && !cameraPermission.granted) {
       void requestCameraPermission();
     }
@@ -563,6 +571,25 @@ export default function ConnectModal({
                   <Text style={styles.verifyingText}>
                     Checking proximity and validating tickets
                   </Text>
+                </View>
+              ) : connectState === 'error' && duplicateConnection ? (
+                <View style={styles.duplicateState}>
+                  <View style={styles.duplicateIconContainer}>
+                    <Users color={Colors.accent.primary} size={40} />
+                  </View>
+                  <Text style={styles.duplicateTitle}>Already Connected</Text>
+                  <Text style={styles.duplicateText}>
+                    You've already connected with this hunter during this hunt.
+                    You can only connect with each hunter once per game to prevent
+                    cheating.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.successButton}
+                    onPress={onClose}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.successButtonText}>Got It</Text>
+                  </TouchableOpacity>
                 </View>
               ) : !cameraPermission?.granted ? (
                 <View style={styles.permissionState}>
@@ -1122,6 +1149,40 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700' as const,
     color: '#000',
+  },
+
+  // Duplicate connection state
+  duplicateState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  duplicateIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 28,
+    backgroundColor: C.accent.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.25)',
+  },
+  duplicateTitle: {
+    fontSize: 22,
+    fontWeight: '900' as const,
+    color: C.accent.primary,
+    marginBottom: 10,
+    letterSpacing: 0.5,
+  },
+  duplicateText: {
+    fontSize: 15,
+    color: C.dark.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+    marginBottom: 28,
   },
 
   // Verifying state

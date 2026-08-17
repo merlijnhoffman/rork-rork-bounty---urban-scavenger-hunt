@@ -135,7 +135,11 @@ serve(async (req: Request) => {
 
     if (existingConnection) {
       return new Response(
-        JSON.stringify({ success: false, error: 'You are already connected with this hunter' }),
+        JSON.stringify({
+          success: false,
+          error: 'You’ve already connected with this hunter. You can only connect with each hunter once per game.',
+          code: 'ALREADY_CONNECTED',
+        }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -169,6 +173,18 @@ serve(async (req: Request) => {
     });
 
     if (insertError) {
+      // Race condition: two simultaneous scans both passed the duplicate check
+      // before either INSERT landed. The unique index catches it here.
+      if (insertError.code === '23505') {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'You’ve already connected with this hunter. You can only connect with each hunter once per game.',
+            code: 'ALREADY_CONNECTED',
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
       console.error('[verify-connection] Error inserting connection:', insertError.message);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to create connection' }),
@@ -238,6 +254,18 @@ serve(async (req: Request) => {
  *
  * CREATE INDEX idx_player_connections_event ON player_connections(event_id);
  * CREATE INDEX idx_player_connections_users ON player_connections(generator_user_id, scanner_user_id);
+ *
+ * -- Prevent duplicate connections between the same pair per event
+ * -- (handles race condition: two simultaneous scans that both pass the
+ * -- SELECT check before either INSERT lands). LEAST/GREATEST normalise
+ * -- the pair so (A→B) and (B→A) are treated as the same connection.
+ * CREATE UNIQUE INDEX idx_player_connections_unique_pair
+ *   ON player_connections (
+ *     event_id,
+ *     LEAST(generator_user_id, scanner_user_id),
+ *     GREATEST(generator_user_id, scanner_user_id)
+ *   );
+ *
  * ALTER TABLE player_connections ENABLE ROW LEVEL SECURITY;
  *
  * -- Users can read connections they are part of
