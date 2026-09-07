@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, Crosshair } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
@@ -23,6 +24,7 @@ const C = Colors;
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { signIn } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -35,22 +37,22 @@ export default function LoginScreen() {
 
   const handleSignIn = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
+      Alert.alert(t('errSignInFailed'), t('errEnterEmail'));
       return;
     }
 
     if (!validateEmail(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(t('errSignInFailed'), t('errValidEmail'));
       return;
     }
 
     if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
+      Alert.alert(t('errSignInFailed'), t('errEnterPassword'));
       return;
     }
 
     if (password.trim().length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert(t('errSignInFailed'), t('errPasswordLength'));
       return;
     }
 
@@ -59,7 +61,7 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (!result.success) {
-      Alert.alert('Sign In Failed', result.error || 'Something went wrong. Please try again.');
+      Alert.alert(t('errSignInFailed'), result.error || t('errVerify'));
       return;
     }
 
@@ -92,8 +94,8 @@ export default function LoginScreen() {
               <View style={styles.logoBadge}>
                 <Crosshair color={C.accent.primary} size={24} />
               </View>
-              <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Sign in to continue your hunt</Text>
+              <Text style={styles.title}>{t('loginTitle')}</Text>
+              <Text style={styles.subtitle}>{t('loginSubtitle')}</Text>
             </View>
 
             <View style={styles.form}>
@@ -101,7 +103,7 @@ export default function LoginScreen() {
                 <Mail size={18} color={C.dark.textMuted} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Email"
+                  placeholder={t('email')}
                   placeholderTextColor={C.dark.textMuted}
                   value={email}
                   onChangeText={setEmail}
@@ -116,7 +118,7 @@ export default function LoginScreen() {
                 <Lock size={18} color={C.dark.textMuted} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Password"
+                  placeholder={t('password')}
                   placeholderTextColor={C.dark.textMuted}
                   value={password}
                   onChangeText={setPassword}
@@ -148,15 +150,15 @@ export default function LoginScreen() {
                 {loading ? (
                   <ActivityIndicator color="#000" />
                 ) : (
-                  <Text style={styles.loginButtonText}>Sign In</Text>
+                  <Text style={styles.loginButtonText}>{t('signIn')}</Text>
                 )}
               </TouchableOpacity>
             </View>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>{"Don't have an account? "}</Text>
+              <Text style={styles.footerText}>{t('noAccount')}</Text>
               <TouchableOpacity onPress={() => router.push('/signup' as any)}>
-                <Text style={styles.signupLink}>Sign Up</Text>
+                <Text style={styles.signupLink}>{t('signUp')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>

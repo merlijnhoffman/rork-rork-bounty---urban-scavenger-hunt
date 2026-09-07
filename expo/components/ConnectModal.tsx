@@ -9,6 +9,7 @@ import {
   Dimensions,
   Linking,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,6 +32,7 @@ import {
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -55,6 +57,7 @@ export default function ConnectModal({
 }: ConnectModalProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [mode, setMode] = useState<ConnectMode>('generate');
   const [connectState, setConnectState] = useState<ConnectState>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -73,6 +76,7 @@ export default function ConnectModal({
   const [hasScanned, setHasScanned] = useState<boolean>(false);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [duplicateConnection, setDuplicateConnection] = useState<boolean>(false);
+  const [manualCode, setManualCode] = useState<string>('');
 
   // Reset everything when modal closes
   useEffect(() => {
@@ -86,6 +90,7 @@ export default function ConnectModal({
       setHasScanned(false);
       setIsVerifying(false);
       setDuplicateConnection(false);
+      setManualCode('');
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
         countdownRef.current = null;
@@ -154,7 +159,7 @@ export default function ConnectModal({
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setConnectState('error');
-        setErrorMessage('Location access is needed to verify proximity. Enable it in Settings.');
+        setErrorMessage(t('errLocationNeeded'));
         setIsGenerating(false);
         return;
       }
@@ -189,7 +194,7 @@ export default function ConnectModal({
       if (error) {
         console.error('[Connect] Error creating code:', error.message);
         setConnectState('error');
-        setErrorMessage('Failed to generate code. Try again.');
+        setErrorMessage(t('errGenerate'));
         setIsGenerating(false);
         return;
       }
@@ -200,21 +205,19 @@ export default function ConnectModal({
     } catch (err) {
       console.error('[Connect] Generate error:', err);
       setConnectState('error');
-      setErrorMessage('Could not get your location. Try again.');
+      setErrorMessage(t('errCurrentLocation'));
     } finally {
       setIsGenerating(false);
     }
-  }, [user, eventId]);
+  }, [user, eventId, t]);
 
-  const handleBarcodeScanned = useCallback(
-    async (result: { type: string; data: string }) => {
-      if (hasScanned || isVerifying) return;
-      setHasScanned(true);
+  const verifyConnection = useCallback(
+    async (rawCode: string) => {
       setIsVerifying(true);
       setConnectState('loading');
       setErrorMessage('');
 
-      const scannedData = result.data.trim();
+      const scannedData = rawCode.trim();
 
       // The QR data might be a plain code or a JSON payload
       let code = scannedData;
@@ -229,7 +232,7 @@ export default function ConnectModal({
 
       if (!user) {
         setConnectState('error');
-        setErrorMessage('You must be logged in to connect.');
+        setErrorMessage(t('errNotLoggedIn'));
         setIsVerifying(false);
         return;
       }
@@ -238,7 +241,7 @@ export default function ConnectModal({
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           setConnectState('error');
-          setErrorMessage('Location access is needed to verify proximity.');
+          setErrorMessage(t('errLocationNeeded'));
           setIsVerifying(false);
           return;
         }
@@ -247,10 +250,6 @@ export default function ConnectModal({
           accuracy: Location.Accuracy.High,
         });
 
-        const functionsUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.replace(
-          '.supabase.co',
-          '',
-        );
         const functionEndpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/verify-connection`;
 
         const response = await fetch(functionEndpoint, {
@@ -278,7 +277,9 @@ export default function ConnectModal({
         } else {
           const isDuplicate = data.code === 'ALREADY_CONNECTED';
           setConnectState('error');
-          setErrorMessage(data.error || 'Connection failed. Try again.');
+          // Surface the exact server reason (distance, expired code, tickets…)
+          console.log('[Connect] Verification failed:', data.code ?? '-', data.error ?? '-');
+          setErrorMessage(data.error || t('errGeneric'));
           setDuplicateConnection(isDuplicate);
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           // Only allow re-scan for retryable errors (distance, expired code, etc.)
@@ -290,15 +291,37 @@ export default function ConnectModal({
       } catch (err) {
         console.error('[Connect] Verify error:', err);
         setConnectState('error');
-        setErrorMessage('Could not verify connection. Check your internet and try again.');
+        setErrorMessage(t('errVerify'));
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setTimeout(() => setHasScanned(false), 2000);
       } finally {
         setIsVerifying(false);
       }
     },
-    [hasScanned, isVerifying, user, onConnectionMade],
+    [user, onConnectionMade, t],
   );
+
+  const handleBarcodeScanned = useCallback(
+    (result: { type: string; data: string }) => {
+      if (hasScanned || isVerifying) return;
+      setHasScanned(true);
+      void verifyConnection(result.data);
+    },
+    [hasScanned, isVerifying, verifyConnection],
+  );
+
+  // Manual code entry — backup when QR scanning doesn't detect the code
+  const handleManualSubmit = useCallback(() => {
+    if (isVerifying) return;
+    const code = manualCode.trim().toUpperCase();
+    if (code.length < 4) {
+      setConnectState('error');
+      setErrorMessage(t('manualEntryInvalid'));
+      return;
+    }
+    setHasScanned(true);
+    void verifyConnection(code);
+  }, [manualCode, isVerifying, verifyConnection, t]);
 
   const switchMode = useCallback((newMode: ConnectMode) => {
     setMode(newMode);
@@ -346,8 +369,8 @@ export default function ConnectModal({
                 <Users color={Colors.accent.primary} size={20} />
               </View>
               <View>
-                <Text style={styles.headerTitle}>Hunter Connect</Text>
-                <Text style={styles.headerSubtitle}>Earn bonus hint tokens</Text>
+                <Text style={styles.headerTitle}>{t('connectTitle')}</Text>
+                <Text style={styles.headerSubtitle}>{t('connectSubtitle')}</Text>
               </View>
             </View>
             <TouchableOpacity
@@ -363,7 +386,7 @@ export default function ConnectModal({
           <View style={styles.infoBanner}>
             <Zap color={Colors.accent.primary} size={14} />
             <Text style={styles.infoText}>
-              Meet up with another hunter, scan their QR, and both earn an extra hint token.
+              {t('connectInfo')}
             </Text>
           </View>
 
@@ -384,7 +407,7 @@ export default function ConnectModal({
                   mode === 'generate' && styles.modeButtonTextActive,
                 ]}
               >
-                My QR
+                {t('myQr')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -402,7 +425,7 @@ export default function ConnectModal({
                   mode === 'scan' && styles.modeButtonTextActive,
                 ]}
               >
-                Scan
+                {t('scan')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -415,11 +438,9 @@ export default function ConnectModal({
                   <View style={styles.emptyIconContainer}>
                     <QrCode color={Colors.accent.primary} size={48} />
                   </View>
-                  <Text style={styles.emptyTitle}>Generate Your QR Code</Text>
+                  <Text style={styles.emptyTitle}>{t('generateTitle')}</Text>
                   <Text style={styles.emptyText}>
-                    Show this QR to another hunter. They scan it to connect, and you both
-                    earn a bonus hint token. You must be within {MAX_DISTANCE_METERS}m of
-                    each other.
+                    {t('generateHint', { meters: MAX_DISTANCE_METERS })}
                   </Text>
                   <TouchableOpacity
                     style={styles.generateButton}
@@ -428,11 +449,11 @@ export default function ConnectModal({
                     activeOpacity={0.8}
                   >
                     {isGenerating ? (
-                      <Text style={styles.generateButtonText}>Generating...</Text>
+                      <Text style={styles.generateButtonText}>{t('generating')}</Text>
                     ) : (
                       <>
                         <QrCode color="#000" size={18} />
-                        <Text style={styles.generateButtonText}>Generate QR Code</Text>
+                        <Text style={styles.generateButtonText}>{t('generateButton')}</Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -453,7 +474,7 @@ export default function ConnectModal({
                           qrExpiring && styles.qrTimerExpiring,
                         ]}
                       >
-                        Expires in {formatTime(codeTimeLeft)}
+                        {t('expiresIn', { time: formatTime(codeTimeLeft) })}
                       </Text>
                     </View>
 
@@ -488,7 +509,7 @@ export default function ConnectModal({
                     </View>
 
                     <View style={styles.codeDisplayRow}>
-                      <Text style={styles.codeLabel}>CODE</Text>
+                      <Text style={styles.codeLabel}>{t('codeLabel')}</Text>
                       <Text style={styles.codeValue}>{connectionCode}</Text>
                     </View>
                   </View>
@@ -500,14 +521,14 @@ export default function ConnectModal({
                       activeOpacity={0.7}
                     >
                       <RefreshCw color={Colors.accent.primary} size={16} />
-                      <Text style={styles.qrActionButtonText}>Refresh</Text>
+                      <Text style={styles.qrActionButtonText}>{t('refresh')}</Text>
                     </TouchableOpacity>
                   </View>
 
                   <View style={styles.waitingIndicator}>
                     <View style={styles.waitingDot} />
                     <Text style={styles.waitingText}>
-                      Waiting for another hunter to scan...
+                      {t('waitingForScan')}
                     </Text>
                   </View>
                 </View>
@@ -518,9 +539,9 @@ export default function ConnectModal({
                   <View style={styles.expiredIconContainer}>
                     <Clock color={Colors.status.danger} size={36} />
                   </View>
-                  <Text style={styles.expiredTitle}>Code Expired</Text>
+                  <Text style={styles.expiredTitle}>{t('expiredTitle')}</Text>
                   <Text style={styles.expiredText}>
-                    Your QR code has expired. Generate a new one to connect.
+                    {t('expiredText')}
                   </Text>
                   <TouchableOpacity
                     style={styles.generateButton}
@@ -528,7 +549,7 @@ export default function ConnectModal({
                     activeOpacity={0.8}
                   >
                     <QrCode color="#000" size={18} />
-                    <Text style={styles.generateButtonText}>New QR Code</Text>
+                    <Text style={styles.generateButtonText}>{t('newQr')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -549,27 +570,26 @@ export default function ConnectModal({
                   <View style={styles.successIconContainer}>
                     <Check color={Colors.status.success} size={48} />
                   </View>
-                  <Text style={styles.successTitle}>Connected!</Text>
+                  <Text style={styles.successTitle}>{t('connectedTitle')}</Text>
                   <Text style={styles.successText}>
-                    You've connected with another hunter.
-                    {successDistance !== null &&
-                      ` You were ${successDistance}m apart.`}{' '}
-                    You both earned a bonus hint token!
+                    {t('connectedText', {
+                      distance: successDistance !== null ? ` ${successDistance}m` : '',
+                    })}
                   </Text>
                   <TouchableOpacity
                     style={styles.successButton}
                     onPress={onClose}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.successButtonText}>Back to Hunt</Text>
+                    <Text style={styles.successButtonText}>{t('backToHunt')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : connectState === 'loading' ? (
                 <View style={styles.verifyingState}>
                   <View style={styles.verifyingPulse} />
-                  <Text style={styles.verifyingTitle}>Verifying connection...</Text>
+                  <Text style={styles.verifyingTitle}>{t('verifying')}</Text>
                   <Text style={styles.verifyingText}>
-                    Checking proximity and validating tickets
+                    {t('verifyingSub')}
                   </Text>
                 </View>
               ) : connectState === 'error' && duplicateConnection ? (
@@ -577,18 +597,16 @@ export default function ConnectModal({
                   <View style={styles.duplicateIconContainer}>
                     <Users color={Colors.accent.primary} size={40} />
                   </View>
-                  <Text style={styles.duplicateTitle}>Already Connected</Text>
+                  <Text style={styles.duplicateTitle}>{t('alreadyConnected')}</Text>
                   <Text style={styles.duplicateText}>
-                    You've already connected with this hunter during this hunt.
-                    You can only connect with each hunter once per game to prevent
-                    cheating.
+                    {t('alreadyConnectedText')}
                   </Text>
                   <TouchableOpacity
                     style={styles.successButton}
                     onPress={onClose}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.successButtonText}>Got It</Text>
+                    <Text style={styles.successButtonText}>{t('gotIt')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : !cameraPermission?.granted ? (
@@ -596,9 +614,11 @@ export default function ConnectModal({
                   <View style={styles.permissionIconContainer}>
                     <ScanLine color={Colors.accent.primary} size={40} />
                   </View>
-                  <Text style={styles.permissionTitle}>Camera Access Required</Text>
+                  <Text style={styles.permissionTitle}>{t('cameraRequired')}</Text>
                   <Text style={styles.permissionText}>
-                    Camera access is required to scan another hunter's QR code. {cameraPermission?.canAskAgain === false ? 'Please enable it in your device settings to use Hunter Connect.' : 'Allow camera access to continue.'}
+                    {cameraPermission?.canAskAgain === false
+                      ? t('cameraDenied')
+                      : t('cameraAllowed')}
                   </Text>
                   {cameraPermission?.canAskAgain !== false ? (
                     <TouchableOpacity
@@ -606,7 +626,7 @@ export default function ConnectModal({
                       onPress={requestCameraPermission}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.generateButtonText}>Allow Camera</Text>
+                      <Text style={styles.generateButtonText}>{t('allowCamera')}</Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
@@ -620,7 +640,7 @@ export default function ConnectModal({
                       }}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.generateButtonText}>Open Settings</Text>
+                      <Text style={styles.generateButtonText}>{t('openSettings')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -647,10 +667,10 @@ export default function ConnectModal({
                   <View style={styles.scanInstructions}>
                     <ScanLine color={Colors.accent.primary} size={20} />
                     <Text style={styles.scanInstructionsTitle}>
-                      Point at a hunter's QR code
+                      {t('scanPointTitle')}
                     </Text>
                     <Text style={styles.scanInstructionsText}>
-                      Make sure you're within {MAX_DISTANCE_METERS}m of each other
+                      {t('scanPointSub', { meters: MAX_DISTANCE_METERS })}
                     </Text>
                   </View>
 
@@ -660,6 +680,33 @@ export default function ConnectModal({
                       <Text style={styles.scanErrorText}>{errorMessage}</Text>
                     </View>
                   )}
+
+                  {/* Manual code entry — backup when the camera can't detect the QR */}
+                  <View style={styles.manualEntry}>
+                    <Text style={styles.manualEntryTitle}>{t('manualEntryTitle')}</Text>
+                    <View style={styles.manualEntryRow}>
+                      <TextInput
+                        style={styles.manualEntryInput}
+                        value={manualCode}
+                        onChangeText={(t: string) => setManualCode(t.toUpperCase())}
+                        placeholder={t('manualEntryPlaceholder')}
+                        placeholderTextColor={Colors.dark.textMuted}
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                        maxLength={6}
+                        returnKeyType="go"
+                        onSubmitEditing={handleManualSubmit}
+                      />
+                      <TouchableOpacity
+                        style={styles.manualEntryButton}
+                        onPress={handleManualSubmit}
+                        disabled={isVerifying}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.manualEntryButtonText}>{t('manualEntryButton')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
               )}
             </View>
@@ -669,7 +716,7 @@ export default function ConnectModal({
           <View style={styles.footer}>
             <Navigation color={Colors.dark.textMuted} size={12} />
             <Text style={styles.footerText}>
-              Proximity verified via GPS. Anti-cheat protected.
+              {t('connectFooter')}
             </Text>
           </View>
         </Animated.View>
@@ -1063,6 +1110,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: C.status.danger,
     fontWeight: '500' as const,
+  },
+
+  // Manual code entry
+  manualEntry: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: C.dark.border,
+  },
+  manualEntryTitle: {
+    fontSize: 13,
+    color: C.dark.textMuted,
+    textAlign: 'center' as const,
+    marginBottom: 10,
+  },
+  manualEntryRow: {
+    flexDirection: 'row' as const,
+    gap: 10,
+  },
+  manualEntryInput: {
+    flex: 1,
+    backgroundColor: C.dark.card,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 18,
+    fontWeight: '800' as const,
+    color: C.dark.text,
+    letterSpacing: 4,
+    textAlign: 'center' as const,
+  },
+  manualEntryButton: {
+    backgroundColor: C.accent.primary,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    justifyContent: 'center' as const,
+  },
+  manualEntryButtonText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#000',
   },
 
   // Permission state

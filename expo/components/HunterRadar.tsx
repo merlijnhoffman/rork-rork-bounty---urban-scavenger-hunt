@@ -1,19 +1,28 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Text, Animated, Easing } from 'react-native';
-import { Radar } from 'lucide-react-native';
+import { Radar, RefreshCw } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type { NearbyHunter } from '@/hooks/useHunterRadar';
 
 interface HunterRadarProps {
   nearbyCount: number;
   nearbyHunters: NearbyHunter[];
+  /** Device heading in degrees (0 = north). null = no magnetometer → north-up. */
+  heading?: number | null;
+  /** True while nearby-hunter data is being refetched. */
+  isRefreshing?: boolean;
 }
 
 const COMPASS_LABELS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
-export default function HunterRadar({ nearbyCount, nearbyHunters }: HunterRadarProps) {
+export default function HunterRadar({ nearbyCount, nearbyHunters, heading, isRefreshing }: HunterRadarProps) {
+  const { t } = useLanguage();
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
+  const compassAnim = useRef(new Animated.Value(0)).current;
+  const rotationRef = useRef<number>(0);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -49,6 +58,39 @@ export default function HunterRadar({ nearbyCount, nearbyHunters }: HunterRadarP
     };
   }, [pulseAnim, rotateAnim]);
 
+  // Scanning indicator spins while nearby data refreshes
+  useEffect(() => {
+    if (!isRefreshing) return;
+    const loop = Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 1100,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isRefreshing, spinAnim]);
+
+  // Compass: rotate the radar so "up" is the direction the player is facing.
+  // Uses shortest-path rotation so the dial never spins the long way around.
+  useEffect(() => {
+    if (heading === null || heading === undefined) return;
+    const target = -heading;
+    const current = rotationRef.current;
+    const delta = ((((target - current) % 360) + 540) % 360) - 180;
+    rotationRef.current = current + delta;
+    Animated.spring(compassAnim, {
+      toValue: rotationRef.current,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 40,
+    }).start();
+  }, [heading, compassAnim]);
+
+  const compassActive = heading !== null && heading !== undefined;
+
   const radarSize = 160;
   const maxRadius = radarSize / 2 - 8;
 
@@ -79,8 +121,25 @@ export default function HunterRadar({ nearbyCount, nearbyHunters }: HunterRadarP
     <View style={styles.container}>
       <View style={styles.header}>
         <Radar color={Colors.accent.teal} size={16} />
-        <Text style={styles.headerText}>HUNTER RADAR</Text>
-        <View style={styles.liveDot} />
+        <Text style={styles.headerText}>{t('radarTitle')}</Text>
+        {isRefreshing ? (
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  rotate: spinAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg'],
+                  }),
+                },
+              ],
+            }}
+          >
+            <RefreshCw color={Colors.accent.teal} size={13} />
+          </Animated.View>
+        ) : (
+          <View style={styles.liveDot} />
+        )}
       </View>
 
       <View style={styles.radarWrapper}>
@@ -138,49 +197,74 @@ export default function HunterRadar({ nearbyCount, nearbyHunters }: HunterRadarP
           <View style={styles.crosshairV} />
           <View style={styles.crosshairH} />
 
-          {/* Center dot (player) */}
-          <View style={styles.playerDot} />
-
-          {/* Rotating sweep line */}
+          {/* Everything inside this dial rotates with the device heading.
+              Wide interpolation range so accumulated shortest-path rotation
+              extrapolates linearly for any angle. */}
           <Animated.View
             style={[
-              styles.sweepLine,
+              styles.dial,
               {
                 transform: [
                   {
-                    rotate: rotateAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '360deg'],
+                    rotate: compassAnim.interpolate({
+                      inputRange: [-100000, 0, 100000],
+                      outputRange: ['-100000deg', '0deg', '100000deg'],
                     }),
                   },
                 ],
               },
             ]}
-          />
+          >
+            {compassActive && (
+              <View style={styles.northMarker} pointerEvents="none">
+                <Text style={styles.northMarkerText}>N</Text>
+              </View>
+            )}
 
-          {/* Hunter dots */}
-          {hunterDots.map((dot) => (
-            <View
-              key={dot.idx}
+            {/* Center dot (player) */}
+            <View style={styles.playerDot} />
+
+            {/* Rotating sweep line */}
+            <Animated.View
               style={[
-                styles.hunterDot,
+                styles.sweepLine,
                 {
-                  left: dot.x - 5,
-                  top: dot.y - 5,
+                  transform: [
+                    {
+                      rotate: rotateAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      }),
+                    },
+                  ],
                 },
               ]}
             />
-          ))}
+
+            {/* Hunter dots */}
+            {hunterDots.map((dot) => (
+              <View
+                key={dot.idx}
+                style={[
+                  styles.hunterDot,
+                  {
+                    left: dot.x - 5,
+                    top: dot.y - 5,
+                  },
+                ]}
+              />
+            ))}
+          </Animated.View>
         </View>
       </View>
 
       <View style={styles.infoRow}>
         <Text style={styles.countText}>
           {nearbyCount === 0
-            ? 'No hunters nearby'
+            ? t('radarNoHunters')
             : nearbyCount === 1
-              ? '1 hunter nearby'
-              : `${nearbyCount} hunters nearby`}
+              ? t('radarOneHunter')
+              : t('radarManyHunters', { n: nearbyCount })}
         </Text>
         {dominantDirection && nearbyCount > 0 && (
           <View style={styles.directionBadge}>
@@ -233,6 +317,25 @@ const styles = StyleSheet.create({
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     overflow: 'hidden',
+  },
+  dial: {
+    position: 'absolute' as const,
+    width: '100%' as any,
+    height: '100%' as any,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  northMarker: {
+    position: 'absolute' as const,
+    top: 3,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  northMarkerText: {
+    fontSize: 10,
+    fontWeight: '900' as const,
+    color: Colors.accent.teal,
+    letterSpacing: 1,
   },
   radarRing: {
     position: 'absolute' as const,

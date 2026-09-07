@@ -25,11 +25,15 @@ import {
   ToggleLeft,
   ToggleRight,
   ClipboardList,
+  Globe,
+  Check,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePayment } from '@/contexts/PaymentContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LANGUAGE_NAMES, LANGUAGE_ORDER } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 
 const C = Colors;
@@ -41,6 +45,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const { restorePurchases, isRestoring, hasHuntAccess } = usePayment();
+  const { language, setLanguage, t } = useLanguage();
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [locationConsent, setLocationConsent] = useState<boolean>(true);
@@ -233,7 +238,7 @@ export default function SettingsScreen() {
           >
             <ArrowLeft color={C.dark.text} size={22} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
+          <Text style={styles.headerTitle}>{t('settingsTitle')}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -244,7 +249,7 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <RefreshCw color={C.accent.primary} size={16} />
-              <Text style={styles.sectionTitle}>Purchases</Text>
+              <Text style={styles.sectionTitle}>{t('sectionPurchases')}</Text>
             </View>
             <View style={styles.card}>
               {renderLink(
@@ -253,10 +258,38 @@ export default function SettingsScreen() {
                 ) : (
                   <RefreshCw color={C.dark.textSecondary} size={18} />
                 ),
-                isRestoring ? 'Restoring...' : 'Restore Purchases',
+                isRestoring ? t('restoring') : t('restorePurchases'),
                 handleRestore,
                 { disabled: isRestoring },
               )}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Globe color={C.accent.primary} size={16} />
+              <Text style={styles.sectionTitle}>{t('sectionLanguage')}</Text>
+            </View>
+            <View style={styles.card}>
+              {LANGUAGE_ORDER.map((code, idx) => (
+                <React.Fragment key={code}>
+                  {idx > 0 && <View style={styles.rowDivider} />}
+                  {renderLink(
+                    <Globe color={C.dark.textSecondary} size={18} />,
+                    LANGUAGE_NAMES[code],
+                    () => {
+                      setLanguage(code);
+                      Alert.alert(t('languageSaved'), t('languageSavedMsg'));
+                    },
+                    {
+                      right:
+                        language === code ? (
+                          <Check color={C.accent.primary} size={18} />
+                        ) : undefined,
+                    },
+                  )}
+                </React.Fragment>
+              ))}
             </View>
           </View>
 
@@ -264,12 +297,12 @@ export default function SettingsScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
                 <ClipboardList color={C.accent.primary} size={16} />
-                <Text style={styles.sectionTitle}>Data &amp; Privacy</Text>
+                <Text style={styles.sectionTitle}>{t('sectionDataPrivacy')}</Text>
               </View>
               <View style={styles.card}>
                 {renderLink(
                   <Shield color={C.dark.textSecondary} size={18} />,
-                  'Privacy Policy (GDPR)',
+                  t('privacyGdpr'),
                   () => router.push('/privacy' as any),
                 )}
                 <View style={styles.rowDivider} />
@@ -279,7 +312,7 @@ export default function SettingsScreen() {
                   ) : (
                     <Download color={C.dark.textSecondary} size={18} />
                   ),
-                  isExporting ? 'Exporting...' : 'Export My Data (Art. 15 &amp; 20)',
+                  isExporting ? t('exporting') : t('exportData'),
                   handleExportData,
                   { disabled: isExporting, right: <ChevronRight color={C.dark.textMuted} size={18} /> },
                 )}
@@ -301,11 +334,11 @@ export default function SettingsScreen() {
                     )}
                   </View>
                   <View style={styles.settingContent}>
-                    <Text style={styles.settingTitle}>Location Data Consent</Text>
+                    <Text style={styles.settingTitle}>{t('locationConsent')}</Text>
                     <Text style={styles.settingSubtitle}>
                       {locationConsent
-                        ? 'Required for hunt functionality'
-                        : 'Withdrawn \u2013 hunts will not track your location'}
+                        ? t('locationConsentOn')
+                        : t('locationConsentOff')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -327,11 +360,11 @@ export default function SettingsScreen() {
                     )}
                   </View>
                   <View style={styles.settingContent}>
-                    <Text style={styles.settingTitle}>Diagnostic Data</Text>
+                    <Text style={styles.settingTitle}>{t('diagnosticData')}</Text>
                     <Text style={styles.settingSubtitle}>
                       {diagnosticConsent
-                        ? 'Helps us improve the app'
-                        : 'Withdrawn \u2013 no crash reports or analytics'}
+                        ? t('diagnosticOn')
+                        : t('diagnosticOff')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -342,24 +375,24 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
               <Info color={C.accent.primary} size={16} />
-              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.sectionTitle}>{t('sectionAbout')}</Text>
             </View>
             <View style={styles.card}>
               {renderLink(
                 <FileText color={C.dark.textSecondary} size={18} />,
-                'Terms of Service',
+                t('termsOfService'),
                 () => Linking.openURL(TERMS_URL),
               )}
               <View style={styles.rowDivider} />
               {renderLink(
                 <Shield color={C.dark.textSecondary} size={18} />,
-                'Privacy Policy',
+                t('privacyGdpr').replace(' (GDPR)', ''),
                 () => router.push('/privacy' as any),
               )}
               <View style={styles.rowDivider} />
               {renderLink(
                 <HelpCircle color={C.dark.textSecondary} size={18} />,
-                'Contact DPO / Support',
+                t('contactSupport'),
                 () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`),
               )}
             </View>
@@ -369,12 +402,12 @@ export default function SettingsScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
                 <Shield color={C.status.danger} size={16} />
-                <Text style={[styles.sectionTitle, { color: C.dark.textSecondary }]}>Account</Text>
+                <Text style={[styles.sectionTitle, { color: C.dark.textSecondary }]}>{t('sectionAccount')}</Text>
               </View>
               <View style={styles.card}>
                 {renderLink(
                   <ExternalLink color={C.status.danger} size={18} />,
-                  'Sign Out',
+                  t('signOut'),
                   handleSignOut,
                   { danger: true },
                 )}
@@ -385,7 +418,7 @@ export default function SettingsScreen() {
                   ) : (
                     <Trash2 color={C.status.danger} size={18} />
                   ),
-                  isDeleting ? 'Deleting...' : 'Delete Account',
+                  isDeleting ? t('deleting') : t('deleteAccount'),
                   handleDeleteAccount,
                   { danger: true, disabled: isDeleting },
                 )}

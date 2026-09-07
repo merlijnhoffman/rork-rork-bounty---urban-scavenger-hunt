@@ -13,6 +13,8 @@ export interface GameEvent {
   registeredPlayers: number;
   startTime: string;
   status: 'scheduled' | 'live' | 'completed';
+  /** Last time the admin modified this event (used to detect hunt resets). */
+  updatedAt: string;
 }
 
 export interface UserTicket {
@@ -90,6 +92,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
           registeredPlayers: 189,
           startTime: validDate ? validDate.toISOString() : '',
           status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
+          updatedAt: (data as any).updated_at ?? (data as any).created_at ?? '',
         };
         return event;
       } catch (err: any) {

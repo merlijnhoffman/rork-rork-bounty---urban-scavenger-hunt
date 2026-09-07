@@ -17,6 +17,7 @@ import { useNotificationTapHandler, registerForPushNotificationsAsync, unregiste
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { PaymentWrapper } from '@/contexts/PaymentContext';
 import { LocationProvider } from '@/contexts/LocationContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ErrorBoundary } from 'react-error-boundary';
 
 void SplashScreen.preventAutoHideAsync();
@@ -25,8 +26,33 @@ try { configureRevenueCat(); } catch {}
 
 // Bug 5: Disable font scaling globally — prevents UI breakage when iOS users
 // have large accessibility fonts enabled in their phone settings.
-(Text as any).defaultProps = (Text as any).defaultProps || {};
-(Text as any).defaultProps.allowFontScaling = false;
+// NOTE: React 19 removed defaultProps support, so the previous
+// `(Text as any).defaultProps.allowFontScaling = false` hack silently stopped
+// working on modern RN. We override Text's render function instead, which is
+// the supported workaround (see facebook/react-native#51113).
+function disableFontScalingGlobally() {
+  const textComponent = Text as any;
+  // Text may be memo(forwardRef(...)) — find the object that owns `render`.
+  const target =
+    typeof textComponent.render === 'function'
+      ? textComponent
+      : typeof textComponent.type?.render === 'function'
+        ? textComponent.type
+        : null;
+  if (!target) {
+    console.warn('[FontLock] Could not patch Text.render — font scaling remains active');
+    return;
+  }
+  const originalRender = target.render;
+  target.render = function (this: unknown, ...args: unknown[]) {
+    const element = originalRender.apply(this, args) as React.ReactElement;
+    if (!element) return element;
+    return React.cloneElement(element, {
+      allowFontScaling: false,
+    } as React.Attributes);
+  };
+}
+disableFontScalingGlobally();
 
 const queryClient = new QueryClient();
 
@@ -251,12 +277,14 @@ export default function RootLayout() {
           <PaymentWrapper>
             <LocationProvider>
               <GameProvider>
+                <LanguageProvider>
                 <GestureHandlerRootView style={styles.container}>
                   <LocationPermissionGate>
                     <NotificationRegistrar />
                     <RootLayoutNav />
                   </LocationPermissionGate>
                 </GestureHandlerRootView>
+                </LanguageProvider>
               </GameProvider>
             </LocationProvider>
           </PaymentWrapper>

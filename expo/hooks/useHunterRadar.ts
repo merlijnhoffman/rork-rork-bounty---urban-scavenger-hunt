@@ -15,6 +15,7 @@ export interface NearbyHunter {
 const NEARBY_RADIUS_M = 500;
 const STALE_MS = 2 * 60 * 1000;
 const BROADCAST_INTERVAL_MS = 5000;
+const REFRESH_INTERVAL_MS = 3000;
 
 function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371e3;
@@ -188,8 +189,8 @@ export function useHunterRadar(
       return hunters;
     },
     enabled: !!eventId && !!enabled,
-    refetchInterval: 5000,
-    staleTime: 3000,
+    refetchInterval: REFRESH_INTERVAL_MS,
+    staleTime: 2000,
   });
 
   // Realtime: refresh when any hunter location changes
@@ -230,5 +231,6 @@ export function useHunterRadar(
     nearbyHunters,
     nearbyCount,
     compassHunters,
+    isRefreshing: nearbyQuery.isFetching,
   };
 }

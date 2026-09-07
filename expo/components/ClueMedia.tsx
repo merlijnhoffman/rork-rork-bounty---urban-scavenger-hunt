@@ -13,6 +13,7 @@ import {
 import { Audio, Video, ResizeMode } from 'expo-av';
 import { ImageIcon, Film, Volume2, VolumeX, Play, Pause, X, Maximize2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { buildPublicMediaUrl, getSignedMediaUrl } from '@/lib/media-url';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -35,10 +36,39 @@ export default React.memo(function ClueMedia({ imageUrl, videoUrl, audioUrl }: C
   );
 });
 
+/**
+ * Resolves a raw stored media value into a playable URI. Starts with the
+ * public URL (normalized path); if loading fails once, retries with a
+ * signed URL before giving up — covers non-public buckets and malformed paths.
+ */
+function useMediaSource(rawUrl: string) {
+  const [uri, setUri] = useState<string>(() => buildPublicMediaUrl(rawUrl));
+  const triedSignedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    setUri(buildPublicMediaUrl(rawUrl));
+    triedSignedRef.current = false;
+  }, [rawUrl]);
+
+  const handleError = useCallback(async (): Promise<boolean> => {
+    if (triedSignedRef.current) return false;
+    triedSignedRef.current = true;
+    const signed = await getSignedMediaUrl(rawUrl);
+    if (signed && signed !== uri) {
+      setUri(signed);
+      return true;
+    }
+    return false;
+  }, [rawUrl, uri]);
+
+  return { uri, handleError };
+}
+
 function ClueImage({ url }: { url: string }) {
   const [fullscreen, setFullscreen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
+  const { uri, handleError } = useMediaSource(url);
 
   return (
     <>
@@ -59,15 +89,21 @@ function ClueImage({ url }: { url: string }) {
           </View>
         ) : (
           <Image
-            source={{ uri: url }}
+            source={{ uri }}
             style={styles.clueImage}
             resizeMode="cover"
             onLoadStart={() => setLoading(true)}
             onLoadEnd={() => setLoading(false)}
             onError={() => {
-              setError(true);
-              setLoading(false);
-              console.log('[ClueMedia] Image load error for:', url);
+              console.log('[ClueMedia] Image load error for:', url, '→ trying signed URL');
+              void handleError().then((recovered) => {
+                if (recovered) {
+                  setLoading(true);
+                } else {
+                  setError(true);
+                  setLoading(false);
+                }
+              });
             }}
           />
         )}
@@ -93,7 +129,7 @@ function ClueImage({ url }: { url: string }) {
             <X color="#FFF" size={24} />
           </TouchableOpacity>
           <Image
-            source={{ uri: url }}
+            source={{ uri }}
             style={styles.fullscreenImage}
             resizeMode="contain"
           />
@@ -108,6 +144,7 @@ function ClueVideo({ url }: { url: string }) {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
+  const { uri, handleError } = useMediaSource(url);
 
   const togglePlayback = useCallback(async () => {
     if (!videoRef.current) return;
@@ -140,7 +177,7 @@ function ClueVideo({ url }: { url: string }) {
       )}
       <Video
         ref={videoRef}
-        source={{ uri: url }}
+        source={{ uri }}
         style={styles.clueVideo}
         resizeMode={ResizeMode.CONTAIN}
         useNativeControls={true}
@@ -152,9 +189,13 @@ function ClueVideo({ url }: { url: string }) {
           }
         }}
         onError={(err) => {
-          console.log('[ClueMedia] Video error:', err);
-          setError(true);
-          setLoading(false);
+          console.log('[ClueMedia] Video error:', err, '→ trying signed URL');
+          void handleError().then((recovered) => {
+            if (!recovered) {
+              setError(true);
+              setLoading(false);
+            }
+          });
         }}
         onLoad={() => {
           console.log('[ClueMedia] Video loaded:', url);
@@ -187,6 +228,7 @@ function ClueAudio({ url }: { url: string }) {
   const [error, setError] = useState<boolean>(false);
   const [duration, setDuration] = useState<number>(0);
   const [position, setPosition] = useState<number>(0);
+  const { uri, handleError } = useMediaSource(url);
 
   useEffect(() => {
     return () => {
@@ -215,7 +257,7 @@ function ClueAudio({ url }: { url: string }) {
       });
 
       const { sound } = await Audio.Sound.createAsync(
-        { uri: url },
+        { uri },
         { shouldPlay: true },
         (status) => {
           if (status.isLoaded) {
@@ -235,11 +277,37 @@ function ClueAudio({ url }: { url: string }) {
       setLoading(false);
       console.log('[ClueMedia] Audio loaded and playing:', url);
     } catch (err) {
-      console.log('[ClueMedia] Audio error:', err);
+      console.log('[ClueMedia] Audio error:', err, '→ trying signed URL');
+      const recovered = await handleError();
+      if (recovered) {
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            { uri },
+            { shouldPlay: true },
+            (status) => {
+              if (status.isLoaded) {
+                setIsPlaying(status.isPlaying);
+                setPosition(status.positionMillis || 0);
+                setDuration(status.durationMillis || 0);
+                if (status.didJustFinish) {
+                  setIsPlaying(false);
+                  setPosition(0);
+                  sound.setPositionAsync(0).catch(() => {});
+                }
+              }
+            },
+          );
+          soundRef.current = sound;
+          setLoading(false);
+          return;
+        } catch {
+          // fall through to the error state below
+        }
+      }
       setError(true);
       setLoading(false);
     }
-  }, [isPlaying, url]);
+  }, [isPlaying, uri, handleError]);
 
   const formatTime = (millis: number): string => {
     const totalSec = Math.floor(millis / 1000);

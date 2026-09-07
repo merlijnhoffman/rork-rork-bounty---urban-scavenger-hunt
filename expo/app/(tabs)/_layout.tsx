@@ -3,8 +3,10 @@ import { Crosshair, User } from "lucide-react-native";
 import React from "react";
 import { Platform } from "react-native";
 import Colors from "@/constants/colors";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function TabLayout() {
+  const { t } = useLanguage();
   return (
     <Tabs
       screenOptions={{
@@ -33,14 +35,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="hunt"
         options={{
-          title: "Hunt",
+          title: t("tabHunt"),
           tabBarIcon: ({ color, size }) => <Crosshair color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t("tabProfile"),
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />

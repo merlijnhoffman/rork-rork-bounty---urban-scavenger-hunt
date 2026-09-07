@@ -78,6 +78,10 @@ serve(async (req: Request) => {
     }
 
     if (!codeRow) {
+      console.log(
+        '[verify-connection] Code not found or expired:',
+        code.slice(0, 2) + '****',
+      );
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid or expired code' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -144,12 +148,48 @@ serve(async (req: Request) => {
       );
     }
 
-    // 5. Proximity check — both must be within MAX_DISTANCE_METERS
+    // 5. Proximity check — prefer the generator's LATEST live position from
+    // hunter_locations (they broadcast every ~5s while hunting) over the
+    // position frozen when the code was generated. Stale generation-time
+    // coords caused false "you are too far apart" failures when the generator
+    // had walked around since generating their QR.
+    let generatorLat = codeRow.latitude;
+    let generatorLng = codeRow.longitude;
+    try {
+      const { data: latestLoc } = await supabase
+        .from('hunter_locations')
+        .select('latitude, longitude, updated_at')
+        .eq('user_id', codeRow.user_id)
+        .eq('event_id', codeRow.event_id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestLoc && latestLoc.latitude != null && latestLoc.longitude != null) {
+        generatorLat = Number(latestLoc.latitude);
+        generatorLng = Number(latestLoc.longitude);
+        console.log(
+          '[verify-connection] Using live generator position updated at',
+          latestLoc.updated_at,
+        );
+      }
+    } catch (locErr) {
+      console.warn(
+        '[verify-connection] Could not fetch live generator position, falling back to code coords:',
+        locErr instanceof Error ? locErr.message : locErr,
+      );
+    }
+
     const distance = haversineMeters(
       scannerLatitude,
       scannerLongitude,
-      codeRow.latitude,
-      codeRow.longitude,
+      generatorLat,
+      generatorLng,
+    );
+
+    console.log(
+      '[verify-connection] Proximity result:',
+      Math.round(distance) + 'm',
+      '(max ' + MAX_DISTANCE_METERS + 'm)',
     );
 
     if (distance > MAX_DISTANCE_METERS) {

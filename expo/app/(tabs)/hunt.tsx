@@ -25,9 +25,12 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EventZoneMap from '@/components/EventZoneMap';
 import ClueMedia from '@/components/ClueMedia';
+import { buildPublicMediaUrl } from '@/lib/media-url';
+import { useCompassHeading } from '@/hooks/useCompassHeading';
 import { useGameStore } from '@/store/game-store';
 import { useEventZone } from '@/hooks/useEventZone';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import Colors from '@/constants/colors';
 
 import { supabase } from '@/lib/supabase';
@@ -41,6 +44,7 @@ import { usePayment } from '@/contexts/PaymentContext';
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isLoggedIn = !!user;
   const { 
     currentEvent, 
@@ -107,20 +111,29 @@ export default function HuntScreen() {
         if (cancelled) return;
         if (raw) {
           try {
-            const parsed = JSON.parse(raw) as { tokens?: number; unlocked?: string[] };
-            if (typeof parsed.tokens === 'number') setHintTokens(parsed.tokens);
-            if (Array.isArray(parsed.unlocked)) setUnlockedHints(new Set(parsed.unlocked));
+            const parsed = JSON.parse(raw) as { tokens?: number; unlocked?: string[]; savedAt?: string };
+            // Admin hunt reset: if these stats were saved before the event was
+            // last updated by the admin, they belong to the old hunt — discard.
+            const savedAt = typeof parsed.savedAt === 'string' ? new Date(parsed.savedAt).getTime() : 0;
+            const resetAt = currentEvent?.updatedAt ? new Date(currentEvent.updatedAt).getTime() : 0;
+            if (savedAt > 0 && resetAt > 0 && savedAt < resetAt) {
+              console.log('[Hunt] Discarding pre-reset hints (saved before admin reset)');
+              AsyncStorage.removeItem(hintStorageKey).catch(() => {});
+            } else {
+              if (typeof parsed.tokens === 'number') setHintTokens(parsed.tokens);
+              if (Array.isArray(parsed.unlocked)) setUnlockedHints(new Set(parsed.unlocked));
+            }
           } catch {}
         }
         setHintsHydrated(true);
       })
       .catch(() => setHintsHydrated(true));
     return () => { cancelled = true; };
-  }, [hintStorageKey]);
+  }, [hintStorageKey, currentEvent?.updatedAt]);
 
   useEffect(() => {
     if (!hintsHydrated || !hintStorageKey) return;
-    const payload = JSON.stringify({ tokens: hintTokens, unlocked: Array.from(unlockedHints) });
+    const payload = JSON.stringify({ tokens: hintTokens, unlocked: Array.from(unlockedHints), savedAt: new Date().toISOString() });
     AsyncStorage.setItem(hintStorageKey, payload).catch(() => {});
   }, [hintTokens, unlockedHints, hintStorageKey, hintsHydrated]);
 
@@ -139,31 +152,41 @@ export default function HuntScreen() {
         if (cancelled) return;
         if (raw) {
           try {
-            const parsed = JSON.parse(raw) as { used?: boolean; distance?: number | null };
-            if (typeof parsed.used === 'boolean') setDistanceMeterUsed(parsed.used);
-            if (parsed.distance === null || typeof parsed.distance === 'number') setMeasuredDistance(parsed.distance ?? null);
+            const parsed = JSON.parse(raw) as { used?: boolean; distance?: number | null; savedAt?: string };
+            // Same reset check as hints: drop pre-reset distance meter state.
+            const savedAt = typeof parsed.savedAt === 'string' ? new Date(parsed.savedAt).getTime() : 0;
+            const resetAt = currentEvent?.updatedAt ? new Date(currentEvent.updatedAt).getTime() : 0;
+            if (savedAt > 0 && resetAt > 0 && savedAt < resetAt) {
+              console.log('[Hunt] Discarding pre-reset distance meter');
+              AsyncStorage.removeItem(distanceStorageKey).catch(() => {});
+            } else {
+              if (typeof parsed.used === 'boolean') setDistanceMeterUsed(parsed.used);
+              if (parsed.distance === null || typeof parsed.distance === 'number') setMeasuredDistance(parsed.distance ?? null);
+            }
           } catch {}
         }
         setDistanceHydrated(true);
       })
       .catch(() => setDistanceHydrated(true));
     return () => { cancelled = true; };
-  }, [distanceStorageKey]);
+  }, [distanceStorageKey, currentEvent?.updatedAt]);
 
   useEffect(() => {
     if (!distanceHydrated || !distanceStorageKey) return;
-    const payload = JSON.stringify({ used: distanceMeterUsed, distance: measuredDistance });
+    const payload = JSON.stringify({ used: distanceMeterUsed, distance: measuredDistance, savedAt: new Date().toISOString() });
     AsyncStorage.setItem(distanceStorageKey, payload).catch(() => {});
   }, [distanceMeterUsed, measuredDistance, distanceStorageKey, distanceHydrated]);
 
   // Bug 3 & 4: When the event status transitions FROM 'completed' to another status,
-  // the admin has reset the hunt — clear all local stats and clues.
+  // or from live back to scheduled, the admin has reset the hunt — clear all local stats and clues.
   useEffect(() => {
     const currentStatus = currentEvent?.status ?? null;
     const prevStatus = prevEventStatusRef.current;
     const eventId = currentEvent?.id;
 
-    if (prevStatus === 'completed' && currentStatus && currentStatus !== 'completed' && eventId) {
+    const isCompletedReset = prevStatus === 'completed' && currentStatus && currentStatus !== 'completed';
+    const isLiveReset = prevStatus === 'live' && currentStatus === 'scheduled';
+    if ((isCompletedReset || isLiveReset) && eventId) {
       console.log('[Hunt] Event reset detected (completed → ' + currentStatus + ') — clearing local stats');
       setHintTokens(3);
       setUnlockedHints(new Set());
@@ -418,11 +441,13 @@ export default function HuntScreen() {
   const canReceiveClues = !!hasTicket && !!currentEvent && !!user;
 
   // Hunter Radar — broadcast GPS and fetch nearby hunters during live hunt
-  const { nearbyHunters, nearbyCount } = useHunterRadar(
+  const radarEnabled = isLiveWithTicket && joinedLiveHunt;
+  const { nearbyHunters, nearbyCount, isRefreshing: radarRefreshing } = useHunterRadar(
     currentEvent?.id ?? null,
     user?.id ?? null,
-    isLiveWithTicket && joinedLiveHunt,
+    radarEnabled,
   );
+  const radarHeading = useCompassHeading(radarEnabled);
 
   // Auto-show recap when event transitions to completed with a winner (once per event)
   useEffect(() => {
@@ -461,27 +486,19 @@ export default function HuntScreen() {
       console.log('[Clues] Fetched', data?.length ?? 0, 'clues');
       const mapped: import('@/store/game-store').Clue[] = (data || []).map((c: any) => {
         const mediaType = c.media_type || null;
-        let mediaUrl = c.media_url || null;
-        // Bug 2: If media_url is a storage path (not a full URL), construct the public URL
-        if (mediaUrl && !mediaUrl.startsWith('http')) {
-          try {
-            const urlResult = supabase.storage.from('clue-media').getPublicUrl(mediaUrl);
-            if (urlResult?.data?.publicUrl) {
-              mediaUrl = urlResult.data.publicUrl;
-            }
-          } catch (e) {
-            console.log('[Clues] Failed to construct public URL for media path:', mediaUrl, e);
-          }
-        }
+        // Normalizes messy admin-stored paths (leading slashes, bucket prefix,
+        // full storage URLs) into a valid public URL.
+        const mediaUrl = c.media_url ? buildPublicMediaUrl(c.media_url as string) : null;
+        if (c.media_url) console.log('[Clues] Media URL resolved:', c.media_url, '→', mediaUrl);
         return {
           id: c.id,
           text: c.clue_text || c.text || '',
           hint: c.hint,
           timestamp: c.release_time || c.created_at,
           order: c.order_number,
-          imageUrl: mediaType === 'image' ? mediaUrl : undefined,
-          videoUrl: mediaType === 'video' ? mediaUrl : undefined,
-          audioUrl: mediaType === 'audio' ? mediaUrl : undefined,
+          imageUrl: mediaType === 'image' ? (mediaUrl ?? undefined) : undefined,
+          videoUrl: mediaType === 'video' ? (mediaUrl ?? undefined) : undefined,
+          audioUrl: mediaType === 'audio' ? (mediaUrl ?? undefined) : undefined,
         };
       });
       console.log('[Clues] Mapped clues with media:', mapped.map(c => ({ id: c.id, hasImage: !!c.imageUrl, hasVideo: !!c.videoUrl, hasAudio: !!c.audioUrl })));
@@ -907,7 +924,7 @@ export default function HuntScreen() {
 
       if (user && currentEvent) {
         const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-        await supabase
+        const { error: ticketInsertError } = await supabase
           .from('tickets')
           .insert({
             user_id: user.id,
@@ -915,6 +932,16 @@ export default function HuntScreen() {
             status: 'active',
             verification_code: verificationCode,
           });
+        if (ticketInsertError) {
+          console.error('[Purchase] Ticket insert failed after successful purchase:', ticketInsertError.message);
+          Alert.alert(
+            'Purchase Saved — Ticket Not Activated',
+            'Your purchase went through, but we could not activate your ticket automatically. Contact support@bounty.app with your receipt and we will fix it right away.',
+            [{ text: 'OK' }],
+          );
+          await ticketQuery.refetch();
+          return;
+        }
       }
 
       await ticketQuery.refetch();
@@ -970,11 +997,11 @@ export default function HuntScreen() {
                 <View style={styles.liveIconContainer}>
                   <Target color={Colors.accent.primary} size={20} />
                 </View>
-                <Text style={styles.huntTitle}>LIVE HUNT</Text>
+                <Text style={styles.huntTitle}>{t('liveHunt')}</Text>
               </View>
               <View style={styles.huntStatusPill}>
                 <View style={styles.statusDotPulse} />
-                <Text style={styles.statusPillText}>ACTIVE</Text>
+                <Text style={styles.statusPillText}>{t('active')}</Text>
               </View>
             </View>
 
@@ -1002,18 +1029,18 @@ export default function HuntScreen() {
             )}
             
             <View style={styles.huntInfoRow}>
-              <Text style={styles.huntLocation}>AMSTERDAM</Text>
+              <Text style={styles.huntLocation}>{(currentEvent?.city || '—').toUpperCase()}</Text>
               <Text style={styles.huntTimeSeparator}>|</Text>
-              <Text style={styles.huntTime}>Started at 15:00 CET</Text>
+              <Text style={styles.huntTime}>{formattedEventDateTime}</Text>
             </View>
             
             <View style={styles.hintTokensBar}>
               <View style={styles.hintTokensLeft}>
                 <Lightbulb color={Colors.accent.primary} size={16} />
-                <Text style={styles.hintTokensLabel}>Hint Tokens</Text>
+                <Text style={styles.hintTokensLabel}>{t('hintTokens')}</Text>
               </View>
               <View style={styles.hintTokensRight}>
-                {[0, 1, 2].map((i) => (
+                {Array.from({ length: Math.max(3, hintTokens) }).map((_, i) => (
                   <View
                     key={i}
                     style={[
@@ -1051,9 +1078,9 @@ export default function HuntScreen() {
                       styles.distanceMeterButtonText,
                       distanceMeterUsed && styles.distanceMeterButtonTextDisabled,
                     ]}>
-                      {isCalculatingDistance ? 'Calculating...' :
-                       distanceMeterUsed ? 'Distance Meter Used' :
-                       'Use Distance Meter'}
+                      {isCalculatingDistance ? t('calculating') :
+                       distanceMeterUsed ? t('distanceMeterUsed') :
+                       t('useDistanceMeter')}
                     </Text>
                     {!distanceMeterUsed && (
                       <View style={styles.oneTimeUseBadge}>
@@ -1068,7 +1095,7 @@ export default function HuntScreen() {
                     activeOpacity={0.8}
                   >
                     <Users color="#000" size={18} />
-                    <Text style={styles.connectButtonText}>Connect with Hunters</Text>
+                    <Text style={styles.connectButtonText}>{t('connectWithHunters')}</Text>
                     {connectionsCount > 0 && (
                       <View style={styles.connectBadge}>
                         <Text style={styles.connectBadgeText}>{connectionsCount}</Text>
@@ -1080,7 +1107,7 @@ export default function HuntScreen() {
                     <View style={styles.distanceResult}>
                       <Target color={Colors.accent.primary} size={16} />
                       <Text style={styles.distanceResultText}>
-                        {measuredDistance}m away
+                        {t('metersAway', { n: measuredDistance })}
                       </Text>
                       {isBountyActive && (
                         <View style={styles.liveTrackingBadge}>
@@ -1099,7 +1126,7 @@ export default function HuntScreen() {
                 activeOpacity={0.8}
               >
                 {!huntMenuOpen && (
-                  <Text style={styles.toolsToggleLabel}>Hunt Tools</Text>
+                  <Text style={styles.toolsToggleLabel}>{t('huntTools')}</Text>
                 )}
                 <ChevronUp
                   color={Colors.accent.primary}
@@ -1133,16 +1160,21 @@ export default function HuntScreen() {
             )}
 
             {isLiveWithTicket && (
-              <HunterRadar nearbyCount={nearbyCount} nearbyHunters={nearbyHunters} />
+              <HunterRadar
+                nearbyCount={nearbyCount}
+                nearbyHunters={nearbyHunters}
+                heading={radarHeading}
+                isRefreshing={radarRefreshing}
+              />
             )}
             {liveClues.length === 0 ? (
               <View style={styles.waitingContainer}>
                 <View style={styles.waitingIconContainer}>
                   <Clock color={Colors.accent.primary} size={40} />
                 </View>
-                <Text style={styles.waitingTitle}>Waiting for clues...</Text>
+                <Text style={styles.waitingTitle}>{t('waitingTitle')}</Text>
                 <Text style={styles.waitingText}>
-                  The hunt has started! Clues will appear here as they are released.
+                  {t('waitingText')}
                 </Text>
               </View>
             ) : (
