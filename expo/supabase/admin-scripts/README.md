@@ -60,10 +60,11 @@ delete from connection_codes     where event_id = (select id::text from _reset_e
 -- Reset the hunt zone (players get a fresh zone when you create one)
 delete from event_zones          where event_id = (select id::text from _reset_event);
 
--- Put the event back to upcoming — this bumps updated_at, which is the
+-- Put the event back to upcoming — explicitly bump updated_at, which is the
 -- signal player apps use to clear locally saved stats
 update events
-set status = 'scheduled'
+set status = 'scheduled',
+    updated_at = now()
 where id = (select id from _reset_event);
 ```
 
@@ -79,7 +80,7 @@ delete from bounty_locations     where event_id = (select id::text from events o
 delete from hunter_locations     where event_id = (select id::text from events order by created_at desc limit 1);
 delete from connection_codes     where event_id = (select id::text from events order by created_at desc limit 1);
 delete from event_zones          where event_id = (select id::text from events order by created_at desc limit 1);
-update events set status = 'scheduled' where id = (select id from events order by created_at desc limit 1);
+update events set status = 'scheduled', updated_at = now() where id = (select id from events order by created_at desc limit 1);
 ```
 
 ---
