@@ -42,6 +42,7 @@ import { router } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useGameStore } from '@/store/game-store';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
 import { useEventZone } from '@/hooks/useEventZone';
 import EventZoneMap from '@/components/EventZoneMap';
@@ -70,6 +71,7 @@ type WinnerInfo = {
 export default function BountyModeScreen() {
   const insets = useSafeAreaInsets();
   const { currentEvent } = useGameStore();
+  const { t } = useLanguage();
 
   const [accessCode, setAccessCode] = useState<string>('');
   const [codeVisible, setCodeVisible] = useState<boolean>(false);
@@ -307,7 +309,7 @@ export default function BountyModeScreen() {
           console.warn('[BountyMode] Location update failed:', response.status, JSON.stringify(result));
           const msg = result.error || 'Failed to update location';
           if (msg.includes('Invalid access code')) {
-            setErrorMsg('The access code you entered is incorrect for this event.');
+            setErrorMsg(t('errInvalidAccessCode'));
             setBroadcastState('error');
             // Stop broadcasting
             isBroadcastingRef.current = false;
@@ -316,7 +318,7 @@ export default function BountyModeScreen() {
               watchSubRef.current = null;
             }
           } else if (msg.includes('hunt has ended')) {
-            setErrorMsg('This hunt has ended. Broadcasting is no longer available.');
+            setErrorMsg(t('errBroadcastEnded'));
             setBroadcastState('error');
             isBroadcastingRef.current = false;
             if (watchSubRef.current) {
@@ -341,11 +343,11 @@ export default function BountyModeScreen() {
 
   const startBroadcast = useCallback(async () => {
     if (!accessCode.trim()) {
-      Alert.alert('Access Code Required', 'Enter the access code provided by the hunt organizer.');
+      Alert.alert(t('errAccessCodeRequiredTitle'), t('errAccessCodeRequired'));
       return;
     }
     if (!currentEvent) {
-      Alert.alert('No Event', 'There is no active event to broadcast for.');
+      Alert.alert(t('errNoEventTitle'), t('errNoEvent'));
       return;
     }
 
@@ -360,14 +362,14 @@ export default function BountyModeScreen() {
       // 1. Request location permission (always)
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setErrorMsg('Location permission is required to broadcast your position.');
+        setErrorMsg(t('errLocationPermissionBcast'));
         setBroadcastState('error');
         Alert.alert(
-          'Location Needed',
-          'Bounty Mode needs location access to broadcast your position to hunters.',
+          t('locationNeededTitle'),
+          t('locationNeededMsg'),
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            { text: t('cancel'), style: 'cancel' },
+            { text: t('openSettings'), onPress: () => Linking.openSettings() },
           ],
         );
         return;
@@ -417,7 +419,7 @@ export default function BountyModeScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err) {
       console.error('[BountyMode] Error starting broadcast:', err);
-      setErrorMsg('Could not start broadcasting. Make sure location services are enabled.');
+      setErrorMsg(t('errBroadcastStart'));
       setBroadcastState('error');
     }
   }, [accessCode, currentEvent, sendLocationUpdate]);
@@ -483,7 +485,7 @@ export default function BountyModeScreen() {
   useEffect(() => {
     if (currentEvent?.status === 'completed' && broadcastState === 'live') {
       void stopBroadcast();
-      setErrorMsg('The hunt has ended. Broadcasting stopped automatically.');
+      setErrorMsg(t('errBroadcastEnded'));
       setBroadcastState('error');
     }
   }, [currentEvent?.status, broadcastState, stopBroadcast]);
@@ -495,11 +497,11 @@ export default function BountyModeScreen() {
   };
 
   const formatTimeAgo = (timestamp: number | null): string => {
-    if (!timestamp) return 'Never';
+    if (!timestamp) return t('never');
     const diff = Date.now() - timestamp;
-    if (diff < 5000) return 'Just now';
-    if (diff < 60000) return `${Math.round(diff / 1000)}s ago`;
-    return `${Math.round(diff / 60000)}m ago`;
+    if (diff < 5000) return t('justNow');
+    if (diff < 60000) return t('secondsAgo', { n: Math.round(diff / 1000) });
+    return t('minutesAgo', { n: Math.round(diff / 60000) });
   };
 
   const isLive = broadcastState === 'live';
@@ -646,7 +648,7 @@ export default function BountyModeScreen() {
       const payload = parseVerificationPayload(result.data);
       if (!payload) {
         setWinnerScanState('error');
-        setWinnerScanError('That QR code is not a player verification code. Scan the QR on a hunter\'s Profile screen.');
+        setWinnerScanError(t('errNotVerificationQr'));
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setTimeout(() => {
           setHasScanned(false);
@@ -657,7 +659,7 @@ export default function BountyModeScreen() {
 
       if (!currentEvent || payload.eventId !== currentEvent.id) {
         setWinnerScanState('error');
-        setWinnerScanError('This QR code is for a different event.');
+        setWinnerScanError(t('errWrongEventQr'));
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setTimeout(() => {
           setHasScanned(false);
@@ -674,14 +676,14 @@ export default function BountyModeScreen() {
 
       if (!code) {
         setWinnerScanState('error');
-        setWinnerScanError('Access code missing. Restart your broadcast and try again.');
+        setWinnerScanError(t('errAccessCodeMissing'));
         setHasScanned(false);
         return;
       }
 
       if (!loc) {
         setWinnerScanState('error');
-        setWinnerScanError('Could not read your current GPS position. Try again.');
+        setWinnerScanError(t('errGpsUnavailable'));
         setHasScanned(false);
         return;
       }
@@ -726,7 +728,7 @@ export default function BountyModeScreen() {
           }, 2200);
         } else {
           setWinnerScanState('error');
-          setWinnerScanError(data.error || 'Could not declare a winner.');
+          setWinnerScanError(data.error || t('errDeclareFailed'));
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           setHasScanned(false);
           setTimeout(() => setWinnerScanState('scanning'), 2200);
@@ -734,7 +736,7 @@ export default function BountyModeScreen() {
       } catch (err) {
         console.error('[BountyMode] Declare winner error:', err);
         setWinnerScanState('error');
-        setWinnerScanError('Network error. Check your connection and try again.');
+        setWinnerScanError(t('errNetworkGeneric'));
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setHasScanned(false);
         setTimeout(() => setWinnerScanState('scanning'), 2000);
@@ -786,12 +788,12 @@ export default function BountyModeScreen() {
             onPress={() => {
               if (isLive) {
                 Alert.alert(
-                  'Stop Broadcasting?',
-                  'Hunters will no longer be able to track your location. Are you sure you want to leave?',
+                  t('stopBroadcastTitle'),
+                  t('stopBroadcastMsg'),
                   [
-                    { text: 'Keep Broadcasting', style: 'cancel' },
+                    { text: t('keepBroadcasting'), style: 'cancel' },
                     {
-                      text: 'Stop & Leave',
+                      text: t('stopAndLeave'),
                       style: 'destructive',
                       onPress: async () => {
                         await stopBroadcast();
@@ -808,7 +810,7 @@ export default function BountyModeScreen() {
           >
             <ArrowLeft color={C.dark.text} size={24} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Bounty Mode</Text>
+          <Text style={styles.headerTitle}>{t('bountyModeTitle')}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -847,26 +849,26 @@ export default function BountyModeScreen() {
                 ]}
               >
                 {isLive
-                  ? 'BROADCASTING'
+                  ? t('statusBroadcasting')
                   : isStarting
-                  ? 'STARTING...'
+                  ? t('statusStarting')
                   : hasError
-                  ? 'ERROR'
+                  ? t('statusError')
                   : isPaused
-                  ? 'PAUSED'
-                  : 'OFFLINE'}
+                  ? t('statusPaused')
+                  : t('statusOffline')}
               </Text>
             </View>
             <Text style={styles.statusSubtext}>
               {isLive
-                ? 'Hunters can now track your distance in real-time'
+                ? t('statusSubLive')
                 : isStarting
-                ? 'Acquiring GPS signal and verifying access code'
+                ? t('statusSubStarting')
                 : hasError
-                ? errorMsg || 'Something went wrong'
+                ? errorMsg || t('somethingWentWrong')
                 : isPaused
-                ? 'Broadcast paused — hunters cannot see you'
-                : 'Enter your access code to start broadcasting'}
+                ? t('statusSubPaused')
+                : t('statusSubIdle')}
             </Text>
           </View>
 
@@ -877,12 +879,10 @@ export default function BountyModeScreen() {
                 <Animated.View style={{ opacity: pulseAnim }}>
                   <AlertCircle color={C.status.danger} size={24} />
                 </Animated.View>
-                <Text style={styles.zoneAlertTitle}>YOU LEFT THE HUNT ZONE</Text>
+                <Text style={styles.zoneAlertTitle}>{t('leftZoneTitle')}</Text>
               </View>
               <Text style={styles.zoneAlertBody}>
-                You're no longer in play. Move back inside the amber circle on the map
-                to resume the hunt. Hunters can still see your distance but you're
-                outside the active area.
+                {t('leftZoneBody')}
               </Text>
             </Animated.View>
           )}
@@ -892,7 +892,7 @@ export default function BountyModeScreen() {
             <View style={styles.zoneReassuranceBanner}>
               <CheckCircle2 color={C.status.success} size={18} />
               <Text style={styles.zoneReassuranceText}>
-                Back inside the hunt zone — you're in play again.
+                {t('backInZone')}
               </Text>
             </View>
           )}
@@ -900,7 +900,7 @@ export default function BountyModeScreen() {
           {/* Access Code Entry */}
           {showCodeEntry && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>ACCESS CODE</Text>
+              <Text style={styles.sectionLabel}>{t('accessCodeLabel')}</Text>
               <View style={styles.codeInputContainer}>
                 <Lock color={C.dark.textMuted} size={18} style={{ marginLeft: 4 }} />
                 <TextInput
@@ -928,8 +928,7 @@ export default function BountyModeScreen() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.helperText}>
-                The organizer gave you this code before the hunt. Enter it to start broadcasting
-                your position so hunters can track you with the distance meter.
+                {t('accessCodeHelper')}
               </Text>
 
               {/* Prefilled hint */}
@@ -942,7 +941,7 @@ export default function BountyModeScreen() {
                     activeOpacity={0.7}
                   >
                     <Zap color={C.accent.primary} size={14} />
-                    <Text style={styles.prefillText}>Use the code assigned to this event</Text>
+                    <Text style={styles.prefillText}>{t('useAssignedCode')}</Text>
                   </TouchableOpacity>
                 )}
             </View>
@@ -951,7 +950,7 @@ export default function BountyModeScreen() {
           {/* Live Info */}
           {isLive && currentLocation && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>YOUR POSITION</Text>
+              <Text style={styles.sectionLabel}>{t('yourPositionLabel')}</Text>
               <View style={styles.coordsCard}>
                 <View style={styles.coordsRow}>
                   <MapPin color={C.accent.primary} size={18} />
@@ -963,18 +962,18 @@ export default function BountyModeScreen() {
                   <View style={styles.coordsRow}>
                     <Crosshair color={C.dark.textMuted} size={16} />
                     <Text style={styles.coordsSubtext}>
-                      GPS accuracy: ±{Math.round(currentLocation.accuracy)}m
+                      {t('gpsAccuracy', { m: Math.round(currentLocation.accuracy) })}
                     </Text>
                   </View>
                 )}
                 <View style={styles.coordsRow}>
                   <CheckCircle2 color={C.status.success} size={16} />
-                  <Text style={styles.coordsSubtext}>Last sent: {formatTimeAgo(lastUpdate)}</Text>
+                  <Text style={styles.coordsSubtext}>{t('lastSent', { time: formatTimeAgo(lastUpdate) })}</Text>
                 </View>
                 <View style={styles.coordsRow}>
                   <Radio color={C.dark.textMuted} size={16} />
                   <Text style={styles.coordsSubtext}>
-                    Updates sent: {updateCount}
+                    {t('updatesSent', { n: updateCount })}
                   </Text>
                 </View>
               </View>
@@ -984,7 +983,7 @@ export default function BountyModeScreen() {
           {/* Zone Map — let the bounty see if they're inside the hunt zone */}
           {isLive && eventZone && currentZoneRadius !== null && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>HUNT ZONE</Text>
+              <Text style={styles.sectionLabel}>{t('huntZoneLabel')}</Text>
               <EventZoneMap
                 centerLatitude={eventZone.centerLatitude}
                 centerLongitude={eventZone.centerLongitude}
@@ -995,8 +994,7 @@ export default function BountyModeScreen() {
                 bountyActive={isLive}
               />
               <Text style={styles.zoneHelperText}>
-                Stay inside the amber circle. If you leave the zone, hunters can see
-                your distance but you're no longer in the hunt area.
+                {t('zoneHelper')}
               </Text>
             </View>
           )}
@@ -1004,18 +1002,18 @@ export default function BountyModeScreen() {
           {/* Winner Declaration Section (only while broadcasting) */}
           {isLive && currentEvent && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>DECLARE WINNER</Text>
+              <Text style={styles.sectionLabel}>{t('declareWinnerLabel')}</Text>
               {declaredWinner ? (
                 <View style={styles.winnerDeclaredCard}>
                   <View style={styles.winnerCrownRow}>
                     <Crown color={C.accent.primary} size={26} />
-                    <Text style={styles.winnerDeclaredTitle}>Winner Declared!</Text>
+                    <Text style={styles.winnerDeclaredTitle}>{t('winnerDeclaredTitle')}</Text>
                   </View>
                   <Text style={styles.winnerDeclaredEmail} numberOfLines={1}>
-                    {declaredWinner.winnerEmail || 'A hunter'}
+                    {declaredWinner.winnerEmail || t('aHunter')}
                   </Text>
                   <Text style={styles.winnerDeclaredSubtext}>
-                    The hunt has ended. Every player now sees this winner on their screen.
+                    {t('winnerDeclaredSub')}
                   </Text>
                 </View>
               ) : (
@@ -1025,12 +1023,12 @@ export default function BountyModeScreen() {
                   activeOpacity={0.8}
                 >
                   <ScanLine color="#000" size={20} />
-                  <Text style={styles.declareWinnerButtonText}>Scan Winner's QR Code</Text>
+                  <Text style={styles.declareWinnerButtonText}>{t('scanWinnerQr')}</Text>
                 </TouchableOpacity>
               )}
               {!declaredWinner && (
                 <Text style={styles.declareHelperText}>
-                  When a hunter finds you, scan the QR code on their Profile screen to declare them the winner. The bounty and the winner must be physically close.
+                  {t('declareWinnerHelper')}
                 </Text>
               )}
             </View>
@@ -1039,15 +1037,15 @@ export default function BountyModeScreen() {
           {/* Event Info */}
           {currentEvent && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>EVENT</Text>
+              <Text style={styles.sectionLabel}>{t('eventLabel')}</Text>
               <View style={styles.eventCard}>
                 <View style={styles.eventRow}>
-                  <Text style={styles.eventLabel}>City</Text>
+                  <Text style={styles.eventLabel}>{t('cityLabel')}</Text>
                   <Text style={styles.eventValue}>{currentEvent.city || 'Amsterdam'}</Text>
                 </View>
                 <View style={styles.eventDivider} />
                 <View style={styles.eventRow}>
-                  <Text style={styles.eventLabel}>Status</Text>
+                  <Text style={styles.eventLabel}>{t('statusLabel')}</Text>
                   <View style={styles.eventStatusRow}>
                     <View
                       style={[
@@ -1063,10 +1061,10 @@ export default function BountyModeScreen() {
                       ]}
                     >
                       {currentEvent.status === 'live'
-                        ? 'Live now'
+                        ? t('liveNow')
                         : currentEvent.status === 'completed'
-                        ? 'Ended'
-                        : 'Scheduled'}
+                        ? t('ended')
+                        : t('scheduled')}
                     </Text>
                   </View>
                 </View>
@@ -1078,11 +1076,9 @@ export default function BountyModeScreen() {
           <View style={styles.section}>
             <View style={styles.infoCard}>
               <Shield color={C.accent.teal} size={20} />
-              <Text style={styles.infoTitle}>How this works</Text>
+              <Text style={styles.infoTitle}>{t('howItWorksTitle')}</Text>
               <Text style={styles.infoText}>
-                Your GPS position updates every {UPDATE_INTERVAL_MS / 1000}s while broadcasting.
-                Hunters see the distance to your position — not exact coordinates. If you stop
-                broadcasting for more than 5 minutes, hunters will fall back to the zone center.
+                {t('howItWorksText', { seconds: UPDATE_INTERVAL_MS / 1000 })}
               </Text>
             </View>
           </View>
@@ -1099,7 +1095,7 @@ export default function BountyModeScreen() {
             >
               <Radio color="#FFF" size={20} />
               <Text style={styles.stopButtonText}>
-                {isStarting ? 'Starting...' : 'Stop Broadcasting'}
+                {isStarting ? t('starting') : t('stopBroadcasting')}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -1111,7 +1107,7 @@ export default function BountyModeScreen() {
             >
               <RadioTower color="#000" size={20} />
               <Text style={styles.startButtonText}>
-                {isPaused ? 'Resume Broadcasting' : 'Start Broadcasting'}
+                {isPaused ? t('resumeBroadcasting') : t('startBroadcasting')}
               </Text>
             </TouchableOpacity>
           )}
@@ -1157,7 +1153,7 @@ export default function BountyModeScreen() {
             </TouchableOpacity>
             <View style={styles.winnerScannerTitleContainer}>
               <Trophy color={C.accent.primary} size={16} />
-              <Text style={styles.winnerScannerTitle}>Declare Winner</Text>
+              <Text style={styles.winnerScannerTitle}>{t('declareWinnerModal')}</Text>
             </View>
             <View style={styles.winnerScannerCloseBtn} pointerEvents="none" />
           </View>
@@ -1184,32 +1180,32 @@ export default function BountyModeScreen() {
                 <View style={styles.winnerSuccessIcon}>
                   <Crown color={C.status.success} size={48} />
                 </View>
-                <Text style={styles.winnerSuccessTitle}>Winner Declared!</Text>
+                <Text style={styles.winnerSuccessTitle}>{t('winnerDeclaredTitle')}</Text>
                 <Text style={styles.winnerSuccessText} numberOfLines={2}>
-                  {declaredWinner?.winnerEmail || 'A hunter'} found the bounty first. All players are being notified now.
+                  {t('winnerSuccessText', { name: declaredWinner?.winnerEmail || t('aHunter') })}
                 </Text>
               </View>
             ) : winnerScanState === 'verifying' ? (
               <View style={styles.winnerVerifyingState}>
                 <Loader color={C.accent.primary} size={40} />
-                <Text style={styles.winnerVerifyingTitle}>Verifying hunter...</Text>
+                <Text style={styles.winnerVerifyingTitle}>{t('verifyingHunter')}</Text>
                 <Text style={styles.winnerVerifyingText}>
-                  Checking ticket, verification code, and proximity
+                  {t('verifyingHunterSub')}
                 </Text>
               </View>
             ) : !cameraPermission?.granted ? (
               <View style={styles.winnerPermissionState}>
                 <ScanLine color={C.accent.primary} size={40} />
-                <Text style={styles.winnerPermissionTitle}>Camera Access Needed</Text>
+                <Text style={styles.winnerPermissionTitle}>{t('cameraNeededTitle')}</Text>
                 <Text style={styles.winnerPermissionText}>
-                  Allow camera access to scan a hunter's verification QR code.
+                  {t('cameraNeededText')}
                 </Text>
                 <TouchableOpacity
                   style={styles.winnerGrantButton}
                   onPress={requestCameraPermission}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.winnerGrantButtonText}>Allow Camera</Text>
+                  <Text style={styles.winnerGrantButtonText}>{t('allowCamera')}</Text>
                 </TouchableOpacity>
                 {cameraPermission && !cameraPermission.granted && cameraPermission.canAskAgain === false && (
                   <TouchableOpacity
@@ -1217,7 +1213,7 @@ export default function BountyModeScreen() {
                     onPress={() => Linking.openSettings()}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.winnerSettingsLinkText}>Open Settings</Text>
+                    <Text style={styles.winnerSettingsLinkText}>{t('openSettings')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1225,10 +1221,10 @@ export default function BountyModeScreen() {
               <View style={styles.winnerScanInstructions}>
                 <ScanLine color={C.accent.primary} size={20} />
                 <Text style={styles.winnerScanInstructionsTitle}>
-                  Point at the hunter's verification QR
+                  {t('scanWinnerInstructions')}
                 </Text>
                 <Text style={styles.winnerScanInstructionsText}>
-                  Find it on their Profile screen
+                  {t('scanWinnerInstructionsSub')}
                 </Text>
                 {winnerScanState === 'error' && winnerScanError ? (
                   <View style={styles.winnerScanError}>
@@ -1242,7 +1238,7 @@ export default function BountyModeScreen() {
             <View style={styles.winnerFooter}>
               <Shield color="rgba(255,255,255,0.5)" size={12} />
               <Text style={styles.winnerFooterText}>
-                Anti-cheat: ticket, verification code, and GPS proximity verified.
+                {t('antiCheatFooter')}
               </Text>
             </View>
           </View>

@@ -4,6 +4,7 @@ import { Trophy, MapPin, Calendar, Crown } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/colors';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PastEvent {
   id: string;
@@ -17,6 +18,7 @@ interface PastEvent {
 }
 
 export default function HuntHistory({ userId }: { userId: string | null }) {
+  const { t } = useLanguage();
   const historyQuery = useQuery<PastEvent[]>({
     queryKey: ['hunt-history'],
     queryFn: async () => {
@@ -95,8 +97,8 @@ export default function HuntHistory({ userId }: { userId: string | null }) {
       <View style={styles.sectionHeaderRow}>
         <View style={styles.sectionAccent} />
         <View>
-          <Text style={styles.sectionTitle}>Past Hunts</Text>
-          <Text style={styles.sectionSubtitle}>Legacy hunts &amp; winners</Text>
+          <Text style={styles.sectionTitle}>{t('pastHunts')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('pastHuntsSubtitle')}</Text>
         </View>
       </View>
 
@@ -128,10 +130,10 @@ export default function HuntHistory({ userId }: { userId: string | null }) {
                 <Text style={styles.cardPrize}>{'\u20AC'}{event.prize}</Text>
                 {event.winnerEmail ? (
                   <Text style={styles.cardWinner} numberOfLines={1}>
-                    {isMyWin ? 'You won!' : event.winnerEmail}
+                    {isMyWin ? t('youWon') : event.winnerEmail}
                   </Text>
                 ) : (
-                  <Text style={styles.cardWinnerUnknown}>No winner</Text>
+                  <Text style={styles.cardWinnerUnknown}>{t('noWinner')}</Text>
                 )}
               </View>
             </View>

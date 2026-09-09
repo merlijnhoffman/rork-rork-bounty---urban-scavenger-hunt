@@ -15,6 +15,7 @@ import { User, Mail, Shield, QrCode, Clock, LogIn, UserPlus, Ticket, Fingerprint
 import QRCode from 'react-native-qrcode-svg';
 import { useGameStore } from '@/store/game-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -26,8 +27,8 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { currentEvent } = useGameStore();
   const { user, signOut } = useAuth();
-  
-  
+  const { t } = useLanguage();
+
   const profileQuery = useQuery({
     queryKey: ['user-profile', user?.id],
     queryFn: async () => {
@@ -135,9 +136,9 @@ export default function ProfileScreen() {
               <View style={styles.avatarLarge}>
                 <User color={C.accent.primary} size={36} />
               </View>
-              <Text style={styles.authTitle}>Join the Hunt</Text>
+              <Text style={styles.authTitle}>{t('joinHuntTitle')}</Text>
               <Text style={styles.authSubtitle}>
-                Create an account to claim tickets and participate in treasure hunts
+                {t('joinHuntSubtitle')}
               </Text>
             </View>
 
@@ -148,7 +149,7 @@ export default function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <UserPlus color="#000" size={20} />
-                <Text style={styles.primaryAuthButtonText}>Create Account</Text>
+                <Text style={styles.primaryAuthButtonText}>{t('createAccount')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -157,17 +158,17 @@ export default function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <LogIn color={C.accent.primary} size={20} />
-                <Text style={styles.secondaryAuthButtonText}>Sign In</Text>
+                <Text style={styles.secondaryAuthButtonText}>{t('signIn')}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.benefitsCard}>
-              <Text style={styles.benefitsTitle}>Why Create an Account?</Text>
+              <Text style={styles.benefitsTitle}>{t('whyAccountTitle')}</Text>
               
               {[
-                { icon: Shield, text: 'Secure ticket management' },
-                { icon: QrCode, text: 'Unique verification codes' },
-                { icon: Clock, text: 'Real-time hunt updates' },
+                { icon: Shield, text: t('benefitSecureTickets') },
+                { icon: QrCode, text: t('benefitUniqueCodes') },
+                { icon: Clock, text: t('benefitLiveUpdates') },
               ].map((item, i) => (
                 <View key={i} style={styles.benefitRow}>
                   <View style={styles.benefitIconContainer}>
@@ -225,19 +226,19 @@ export default function ProfileScreen() {
                 )}
               </Pressable>
             </View>
-            <Text style={styles.welcomeText}>Welcome back!</Text>
+            <Text style={styles.welcomeText}>{t('welcomeBack')}</Text>
             <Text style={styles.userEmail}>{user.email}</Text>
           </View>
 
           <View style={styles.profileCard}>
-            <Text style={styles.cardTitle}>Account Details</Text>
+            <Text style={styles.cardTitle}>{t('accountDetails')}</Text>
             
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
                 <Mail color={C.dark.textMuted} size={18} />
               </View>
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Email</Text>
+                <Text style={styles.detailLabel}>{t('emailLabel')}</Text>
                 <Text style={styles.detailValue}>{user.email}</Text>
               </View>
             </View>
@@ -249,7 +250,7 @@ export default function ProfileScreen() {
                 <Fingerprint color={C.dark.textMuted} size={18} />
               </View>
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Account Status</Text>
+                <Text style={styles.detailLabel}>{t('accountStatus')}</Text>
                 <View style={[
                   styles.statusChip,
                   user.email_confirmed_at ? styles.statusChipSuccess : styles.statusChipDanger
@@ -262,7 +263,7 @@ export default function ProfileScreen() {
                     styles.statusChipText,
                     { color: user.email_confirmed_at ? C.status.success : C.status.danger }
                   ]}>
-                    {user.email_confirmed_at ? 'Verified' : 'Not Verified'}
+                    {user.email_confirmed_at ? t('verified') : t('notVerified')}
                   </Text>
                 </View>
               </View>
@@ -275,7 +276,7 @@ export default function ProfileScreen() {
                 <Ticket color={C.dark.textMuted} size={18} />
               </View>
               <View style={styles.detailContent}>
-                <Text style={styles.detailLabel}>Ticket Status</Text>
+                <Text style={styles.detailLabel}>{t('ticketStatus')}</Text>
                 <View style={[
                   styles.statusChip,
                   hasTicket ? styles.statusChipSuccess : styles.statusChipMuted
@@ -288,7 +289,7 @@ export default function ProfileScreen() {
                     styles.statusChipText,
                     { color: hasTicket ? C.status.success : C.dark.textMuted }
                   ]}>
-                    {hasTicket ? 'Active Ticket' : 'No Active Ticket'}
+                    {hasTicket ? t('activeTicket') : t('noActiveTicket')}
                   </Text>
                 </View>
               </View>
@@ -305,7 +306,7 @@ export default function ProfileScreen() {
               >
                 <View style={styles.verificationHeader}>
                   <QrCode color="#FFF" size={22} />
-                  <Text style={styles.verificationTitle}>Verification Code</Text>
+                  <Text style={styles.verificationTitle}>{t('verificationCodeTitle')}</Text>
                 </View>
 
                 <View style={styles.verificationQrWrapper}>
@@ -322,7 +323,7 @@ export default function ProfileScreen() {
                   <View style={styles.verificationQrHintRow}>
                     <ScanLine color="#FFF" size={14} />
                     <Text style={styles.verificationQrHintText}>
-                      Show this to the bounty to win
+                      {t('showBountyToWin')}
                     </Text>
                   </View>
                 </View>
@@ -332,13 +333,13 @@ export default function ProfileScreen() {
                 </View>
                 
                 <Text style={styles.verificationNote}>
-                  Present this code (or let the bounty scan the QR) to claim your prize if you find the target first!
+                  {t('verificationNote')}
                 </Text>
                 
                 <View style={styles.secureNotice}>
                   <Shield color="rgba(255,255,255,0.8)" size={14} />
                   <Text style={styles.secureNoticeText}>
-                    Keep this code secure and don't share it
+                    {t('keepCodeSecure')}
                   </Text>
                 </View>
               </LinearGradient>
@@ -348,9 +349,9 @@ export default function ProfileScreen() {
           {!!hasTicket && !verificationCode && (
             <View style={styles.loadingTicketCard}>
               <Clock color={C.accent.primary} size={28} />
-              <Text style={styles.loadingTicketTitle}>Loading Ticket...</Text>
+              <Text style={styles.loadingTicketTitle}>{t('loadingTicketTitle')}</Text>
               <Text style={styles.loadingTicketText}>
-                Your verification code is being retrieved
+                {t('loadingTicketText')}
               </Text>
             </View>
           )}
@@ -360,14 +361,14 @@ export default function ProfileScreen() {
             onPress={handleSignOut}
             activeOpacity={0.8}
           >
-            <Text style={styles.signOutButtonText}>Sign Out</Text>
+            <Text style={styles.signOutButtonText}>{t('signOut')}</Text>
           </TouchableOpacity>
 
           <View style={styles.securityCard}>
             <Shield color={C.accent.primary} size={22} />
-            <Text style={styles.securityTitle}>Security Features</Text>
+            <Text style={styles.securityTitle}>{t('securityFeaturesTitle')}</Text>
             <Text style={styles.securityDescription}>
-              {`\u2022 Account verification required\n\u2022 Secure authentication\n\u2022 Screenshot protection enabled\n\u2022 Unique verification codes\n\u2022 Anti-sharing technology`}
+              {t('securityFeaturesList')}
             </Text>
           </View>
 

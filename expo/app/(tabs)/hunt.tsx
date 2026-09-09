@@ -656,7 +656,7 @@ export default function HuntScreen() {
       const startISO = currentEvent?.startTime;
       const startDate = startISO ? new Date(startISO) : null;
       if (!startDate || isNaN(startDate.getTime())) {
-        Alert.alert('No event scheduled', 'There is no upcoming hunt to add yet.');
+        Alert.alert(t('errNoEventScheduled'), t('errNoEventScheduledMsg'));
         return;
       }
       const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000);
@@ -781,26 +781,26 @@ export default function HuntScreen() {
 
   const handleDateTimePress = useCallback(() => {
     if (!currentEvent?.startTime) {
-      Alert.alert('No event scheduled', 'There is no upcoming hunt to add yet.');
+      Alert.alert(t('errNoEventScheduled'), t('errNoEventScheduledMsg'));
       return;
     }
     Alert.alert(
-      'Add to Calendar?',
-      'Would you like to add this hunt to your calendar?',
+      t('addCalendarTitle'),
+      t('addCalendarMsg'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Add', onPress: () => { void performAddToCalendar(); } },
+        { text: t('cancel'), style: 'cancel' },
+        { text: t('add'), onPress: () => { void performAddToCalendar(); } },
       ]
     );
   }, [currentEvent, performAddToCalendar]);
 
   const handleDistanceMeter = async () => {
     if (distanceMeterUsed) {
-      Alert.alert('Already Used', 'You have already used your distance meter for this hunt.');
+      Alert.alert(t('meterAlreadyUsedTitle'), t('meterAlreadyUsedMsg'));
       return;
     }
     if (!bountyLocation) {
-      Alert.alert('No Target Yet', 'Wait for the first clue with a hunt zone before using the distance meter.');
+      Alert.alert(t('meterNoTargetTitle'), t('meterNoTargetMsg'));
       return;
     }
 
@@ -1010,7 +1010,7 @@ export default function HuntScreen() {
               <View style={styles.winnerBanner}>
                 <View style={styles.winnerBannerTop}>
                   <Crown color={Colors.accent.primary} size={22} />
-                  <Text style={styles.winnerBannerTitle}>WE HAVE A WINNER</Text>
+                  <Text style={styles.winnerBannerTitle}>{t('weHaveWinner')}</Text>
                 </View>
                 <Text style={styles.winnerBannerEmail} numberOfLines={1}>
                   {eventWinner.winnerEmail || 'A hunter'} found the bounty!
@@ -1112,7 +1112,7 @@ export default function HuntScreen() {
                       {isBountyActive && (
                         <View style={styles.liveTrackingBadge}>
                           <View style={styles.liveTrackingDot} />
-                          <Text style={styles.liveTrackingText}>LIVE</Text>
+                          <Text style={styles.liveTrackingText}>{t('live')}</Text>
                         </View>
                       )}
                     </View>
@@ -1147,7 +1147,7 @@ export default function HuntScreen() {
               <View style={styles.zoneMapWrapper}>
                 <View style={styles.zoneMapHeader}>
                   <Crosshair color={Colors.accent.primary} size={16} />
-                  <Text style={styles.zoneMapHeaderText}>HUNT ZONE</Text>
+                  <Text style={styles.zoneMapHeaderText}>{t('huntZoneLabel')}</Text>
                   <View style={styles.zoneMapLiveDot} />
                 </View>
                 <EventZoneMap
@@ -1220,7 +1220,7 @@ export default function HuntScreen() {
                       <View style={styles.hintRevealed}>
                         <View style={styles.hintRevealedHeader}>
                           <Lightbulb color={Colors.accent.primaryLight} size={14} />
-                          <Text style={styles.hintRevealedLabel}>HINT</Text>
+                          <Text style={styles.hintRevealedLabel}>{t('hint')}</Text>
                         </View>
                         <Text style={styles.hintRevealedText}>{clue.hint}</Text>
                       </View>
@@ -1268,7 +1268,7 @@ export default function HuntScreen() {
                 activeOpacity={0.7}
               >
                 <Crosshair color={Colors.accent.primary} size={16} />
-                <Text style={styles.scrollToZoneText}>Back to Hunt Zone</Text>
+                <Text style={styles.scrollToZoneText}>{t('backToHuntZone')}</Text>
                 <ChevronUp color={Colors.accent.primary} size={16} />
               </TouchableOpacity>
             )}
@@ -1291,7 +1291,7 @@ export default function HuntScreen() {
             ]}
           >
             <Zap color={Colors.accent.primary} size={20} />
-            <Text style={styles.notificationText}>New clue received!</Text>
+            <Text style={styles.notificationText}>{t('newClueReceived')}</Text>
           </Animated.View>
         </LinearGradient>
         
@@ -1325,13 +1325,13 @@ export default function HuntScreen() {
               <View style={styles.hintModalIcon}>
                 <Lightbulb color={Colors.accent.primary} size={36} />
               </View>
-              <Text style={styles.hintModalTitle}>Reveal a Hint?</Text>
+              <Text style={styles.hintModalTitle}>{t('hintModalTitle')}</Text>
               <View style={styles.hintModalTokenBadge}>
                 <Text style={styles.hintModalTokenCount}>{hintTokens}</Text>
-                <Text style={styles.hintModalTokenLabel}>token{hintTokens !== 1 ? 's' : ''} left</Text>
+                <Text style={styles.hintModalTokenLabel}>{t('tokensLeft', { n: hintTokens })}</Text>
               </View>
               <Text style={styles.hintModalDesc}>
-                Spending a token will unlock additional clues to help you solve this riddle.
+                {t('hintModalDesc')}
               </Text>
               <View style={styles.hintModalActions}>
                 <TouchableOpacity
@@ -1339,7 +1339,7 @@ export default function HuntScreen() {
                   onPress={() => setShowHintConfirm(null)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.hintModalCancelText}>Cancel</Text>
+                  <Text style={styles.hintModalCancelText}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.hintModalConfirm}
@@ -1347,7 +1347,7 @@ export default function HuntScreen() {
                   activeOpacity={0.8}
                 >
                   <Unlock color="#000" size={16} />
-                  <Text style={styles.hintModalConfirmText}>Reveal</Text>
+                  <Text style={styles.hintModalConfirmText}>{t('reveal')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1375,7 +1375,7 @@ export default function HuntScreen() {
               </View>
             </View>
             <Text style={styles.appTitle}>BOUNTY</Text>
-            <Text style={styles.tagline}>Urban Scavenger Hunt</Text>
+            <Text style={styles.tagline}>{t('tagline')}</Text>
           </View>
 
           {!currentEvent && !gameLoading && !!eventError && (
@@ -1383,11 +1383,11 @@ export default function HuntScreen() {
               <View style={styles.errorCardIcon}>
                 <AlertCircle color={Colors.status.danger} size={28} />
               </View>
-              <Text style={styles.errorCardTitle}>Unable to Load Event</Text>
+              <Text style={styles.errorCardTitle}>{t('unableToLoadEvent')}</Text>
               <Text style={styles.errorCardMessage}>
                 {eventError === 'Load failed' || eventError === 'Network request failed' || eventError === 'Failed to fetch'
-                  ? 'Could not connect to the server. Check your internet connection and try again.'
-                  : `Something went wrong: ${eventError}`}
+                  ? t('errNoServer')
+                  : t('errGenericEvent', { error: eventError })}
               </Text>
               <TouchableOpacity
                 style={styles.retryButton}
@@ -1396,7 +1396,7 @@ export default function HuntScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.retryButtonText}>
-                  {isEventFetching ? 'Retrying...' : 'Try Again'}
+                  {isEventFetching ? t('retrying') : t('tryAgain')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1405,7 +1405,7 @@ export default function HuntScreen() {
           {!currentEvent && gameLoading && (
             <View style={styles.loadingCard}>
               <View style={styles.loadingPulse} />
-              <Text style={styles.loadingText}>Loading event details...</Text>
+              <Text style={styles.loadingText}>{t('loadingEventDetails')}</Text>
             </View>
           )}
 
@@ -1429,7 +1429,7 @@ export default function HuntScreen() {
                 <View style={styles.eventHeader}>
                   <View style={[styles.nextEventPill, isHuntActive && styles.livePill]}>
                     <Text style={[styles.nextEventLabel, isHuntActive && styles.livePillText]}>
-                      {isHuntActive ? 'LIVE NOW' : currentEvent?.status === 'completed' ? 'COMPLETED' : 'NEXT HUNT'}
+                      {isHuntActive ? t('liveNowPill') : currentEvent?.status === 'completed' ? t('completedPill') : t('nextHuntPill')}
                     </Text>
                   </View>
                   <TouchableOpacity 
@@ -1443,18 +1443,18 @@ export default function HuntScreen() {
                 </View>
 
                 <View style={styles.citySection}>
-                  <Text style={styles.cityLabel}>LOCATION</Text>
+                  <Text style={styles.cityLabel}>{t('locationLabel')}</Text>
                   <Text style={styles.cityNameLarge}>AMSTERDAM</Text>
                   <View style={styles.cityMetaRow}>
                     <Text style={styles.cityFlag}>{'🇳🇱'}</Text>
-                    <Text style={styles.cityCountry}>Netherlands</Text>
+                    <Text style={styles.cityCountry}>{t('countryNetherlands')}</Text>
                   </View>
                 </View>
 
                 {!!timeUntilEvent && !isHuntActive && (
                   <View style={styles.countdownContainer}>
                     <Text style={styles.countdownLabel}>
-                      {currentEvent?.status === 'completed' ? 'STATUS' : 'STARTS IN'}
+                      {currentEvent?.status === 'completed' ? t('statusCountdownLabel') : t('startsIn')}
                     </Text>
                     <Text style={styles.countdownTime}>{timeUntilEvent}</Text>
                   </View>
@@ -1464,10 +1464,10 @@ export default function HuntScreen() {
                   <View style={[styles.countdownContainer, styles.liveCountdownContainer]}>
                     <View style={styles.liveIndicatorRow}>
                       <View style={styles.liveIndicatorDot} />
-                      <Text style={styles.liveIndicatorText}>HUNT IS ACTIVE</Text>
+                      <Text style={styles.liveIndicatorText}>{t('huntIsActive')}</Text>
                     </View>
                     <Text style={styles.liveSubtext}>
-                      {hasTicket ? 'Scroll down or tap below to join the hunt!' : 'Purchase a ticket to join the live hunt!'}
+                      {hasTicket ? t('liveSubWithTicket') : t('liveSubNoTicket')}
                     </Text>
                   </View>
                 )}
@@ -1494,7 +1494,7 @@ export default function HuntScreen() {
                   >
                     <LogIn color="#FFF" size={18} />
                     <Text style={styles.authRequiredText}>
-                      Sign up to claim your ticket
+                      {t('signupToClaim')}
                     </Text>
                     <ChevronRight color="rgba(255,255,255,0.6)" size={16} />
                   </TouchableOpacity>
@@ -1513,10 +1513,10 @@ export default function HuntScreen() {
                       <View style={styles.ticketCheckmark}>
                         <Text style={styles.ticketCheckmarkText}>{'\u2713'}</Text>
                       </View>
-                      <Text style={styles.ticketClaimedTitle}>TICKET CLAIMED</Text>
+                      <Text style={styles.ticketClaimedTitle}>{t('ticketClaimedTitle')}</Text>
                     </View>
                     <Text style={styles.ticketClaimedText}>
-                      Hunt starts at the scheduled time.
+                      {t('ticketClaimedText')}
                     </Text>
                   </View>
                 )}
@@ -1528,7 +1528,7 @@ export default function HuntScreen() {
                     activeOpacity={0.8}
                   >
                     <Target color="#000" size={20} />
-                    <Text style={styles.joinHuntButtonText}>JOIN LIVE HUNT</Text>
+                    <Text style={styles.joinHuntButtonText}>{t('joinLiveHunt')}</Text>
                     <ChevronRight color="#000" size={18} />
                   </TouchableOpacity>
                 )}
@@ -1541,8 +1541,8 @@ export default function HuntScreen() {
               <View style={styles.firstEventBanner}>
                 <Zap color={Colors.accent.primary} size={20} />
                 <View style={styles.firstEventTextContainer}>
-                  <Text style={styles.firstEventText}>{TICKET.isFree ? 'FREE TICKET' : `${TICKET.currency} ${TICKET.price.toFixed(2)} PER TICKET`}</Text>
-                  <Text style={styles.firstEventSubtext}>{TICKET.isFree ? 'Claim your free ticket to join the hunt and compete for the prize.' : 'One-time purchase. Includes all hunt features and prize eligibility.'}</Text>
+                  <Text style={styles.firstEventText}>{TICKET.isFree ? t('free') : t('pricePerTicket', { price: `${TICKET.currency} ${TICKET.price.toFixed(2)}` })}</Text>
+                  <Text style={styles.firstEventSubtext}>{TICKET.isFree ? t('firstEventFreeSub') : t('firstEventPaidSub')}</Text>
                 </View>
               </View>
             </Animated.View>
@@ -1560,7 +1560,11 @@ export default function HuntScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.ticketButtonText}>
-                  {isLoading || isPurchasing ? 'PROCESSING...' : TICKET.isFree ? 'CLAIM FREE TICKET' : `BUY TICKET - ${offering?.availablePackages?.[0]?.product?.priceString ?? `${TICKET.currency} ${TICKET.price.toFixed(2)}`}`}
+                  {isLoading || isPurchasing
+                    ? t('processing')
+                    : TICKET.isFree
+                    ? t('claimTicket')
+                    : t('buyTicketWithPrice', { price: offering?.availablePackages?.[0]?.product?.priceString ?? `${TICKET.currency} ${TICKET.price.toFixed(2)}` })}
                 </Text>
                 {!isLoading && (
                   <ChevronRight color={'#000'} size={18} />
@@ -1573,17 +1577,17 @@ export default function HuntScreen() {
             <View style={styles.sectionHeaderRow}>
               <View style={styles.sectionAccent} />
               <View>
-                <Text style={styles.sectionTitle}>The Hunt</Text>
-                <Text style={styles.sectionSubtitle}>Four steps to the bounty</Text>
+                <Text style={styles.sectionTitle}>{t('theHunt')}</Text>
+                <Text style={styles.sectionSubtitle}>{t('fourSteps')}</Text>
               </View>
             </View>
             
             <View style={styles.stepsContainer}>
               {[
-                { num: '01', title: 'Gear Up', text: 'Create your hunter profile. One ticket per account keeps the chase fair.', icon: LogIn },
-                { num: '02', title: 'Lock It In', text: TICKET.isFree ? 'Claim your free ticket and secure your spot in the field.' : `Grab your ticket for \u20AC${TICKET.price.toFixed(2)} \u2014 your entry to the chase.`, icon: Zap },
-                { num: '03', title: 'Chase the Clues', text: 'Clues drop in real-time during the live hunt. Photos, videos, audio \u2014 follow every lead.', icon: Eye },
-                { num: '04', title: 'Claim the Bounty', text: 'Be the first hunter to track down the target and walk away with the cash prize.', icon: Trophy },
+                { num: '01', title: t('step1Title'), text: t('step1Text'), icon: LogIn },
+                { num: '02', title: t('step2Title'), text: TICKET.isFree ? t('step2TextFree') : t('step2TextPaid', { price: TICKET.price.toFixed(2) }), icon: Zap },
+                { num: '03', title: t('step3Title'), text: t('step3Text'), icon: Eye },
+                { num: '04', title: t('step4Title'), text: t('step4Text'), icon: Trophy },
               ].map((step, i) => (
                 <View key={step.num} style={styles.stepCard}>
                   <View style={styles.stepNumberWatermark}>
@@ -1618,7 +1622,7 @@ export default function HuntScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Prize Details</Text>
+                <Text style={styles.modalTitle}>{t('prizeDetailsTitle')}</Text>
                 <TouchableOpacity 
                   onPress={() => setShowPrizeModal(false)}
                   style={styles.modalCloseButton}
@@ -1632,34 +1636,34 @@ export default function HuntScreen() {
                 <View style={styles.modalPrizeSection}>
                   <Trophy color={Colors.accent.primary} size={40} />
                   <Text style={styles.modalPrizeAmount}>{'\u20AC'}{currentEvent?.prize || '1000'}</Text>
-                  <Text style={styles.modalPrizeSubtitle}>Cash Prize</Text>
+                  <Text style={styles.modalPrizeSubtitle}>{t('cashPrize')}</Text>
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Prize Description</Text>
+                  <Text style={styles.modalSectionTitle}>{t('prizeDescriptionTitle')}</Text>
                   <Text style={styles.modalSectionText}>
-                    {`The winner will receive \u20AC1,000 in cash, paid via bank transfer within 7 business days of verification. The prize is awarded to the first verified hunter who successfully locates and identifies the target during the live event.`}
+                    {t('prizeDescriptionText')}
                   </Text>
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>How to Win</Text>
+                  <Text style={styles.modalSectionTitle}>{t('howToWinTitle')}</Text>
                   <Text style={styles.modalSectionText}>
-                    {`\u2022 Be the first to find the target person in the designated area\n\u2022 Take a photo or video as proof of discovery\n\u2022 Submit your verification through the app\n\u2022 Our team will verify your submission\n\u2022 Winner announced within 1 hour of hunt completion`}
+                    {t('howToWinText')}
                   </Text>
                 </View>
 
                 <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Legal Terms</Text>
+                  <Text style={styles.modalSectionTitle}>{t('legalTermsTitle')}</Text>
                   <Text style={styles.modalSectionText}>
-                    {`\u2022 Participants must be 18 years or older\n\u2022 One prize per event, awarded to first verified winner\n\u2022 Prize cannot be transferred or exchanged for other goods\n\u2022 Winner must provide valid identification for verification\n\u2022 Tax obligations are the responsibility of the winner\n\u2022 Bounty reserves the right to disqualify any participant for rule violations\n\u2022 All participants must comply with local laws and regulations\n\u2022 Harassment or aggressive behavior will result in immediate disqualification\n\u2022 Prize payment subject to identity verification and fraud prevention checks`}
+                    {t('legalTermsText')}
                   </Text>
                 </View>
 
                 <View style={[styles.modalSection, { borderBottomWidth: 0 }]}>
-                  <Text style={styles.modalSectionTitle}>Important Notice</Text>
+                  <Text style={styles.modalSectionTitle}>{t('importantNoticeTitle')}</Text>
                   <Text style={styles.modalSectionText}>
-                    By participating in this hunt, you agree to our Terms of Service and Privacy Policy. All decisions made by Bounty regarding winner verification are final. The hunt may be cancelled or postponed due to unforeseen circumstances, in which case full refunds will be provided.
+                    {t('importantNoticeText')}
                   </Text>
                 </View>
               </ScrollView>
@@ -1669,7 +1673,7 @@ export default function HuntScreen() {
                 onPress={() => setShowPrizeModal(false)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.modalButtonText}>Got It</Text>
+                <Text style={styles.modalButtonText}>{t('gotIt')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1683,7 +1687,7 @@ export default function HuntScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.paywallContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Get Your Ticket</Text>
+                <Text style={styles.modalTitle}>{t('getYourTicket')}</Text>
                 <TouchableOpacity
                   onPress={() => setShowPaywall(false)}
                   style={styles.modalCloseButton}
@@ -1697,11 +1701,11 @@ export default function HuntScreen() {
                 <View style={styles.paywallPriceSection}>
                   <Target color={Colors.accent.primary} size={44} />
                   <Text style={styles.paywallPrice}>{offering?.availablePackages?.[0]?.product?.priceString ?? `\u20AC${TICKET.price.toFixed(2)}`}</Text>
-                  <Text style={styles.paywallPriceLabel}>One-time purchase</Text>
+                  <Text style={styles.paywallPriceLabel}>{t('oneTimePurchase')}</Text>
                 </View>
 
                 <View style={styles.paywallFeatures}>
-                  {TICKET.features.map((feature, idx) => (
+                  {[t('ticketFeature1'), t('ticketFeature2'), t('ticketFeature3'), t('ticketFeature4')].map((feature, idx) => (
                     <View key={idx} style={styles.paywallFeatureRow}>
                       <View style={styles.paywallFeatureCheck}>
                         <Text style={styles.paywallFeatureCheckText}>{'\u2713'}</Text>
@@ -1728,7 +1732,11 @@ export default function HuntScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={styles.paywallBuyButtonText}>
-                    {isPurchasing ? 'PROCESSING...' : isOfferingLoading ? 'LOADING...' : `PURCHASE FOR ${offering?.availablePackages?.[0]?.product?.priceString ?? `\u20AC${TICKET.price.toFixed(2)}`}`}
+                    {isPurchasing
+                      ? t('processing')
+                      : isOfferingLoading
+                      ? t('loading')
+                      : t('purchaseFor', { price: offering?.availablePackages?.[0]?.product?.priceString ?? `\u20AC${TICKET.price.toFixed(2)}` })}
                   </Text>
                 </TouchableOpacity>
 
@@ -1739,21 +1747,21 @@ export default function HuntScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.paywallRestoreText}>
-                    {isRestoring ? 'Restoring...' : 'Restore Previous Purchase'}
+                    {isRestoring ? t('restoring') : t('restorePrevious')}
                   </Text>
                 </TouchableOpacity>
 
                 <View style={styles.paywallLegalRow}>
                   <TouchableOpacity onPress={() => Linking.openURL('https://bounty.app/terms')} activeOpacity={0.7}>
-                    <Text style={styles.paywallLegalLink}>Terms of Service</Text>
+                    <Text style={styles.paywallLegalLink}>{t('termsOfService')}</Text>
                   </TouchableOpacity>
                   <Text style={styles.paywallLegalDot}>{'\u2022'}</Text>
                   <TouchableOpacity onPress={() => Linking.openURL('https://bounty.app/privacy')} activeOpacity={0.7}>
-                    <Text style={styles.paywallLegalLink}>Privacy Policy</Text>
+                    <Text style={styles.paywallLegalLink}>{t('privacyPolicy')}</Text>
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.paywallLegalNote}>
-                  Charged to your {Platform.OS === 'ios' ? 'Apple ID' : 'Google account'}. One-time purchase, no auto-renewal.
+                  {t('chargedTo', { account: Platform.OS === 'ios' ? t('appleId') : t('googleAccount') })}
                 </Text>
               </View>
             </View>

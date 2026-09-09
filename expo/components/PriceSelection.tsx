@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Check, Ticket } from 'lucide-react-native';
 import { TICKET_TIERS } from '@/constants/payment';
 import { TicketTier } from '@/types/payment';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PriceSelectionProps {
   selectedTier: TicketTier | null;
@@ -25,7 +26,14 @@ export default function PriceSelection({
   isProcessing,
   disabled = false,
 }: PriceSelectionProps) {
+  const { t } = useLanguage();
   const ticket = TICKET_TIERS[0]; // Single ticket
+  const featureLabels = [
+    t('ticketFeature1'),
+    t('ticketFeature2'),
+    t('ticketFeature3'),
+    t('ticketFeature4'),
+  ];
   const isSelected = selectedTier?.id === ticket.id;
 
   const handleTicketPress = () => {
@@ -41,9 +49,9 @@ export default function PriceSelection({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Join the Hunt</Text>
+        <Text style={styles.title}>{t('joinHuntTitle')}</Text>
         <Text style={styles.subtitle}>
-          Get your ticket and start the adventure
+          {t('ticketSubtitle')}
         </Text>
       </View>
 
@@ -67,21 +75,21 @@ export default function PriceSelection({
               </View>
               <View style={styles.ticketInfo}>
                 <Text style={styles.ticketName}>
-                  {ticket.name}
+                  {t('ticketName')}
                 </Text>
                 <Text style={styles.ticketDescription}>
-                  {ticket.description}
+                  {t('ticketDescription')}
                 </Text>
               </View>
               <View style={styles.priceContainer}>
                 <Text style={styles.price}>
-                  {ticket.isFree ? 'FREE' : `€${ticket.price}`}
+                  {ticket.isFree ? t('free') : `€${ticket.price}`}
                 </Text>
               </View>
             </View>
 
             <View style={styles.featuresContainer}>
-              {ticket.features.map((feature, index) => (
+              {featureLabels.map((feature, index) => (
                 <View key={index} style={styles.featureRow}>
                   <Check color="#FFF" size={16} />
                   <Text style={styles.featureText}>
@@ -102,8 +110,8 @@ export default function PriceSelection({
             >
               <Text style={styles.purchaseButtonText}>
                 {isProcessing && selectedTier?.id === ticket.id
-                  ? 'PROCESSING...'
-                  : ticket.isFree ? 'CLAIM TICKET' : 'BUY TICKET'
+                  ? t('processing')
+                  : ticket.isFree ? t('claimTicket') : t('buyTicket')
                 }
               </Text>
             </TouchableOpacity>

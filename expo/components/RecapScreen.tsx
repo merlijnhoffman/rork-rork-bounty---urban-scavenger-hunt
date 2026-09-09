@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Crown, Trophy, Target, Users, Lightbulb, Navigation, Share as ShareIcon, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface RecapScreenProps {
   visible: boolean;
@@ -36,6 +37,7 @@ export default function RecapScreen({
   hintTokensLeft,
   cityName,
 }: RecapScreenProps) {
+  const { t } = useLanguage();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const crownAnim = useRef(new Animated.Value(0)).current;
@@ -74,8 +76,14 @@ export default function RecapScreen({
 
   const handleShare = async () => {
     const message = isWinner
-      ? `I found the bounty in ${cityName} and WON the hunt! 🏆 Can you catch me next time?`
-      : `The ${cityName} bounty hunt just ended! ${winnerEmail ? winnerEmail + ' found the bounty' : 'Someone found the bounty'} — I got ${closestDistance !== null ? closestDistance + 'm' : 'close'} away. Next time it's mine! 🎯`;
+      ? t('shareWinnerMsg', { city: cityName })
+      : t('shareLostMsg', {
+          city: cityName,
+          found: winnerEmail
+            ? t('foundTheBounty', { name: winnerEmail })
+            : t('someoneFoundBounty'),
+          distance: closestDistance !== null ? `${closestDistance}m` : t('shareGotClose'),
+        });
 
     try {
       await Share.share({ message });
@@ -87,25 +95,25 @@ export default function RecapScreen({
   const stats = [
     {
       icon: Navigation,
-      label: 'Closest Distance',
+      label: t('statClosestDistance'),
       value: closestDistance !== null ? `${closestDistance}m` : '—',
       color: Colors.accent.primary,
     },
     {
       icon: Target,
-      label: 'Clues Solved',
+      label: t('statCluesSolved'),
       value: String(cluesSolved),
       color: Colors.accent.teal,
     },
     {
       icon: Users,
-      label: 'Connections',
+      label: t('statConnections'),
       value: String(connectionsMade),
       color: Colors.accent.primaryLight,
     },
     {
       icon: Lightbulb,
-      label: 'Hints Left',
+      label: t('statHintsLeft'),
       value: String(hintTokensLeft),
       color: Colors.status.warning,
     },
@@ -159,16 +167,16 @@ export default function RecapScreen({
 
             {/* Title */}
             <Text style={styles.title}>
-              {isWinner ? 'YOU FOUND THE BOUNTY!' : 'HUNT COMPLETE'}
+              {isWinner ? t('recapWinnerTitle') : t('recapCompleteTitle')}
             </Text>
 
             {/* Winner reveal */}
             <Text style={styles.subtitle}>
               {isWinner
-                ? 'Congratulations, hunter!'
+                ? t('recapWinnerSubtitle')
                 : winnerEmail
-                  ? `${winnerEmail} found the bounty`
-                  : 'A hunter found the bounty'}
+                  ? t('foundTheBounty', { name: winnerEmail })
+                  : t('someoneFoundBounty')}
             </Text>
 
             <Text style={styles.cityText}>{cityName.toUpperCase()}</Text>
@@ -194,12 +202,12 @@ export default function RecapScreen({
             {/* Share button */}
             <TouchableOpacity style={styles.shareButton} onPress={handleShare} activeOpacity={0.8}>
               <ShareIcon color="#000" size={18} />
-              <Text style={styles.shareButtonText}>Share Your Result</Text>
+              <Text style={styles.shareButtonText}>{t('shareResult')}</Text>
             </TouchableOpacity>
 
             {/* Play again */}
             <TouchableOpacity style={styles.playAgainButton} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.playAgainText}>Back to Hunt</Text>
+              <Text style={styles.playAgainText}>{t('backToHunt')}</Text>
             </TouchableOpacity>
           </LinearGradient>
         </Animated.View>

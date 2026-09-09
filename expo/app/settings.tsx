@@ -55,14 +55,14 @@ export default function SettingsScreen() {
     try {
       await restorePurchases();
       Alert.alert(
-        hasHuntAccess ? 'Purchases Restored' : 'No Purchases Found',
+        hasHuntAccess ? t('purchasesRestored') : t('noPurchasesFound'),
         hasHuntAccess
-          ? 'Your previous purchases have been restored to this account.'
-          : 'No previous purchases were found for this account.',
+          ? t('purchasesRestoredMsg')
+          : t('noPurchasesMsg'),
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Could not restore purchases.';
-      Alert.alert('Restore Failed', message);
+      Alert.alert(t('errRestoreFailed'), message);
     }
   }, [restorePurchases, hasHuntAccess]);
 
@@ -72,27 +72,27 @@ export default function SettingsScreen() {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) {
-        throw new Error('You must be signed in to delete your account.');
+        throw new Error(t('errDeleteSignIn'));
       }
 
       const { error } = await supabase.functions.invoke('delete-account', {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (error) {
-        throw new Error(error.message || 'Failed to delete account');
+        throw new Error(error.message || t('errDeleteFailed'));
       }
 
       await supabase.auth.signOut();
       Alert.alert(
-        'Account Deleted',
-        'Your account and personal data have been permanently removed.',
-        [{ text: 'OK', onPress: () => router.replace('/hunt') }],
+        t('accountDeletedTitle'),
+        t('accountDeletedMsg'),
+        [{ text: t('ok'), onPress: () => router.replace('/hunt') }],
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete account.';
+      const message = err instanceof Error ? err.message : t('errDeleteFailed');
       Alert.alert(
-        'Could Not Delete Account',
-        `${message}\n\nIf this keeps happening, contact support@bounty.app.`,
+        t('errDeleteAccountTitle'),
+        `${message}\n\n${t('deleteContactSupport')}`,
       );
     } finally {
       setIsDeleting(false);
@@ -101,20 +101,20 @@ export default function SettingsScreen() {
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
-      'Delete Account',
-      'This permanently deletes your account, profile, and tickets. This cannot be undone. Continue?',
+      t('deleteAccount'),
+      t('deleteAccountMsg'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('delete'),
           style: 'destructive',
           onPress: () => {
             Alert.alert(
-              'Are you absolutely sure?',
-              'All your data will be erased immediately. This action is irreversible.',
+              t('deleteSureTitle'),
+              t('deleteSureMsg'),
               [
-                { text: 'Keep Account', style: 'cancel' },
-                { text: 'Delete Forever', style: 'destructive', onPress: performDelete },
+                { text: t('keepAccount'), style: 'cancel' },
+                { text: t('deleteForever'), style: 'destructive', onPress: performDelete },
               ],
             );
           },
@@ -129,7 +129,7 @@ export default function SettingsScreen() {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) {
-        throw new Error('You must be signed in to export your data.');
+        throw new Error(t('errExportSignIn'));
       }
 
       const { data, error } = await supabase.functions.invoke('export-data', {
@@ -137,30 +137,30 @@ export default function SettingsScreen() {
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to export data');
+        throw new Error(error.message || t('errExportFailed'));
       }
 
       Alert.alert(
-        'Data Export Requested',
-        'Your personal data export has been requested. We will process it and send it to your registered email within 30 days, as required by GDPR Art. 12(3).',
+        t('exportRequestedTitle'),
+        t('exportRequestedMsg'),
       );
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to export data.';
-      Alert.alert('Export Failed', `${message}\n\nContact ${SUPPORT_EMAIL} for assistance.`);
+      const message = err instanceof Error ? err.message : t('errExportDataFailed');
+      Alert.alert(t('exportFailedTitle'), `${message}\n\n${t('exportContactSupport', { email: SUPPORT_EMAIL })}`);
     } finally {
       setIsExporting(false);
     }
   }, []);
 
   const handleToggleConsent = useCallback((type: 'location' | 'diagnostic') => {
-    const label = type === 'location' ? 'Location Data' : 'Diagnostic Data';
+    const label = type === 'location' ? t('locationData') : t('diagnosticData');
     Alert.alert(
-      `Withdraw ${label} Consent`,
-      `Withdrawing consent may limit app functionality. You can re-enable it at any time.`,
+      t('withdrawConsentTitle', { label }),
+      t('withdrawConsentMsg'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Withdraw',
+          text: t('withdraw'),
           style: 'destructive',
           onPress: () => {
             if (type === 'location') {
@@ -169,9 +169,9 @@ export default function SettingsScreen() {
               setDiagnosticConsent(false);
             }
             Alert.alert(
-              'Consent Updated',
-              'Your consent preference has been saved. Some features may be limited.',
-              [{ text: 'OK' }],
+              t('consentUpdatedTitle'),
+              t('consentUpdatedMsg'),
+              [{ text: t('ok') }],
             );
           },
         },
@@ -185,14 +185,14 @@ export default function SettingsScreen() {
     } else {
       setDiagnosticConsent(true);
     }
-    Alert.alert('Consent Restored', 'Your consent has been re-enabled.');
+    Alert.alert(t('consentRestoredTitle'), t('consentRestoredMsg'));
   }, []);
 
   const handleSignOut = useCallback(async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('signOut'), t('signOutMsg'), [
+      { text: t('cancel'), style: 'cancel' },
       {
-        text: 'Sign Out',
+        text: t('signOut'),
         style: 'destructive',
         onPress: async () => {
           await signOut();

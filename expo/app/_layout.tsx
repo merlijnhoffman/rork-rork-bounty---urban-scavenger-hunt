@@ -17,7 +17,7 @@ import { useNotificationTapHandler, registerForPushNotificationsAsync, unregiste
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { PaymentWrapper } from '@/contexts/PaymentContext';
 import { LocationProvider } from '@/contexts/LocationContext';
-import { LanguageProvider } from '@/contexts/LanguageContext';
+import { LanguageProvider, useLanguage } from '@/contexts/LanguageContext';
 import { ErrorBoundary } from 'react-error-boundary';
 
 void SplashScreen.preventAutoHideAsync();
@@ -81,6 +81,7 @@ function NotificationRegistrar() {
 }
 
 function LocationPermissionGate({ children }: { children: React.ReactNode }) {
+  const { t } = useLanguage();
   const [permissionStatus, setPermissionStatus] = useState<Location.PermissionStatus | null>(null);
   const [canAskAgain, setCanAskAgain] = useState<boolean>(true);
 
@@ -121,9 +122,9 @@ function LocationPermissionGate({ children }: { children: React.ReactNode }) {
           <View style={styles.permissionIconContainer}>
             <Crosshair color={Colors.accent.primary} size={32} />
           </View>
-          <Text style={styles.permissionTitle}>Location Required</Text>
+          <Text style={styles.permissionTitle}>{t('locationRequiredTitle')}</Text>
           <Text style={styles.permissionMessage}>
-            Bounty needs location access to track distances, show hunt zones, and verify hunter connections. Please enable location in your settings.
+            {t('locationRequiredMsg')}
           </Text>
           {canAskAgain ? (
             <TouchableOpacity
@@ -131,7 +132,7 @@ function LocationPermissionGate({ children }: { children: React.ReactNode }) {
               onPress={() => { void checkPermission(); }}
               activeOpacity={0.8}
             >
-              <Text style={styles.permissionButtonText}>Enable Location</Text>
+              <Text style={styles.permissionButtonText}>{t('enableLocation')}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -145,7 +146,7 @@ function LocationPermissionGate({ children }: { children: React.ReactNode }) {
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.permissionButtonText}>Open Settings</Text>
+              <Text style={styles.permissionButtonText}>{t('openSettings')}</Text>
             </TouchableOpacity>
           )}
         </View>

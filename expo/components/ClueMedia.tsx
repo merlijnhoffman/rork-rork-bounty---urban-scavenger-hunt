@@ -14,6 +14,7 @@ import { Audio, Video, ResizeMode } from 'expo-av';
 import { ImageIcon, Film, Volume2, VolumeX, Play, Pause, X, Maximize2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { buildPublicMediaUrl, getSignedMediaUrl } from '@/lib/media-url';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -65,6 +66,7 @@ function useMediaSource(rawUrl: string) {
 }
 
 function ClueImage({ url }: { url: string }) {
+  const { t } = useLanguage();
   const [fullscreen, setFullscreen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
@@ -85,7 +87,7 @@ function ClueImage({ url }: { url: string }) {
         {error ? (
           <View style={styles.mediaError}>
             <ImageIcon color={Colors.dark.textMuted} size={24} />
-            <Text style={styles.mediaErrorText}>Failed to load image</Text>
+            <Text style={styles.mediaErrorText}>{t('failedImage')}</Text>
           </View>
         ) : (
           <Image
@@ -140,6 +142,7 @@ function ClueImage({ url }: { url: string }) {
 }
 
 function ClueVideo({ url }: { url: string }) {
+  const { t } = useLanguage();
   const videoRef = useRef<Video>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
@@ -163,7 +166,7 @@ function ClueVideo({ url }: { url: string }) {
     return (
       <View style={styles.mediaError}>
         <Film color={Colors.dark.textMuted} size={24} />
-        <Text style={styles.mediaErrorText}>Failed to load video</Text>
+        <Text style={styles.mediaErrorText}>{t('failedVideo')}</Text>
       </View>
     );
   }
@@ -215,13 +218,14 @@ function ClueVideo({ url }: { url: string }) {
       )}
       <View style={styles.mediaLabel}>
         <Film color={Colors.accent.primary} size={12} />
-        <Text style={styles.mediaLabelText}>VIDEO</Text>
+        <Text style={styles.mediaLabelText}>{t('mediaVideo')}</Text>
       </View>
     </View>
   );
 }
 
 function ClueAudio({ url }: { url: string }) {
+  const { t } = useLanguage();
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -322,7 +326,7 @@ function ClueAudio({ url }: { url: string }) {
     return (
       <View style={styles.mediaError}>
         <VolumeX color={Colors.dark.textMuted} size={24} />
-        <Text style={styles.mediaErrorText}>Failed to load audio</Text>
+        <Text style={styles.mediaErrorText}>{t('failedAudio')}</Text>
       </View>
     );
   }
@@ -361,7 +365,7 @@ function ClueAudio({ url }: { url: string }) {
       </View>
       <View style={styles.mediaLabel}>
         <Volume2 color={Colors.accent.primary} size={12} />
-        <Text style={styles.mediaLabelText}>AUDIO</Text>
+        <Text style={styles.mediaLabelText}>{t('mediaAudio')}</Text>
       </View>
     </View>
   );

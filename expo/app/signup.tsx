@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Mail, Lock, Eye, EyeOff, ArrowLeft, Crosshair, Check, Square,
 } from 'lucide-react-native';
@@ -25,6 +26,7 @@ const C = Colors;
 export default function SignupScreen() {
   const insets = useSafeAreaInsets();
   const { signUp } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
@@ -41,37 +43,37 @@ export default function SignupScreen() {
 
   const handleSignUp = async () => {
     if (!email.trim()) {
-      Alert.alert('Missing Email', 'Please enter your email address.');
+      Alert.alert(t('errMissingEmailTitle'), t('errMissingEmail'));
       return;
     }
 
     if (!validateEmail(email.trim())) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      Alert.alert(t('errInvalidEmailTitle'), t('errValidEmail'));
       return;
     }
 
     if (!password.trim()) {
-      Alert.alert('Missing Password', 'Please enter a password.');
+      Alert.alert(t('errMissingPasswordTitle'), t('errMissingPassword'));
       return;
     }
 
     if (password.trim().length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
+      Alert.alert(t('errWeakPasswordTitle'), t('errWeakPassword'));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Passwords Don\'t Match', 'Please make sure both passwords are identical.');
+      Alert.alert(t('errPasswordMismatchTitle'), t('errPasswordMismatch'));
       return;
     }
 
     if (!ageConfirmed) {
-      Alert.alert('Age Verification Required', 'You must confirm that you are at least 16 years old to create an account.');
+      Alert.alert(t('errAgeRequiredTitle'), t('errAgeRequired'));
       return;
     }
 
     if (!privacyConsent) {
-      Alert.alert('Consent Required', 'You must agree to the Privacy Policy and data processing to create an account.');
+      Alert.alert(t('errConsentRequiredTitle'), t('errConsentRequired'));
       return;
     }
 
@@ -80,16 +82,16 @@ export default function SignupScreen() {
     setLoading(false);
 
     if (!result.success) {
-      Alert.alert('Sign Up Failed', result.error || 'Something went wrong. Please try again.');
+      Alert.alert(t('errSignUpFailedTitle'), result.error || t('errSignUpGeneric'));
       return;
     }
 
     Alert.alert(
-      'Account Created!',
-      'We\'ve sent a confirmation link to your email. Please open it to verify your account, then sign in.',
+      t('accountCreatedTitle'),
+      t('accountCreatedMsg'),
       [
         {
-          text: 'OK',
+          text: t('ok'),
           onPress: () => router.replace('/login' as any),
         },
       ]
@@ -122,8 +124,8 @@ export default function SignupScreen() {
               <View style={styles.logoBadge}>
                 <Crosshair color={C.accent.primary} size={24} />
               </View>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>Join the hunt in seconds</Text>
+              <Text style={styles.title}>{t('createAccount')}</Text>
+              <Text style={styles.subtitle}>{t('signupSubtitle')}</Text>
             </View>
 
             <View style={styles.form}>
@@ -131,7 +133,7 @@ export default function SignupScreen() {
                 <Mail size={18} color={C.dark.textMuted} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Email"
+                  placeholder={t('email')}
                   placeholderTextColor={C.dark.textMuted}
                   value={email}
                   onChangeText={setEmail}
@@ -146,7 +148,7 @@ export default function SignupScreen() {
                 <Lock size={18} color={C.dark.textMuted} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Password"
+                  placeholder={t('password')}
                   placeholderTextColor={C.dark.textMuted}
                   value={password}
                   onChangeText={setPassword}
@@ -172,7 +174,7 @@ export default function SignupScreen() {
                 <Lock size={18} color={C.dark.textMuted} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Confirm Password"
+                  placeholder={t('confirmPassword')}
                   placeholderTextColor={C.dark.textMuted}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -207,7 +209,7 @@ export default function SignupScreen() {
                     <Square size={20} color={C.dark.textMuted} />
                   )}
                   <Text style={styles.checkboxLabel}>
-                    I confirm that I am at least 16 years old
+                    {t('ageConfirmLabel')}
                   </Text>
                 </TouchableOpacity>
 
@@ -223,12 +225,12 @@ export default function SignupScreen() {
                     <Square size={20} color={C.dark.textMuted} />
                   )}
                   <Text style={styles.checkboxLabel}>
-                    I consent to the processing of my personal data as described in the{' '}
+                    {t('privacyConsentPrefix')}
                     <Text
                       style={styles.checkboxLink}
                       onPress={() => router.push('/privacy' as any)}
                     >
-                      Privacy Policy
+                      {t('privacyPolicy')}
                     </Text>
                   </Text>
                 </TouchableOpacity>
@@ -247,15 +249,15 @@ export default function SignupScreen() {
                 {loading ? (
                   <ActivityIndicator color="#000" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>Create Account</Text>
+                  <Text style={styles.primaryButtonText}>{t('createAccount')}</Text>
                 )}
               </TouchableOpacity>
             </View>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Already have an account? </Text>
+              <Text style={styles.footerText}>{t('alreadyHaveAccount')} </Text>
               <TouchableOpacity onPress={() => router.push('/login' as any)}>
-                <Text style={styles.loginLink}>Sign In</Text>
+                <Text style={styles.loginLink}>{t('signIn')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
