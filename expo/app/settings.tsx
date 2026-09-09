@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,7 @@ import {
   Linking,
   Alert,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +28,7 @@ import {
   ClipboardList,
   Globe,
   Check,
+  ChevronDown,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Colors from '@/constants/colors';
@@ -50,6 +52,34 @@ export default function SettingsScreen() {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [locationConsent, setLocationConsent] = useState<boolean>(true);
   const [diagnosticConsent, setDiagnosticConsent] = useState<boolean>(true);
+  const [langOpen, setLangOpen] = useState<boolean>(false);
+  const chevronAnim = useRef<Animated.Value>(new Animated.Value(0)).current;
+  const chevronRotate = chevronAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const animateChevron = useCallback((toValue: number) => {
+    Animated.timing(chevronAnim, { toValue, duration: 200, useNativeDriver: true }).start();
+  }, [chevronAnim]);
+
+  const toggleLangOpen = useCallback(() => {
+    animateChevron(langOpen ? 0 : 1);
+    setLangOpen(!langOpen);
+  }, [langOpen, animateChevron]);
+
+  const selectLanguage = useCallback(
+    (code: (typeof LANGUAGE_ORDER)[number]) => {
+      const changed = code !== language;
+      animateChevron(0);
+      setLangOpen(false);
+      setLanguage(code);
+      if (changed) {
+        Alert.alert(t('languageSaved'), t('languageSavedMsg'));
+      }
+    },
+    [language, setLanguage, t, animateChevron],
+  );
 
   const handleRestore = useCallback(async () => {
     try {
@@ -271,25 +301,46 @@ export default function SettingsScreen() {
               <Text style={styles.sectionTitle}>{t('sectionLanguage')}</Text>
             </View>
             <View style={styles.card}>
-              {LANGUAGE_ORDER.map((code, idx) => (
-                <React.Fragment key={code}>
-                  {idx > 0 && <View style={styles.rowDivider} />}
-                  {renderLink(
-                    <Globe color={C.dark.textSecondary} size={18} />,
-                    LANGUAGE_NAMES[code],
-                    () => {
-                      setLanguage(code);
-                      Alert.alert(t('languageSaved'), t('languageSavedMsg'));
-                    },
-                    {
-                      right:
-                        language === code ? (
-                          <Check color={C.accent.primary} size={18} />
-                        ) : undefined,
-                    },
-                  )}
-                </React.Fragment>
-              ))}
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={toggleLangOpen}
+                activeOpacity={0.7}
+              >
+                <View style={styles.settingIconWrap}>
+                  <Globe color={C.dark.textSecondary} size={18} />
+                </View>
+                <View style={styles.settingContent}>
+                  <Text style={styles.settingTitle}>
+                    {LANGUAGE_NAMES[language]}
+                  </Text>
+                </View>
+                <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+                  <ChevronDown color={C.dark.textMuted} size={18} />
+                </Animated.View>
+              </TouchableOpacity>
+              {langOpen &&
+                LANGUAGE_ORDER.map((code) => (
+                  <React.Fragment key={code}>
+                    <View style={styles.rowDivider} />
+                    <TouchableOpacity
+                      style={styles.settingRow}
+                      onPress={() => selectLanguage(code)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.settingContent}>
+                        <Text
+                          style={[
+                            styles.settingTitle,
+                            language === code && { color: C.accent.primary },
+                          ]}
+                        >
+                          {LANGUAGE_NAMES[code]}
+                        </Text>
+                      </View>
+                      {language === code && <Check color={C.accent.primary} size={18} />}
+                    </TouchableOpacity>
+                  </React.Fragment>
+                ))}
             </View>
           </View>
 
