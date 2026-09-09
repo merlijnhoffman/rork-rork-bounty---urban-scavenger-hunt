@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,7 +10,14 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { Audio, Video, ResizeMode } from 'expo-av';
+import { useEvent, useEventListener } from 'expo';
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  type AudioSource,
+} from 'expo-audio';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { ImageIcon, Film, Volume2, VolumeX, Play, Pause, X, Maximize2 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { buildPublicMediaUrl, getSignedMediaUrl } from '@/lib/media-url';
@@ -143,24 +150,41 @@ function ClueImage({ url }: { url: string }) {
 
 function ClueVideo({ url }: { url: string }) {
   const { t } = useLanguage();
-  const videoRef = useRef<Video>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
   const { uri, handleError } = useMediaSource(url);
 
-  const togglePlayback = useCallback(async () => {
-    if (!videoRef.current) return;
-    try {
-      if (isPlaying) {
-        await videoRef.current.pauseAsync();
-      } else {
-        await videoRef.current.playAsync();
-      }
-    } catch (err) {
-      console.log('[ClueMedia] Video playback error:', err);
+  const player = useVideoPlayer({ uri }, (p) => {
+    p.loop = false;
+  });
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: false });
+
+  // Re-sync the player when the resolved URI changes (public → signed fallback)
+  const isFirstUriRef = useRef<boolean>(true);
+  useEffect(() => {
+    if (isFirstUriRef.current) {
+      isFirstUriRef.current = false;
+      return;
     }
-  }, [isPlaying]);
+    if (error) return;
+    player.replace({ uri });
+  }, [player, uri, error]);
+
+  useEventListener(player, 'statusChange', (event) => {
+    if (event.status === 'readyToPlay') {
+      setLoading(false);
+    } else if (event.status === 'error') {
+      console.log('[ClueMedia] Video error:', event.error, '→ trying signed URL');
+      void handleError().then((recovered) => {
+        if (!recovered) {
+          setError(true);
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
+      });
+    }
+  });
 
   if (error) {
     return (
@@ -178,37 +202,17 @@ function ClueVideo({ url }: { url: string }) {
           <ActivityIndicator color={Colors.accent.primary} size="small" />
         </View>
       )}
-      <Video
-        ref={videoRef}
-        source={{ uri }}
+      <VideoView
+        player={player}
         style={styles.clueVideo}
-        resizeMode={ResizeMode.CONTAIN}
-        useNativeControls={true}
-        isLooping={false}
-        onPlaybackStatusUpdate={(status) => {
-          if (status.isLoaded) {
-            setIsPlaying(status.isPlaying);
-            if (loading) setLoading(false);
-          }
-        }}
-        onError={(err) => {
-          console.log('[ClueMedia] Video error:', err, '→ trying signed URL');
-          void handleError().then((recovered) => {
-            if (!recovered) {
-              setError(true);
-              setLoading(false);
-            }
-          });
-        }}
-        onLoad={() => {
-          console.log('[ClueMedia] Video loaded:', url);
-          setLoading(false);
-        }}
+        contentFit="contain"
+        nativeControls={true}
+        fullscreenOptions={{ enable: true }}
       />
       {!loading && !isPlaying && (
         <TouchableOpacity
           style={styles.videoPlayOverlay}
-          onPress={togglePlayback}
+          onPress={() => player.play()}
           activeOpacity={0.8}
         >
           <View style={styles.playButtonCircle}>
@@ -226,92 +230,55 @@ function ClueVideo({ url }: { url: string }) {
 
 function ClueAudio({ url }: { url: string }) {
   const { t } = useLanguage();
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
-  const [duration, setDuration] = useState<number>(0);
-  const [position, setPosition] = useState<number>(0);
   const { uri, handleError } = useMediaSource(url);
 
+  const source = useMemo<AudioSource | null>(() => (error ? null : { uri }), [uri, error]);
+  const player = useAudioPlayer(source);
+  const status = useAudioPlayerStatus(player);
+
   useEffect(() => {
-    return () => {
-      if (soundRef.current) {
-        console.log('[ClueMedia] Unloading audio');
-        soundRef.current.unloadAsync().catch(() => {});
-      }
-    };
+    void setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
   }, []);
 
-  const loadAndPlay = useCallback(async () => {
-    try {
-      if (soundRef.current) {
-        if (isPlaying) {
-          await soundRef.current.pauseAsync();
-          return;
-        }
-        await soundRef.current.playAsync();
-        return;
+  // Re-sync the player when the resolved URI changes (public → signed fallback)
+  const prevUriRef = useRef<string>(uri);
+  useEffect(() => {
+    if (prevUriRef.current === uri) return;
+    prevUriRef.current = uri;
+    if (error) return;
+    player.replace({ uri });
+  }, [player, uri, error]);
+
+  // On load/playback errors, retry once with a signed URL before failing
+  useEffect(() => {
+    if (error || status.playbackState !== 'error') return;
+    console.log('[ClueMedia] Audio error → trying signed URL');
+    void handleError().then((recovered) => {
+      if (!recovered) {
+        setError(true);
       }
+    });
+  }, [status.playbackState, error, handleError]);
 
-      setLoading(true);
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-      });
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true },
-        (status) => {
-          if (status.isLoaded) {
-            setIsPlaying(status.isPlaying);
-            setPosition(status.positionMillis || 0);
-            setDuration(status.durationMillis || 0);
-            if (status.didJustFinish) {
-              setIsPlaying(false);
-              setPosition(0);
-              sound.setPositionAsync(0).catch(() => {});
-            }
-          }
-        }
-      );
-
-      soundRef.current = sound;
-      setLoading(false);
-      console.log('[ClueMedia] Audio loaded and playing:', url);
-    } catch (err) {
-      console.log('[ClueMedia] Audio error:', err, '→ trying signed URL');
-      const recovered = await handleError();
-      if (recovered) {
-        try {
-          const { sound } = await Audio.Sound.createAsync(
-            { uri },
-            { shouldPlay: true },
-            (status) => {
-              if (status.isLoaded) {
-                setIsPlaying(status.isPlaying);
-                setPosition(status.positionMillis || 0);
-                setDuration(status.durationMillis || 0);
-                if (status.didJustFinish) {
-                  setIsPlaying(false);
-                  setPosition(0);
-                  sound.setPositionAsync(0).catch(() => {});
-                }
-              }
-            },
-          );
-          soundRef.current = sound;
-          setLoading(false);
-          return;
-        } catch {
-          // fall through to the error state below
-        }
-      }
-      setError(true);
-      setLoading(false);
+  useEffect(() => {
+    if (status.didJustFinish) {
+      void player.seekTo(0);
     }
-  }, [isPlaying, uri, handleError]);
+  }, [status.didJustFinish, player]);
+
+  const isPlaying = status.playing;
+  const loading = !status.isLoaded && !error;
+  const duration = status.duration * 1000;
+  const position = status.currentTime * 1000;
+
+  const togglePlayback = useCallback(() => {
+    if (isPlaying) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }, [isPlaying, player]);
 
   const formatTime = (millis: number): string => {
     const totalSec = Math.floor(millis / 1000);
@@ -336,7 +303,7 @@ function ClueAudio({ url }: { url: string }) {
       <View style={styles.audioRow}>
         <TouchableOpacity
           style={styles.audioPlayButton}
-          onPress={loadAndPlay}
+          onPress={togglePlayback}
           disabled={loading}
           activeOpacity={0.7}
         >
@@ -409,7 +376,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   videoPlayOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)',
@@ -469,7 +436,7 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   mediaLoading: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.dark.cardElevated,

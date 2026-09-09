@@ -160,7 +160,7 @@ function LocationPermissionGate({ children }: { children: React.ReactNode }) {
 function RootLayoutNav() {
   return (
     <>
-      <StatusBar style="light" backgroundColor={Colors.dark.background} />
+      <StatusBar style="light" />
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />

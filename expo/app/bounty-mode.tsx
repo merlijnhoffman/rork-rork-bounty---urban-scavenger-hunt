@@ -17,7 +17,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Audio } from 'expo-av';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  type AudioPlayer,
+} from 'expo-audio';
 import {
   ArrowLeft,
   Crosshair,
@@ -107,7 +111,7 @@ export default function BountyModeScreen() {
   const [isOutsideZone, setIsOutsideZone] = useState<boolean | null>(null);
   const [showOutsideAlert, setShowOutsideAlert] = useState<boolean>(false);
   const wasOutsideRef = useRef<boolean>(false);
-  const alertSoundRef = useRef<Audio.Sound | null>(null);
+  const alertSoundRef = useRef<AudioPlayer | null>(null);
   const lastAlertAtRef = useRef<number>(0);
 
   // Keep refs in sync
@@ -475,7 +479,7 @@ export default function BountyModeScreen() {
         watchSubRef.current = null;
       }
       if (alertSoundRef.current) {
-        void alertSoundRef.current.unloadAsync().catch(() => {});
+        void alertSoundRef.current.release();
         alertSoundRef.current = null;
       }
     };
@@ -516,18 +520,13 @@ export default function BountyModeScreen() {
     let cancelled = false;
     (async () => {
       try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-        });
-        const { sound } = await Audio.Sound.createAsync(
-          require('../assets/notification_sound.wav'),
-        );
+        await setAudioModeAsync({ playsInSilentMode: true });
+        const player = createAudioPlayer(require('../assets/notification_sound.wav'));
         if (cancelled) {
-          void sound.unloadAsync();
+          player.release();
           return;
         }
-        alertSoundRef.current = sound;
+        alertSoundRef.current = player;
       } catch (err) {
         console.warn('[BountyMode] Could not preload alert sound:', err);
       }
@@ -536,7 +535,7 @@ export default function BountyModeScreen() {
     return () => {
       cancelled = true;
       if (alertSoundRef.current) {
-        void alertSoundRef.current.unloadAsync().catch(() => {});
+        alertSoundRef.current.release();
         alertSoundRef.current = null;
       }
     };
@@ -579,14 +578,12 @@ export default function BountyModeScreen() {
       try {
         const sound = alertSoundRef.current;
         if (sound) {
-          await sound.setPositionAsync(0);
-          await sound.playAsync();
+          await sound.seekTo(0);
+          sound.play();
         } else {
-          const { sound: newSound } = await Audio.Sound.createAsync(
-            require('../assets/notification_sound.wav'),
-          );
+          const newSound = createAudioPlayer(require('../assets/notification_sound.wav'));
           alertSoundRef.current = newSound;
-          await newSound.playAsync();
+          newSound.play();
         }
       } catch (err) {
         console.warn('[BountyMode] Alert sound playback failed:', err);
@@ -1620,7 +1617,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   winnerScannerDimmer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: C.dark.surface,
   },
   winnerScannerTopBar: {
@@ -1650,7 +1647,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   winnerScannerFrameOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

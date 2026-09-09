@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center' as const,
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     backgroundColor: 'rgba(0,0,0,0.3)',
