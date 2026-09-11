@@ -18,6 +18,8 @@ import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight,
 import HunterRadar from '@/components/HunterRadar';
 import RecapScreen from '@/components/RecapScreen';
 import HuntHistory from '@/components/HuntHistory';
+import PrizePoolGraphic from '@/components/PrizePoolGraphic';
+import PrizePoolCelebration from '@/components/PrizePoolCelebration';
 import { useHunterRadar } from '@/hooks/useHunterRadar';
 import * as Calendar from 'expo-calendar';
 import * as Haptics from 'expo-haptics';
@@ -76,6 +78,7 @@ export default function HuntScreen() {
   const [isCalculatingDistance, setIsCalculatingDistance] = useState<boolean>(false);
   const [timeUntilEvent, setTimeUntilEvent] = useState<string>('');
   const [showPrizeModal, setShowPrizeModal] = useState<boolean>(false);
+  const [celebration, setCelebration] = useState<{ previous: number; current: number; added: number; playerCount: number } | null>(null);
   const [joinedLiveHunt, setJoinedLiveHunt] = useState<boolean>(false);
   const [hintTokens, setHintTokens] = useState<number>(3);
   const [unlockedHints, setUnlockedHints] = useState<Set<string>>(new Set());
@@ -889,14 +892,12 @@ export default function HuntScreen() {
     }
 
     await ticketQuery.refetch();
-    Alert.alert(
-      'Ticket Claimed!',
-      'You\'re in! Check your profile for your verification code.',
-      [
-        { text: 'View Profile', onPress: () => router.push('/profile') },
-        { text: 'OK' },
-      ]
-    );
+    setCelebration({
+      previous: currentEvent.prize,
+      current: currentEvent.prize + currentEvent.prizePerTicket,
+      added: currentEvent.prizePerTicket,
+      playerCount: currentEvent.playerCount + 1,
+    });
   };
 
   const handlePurchaseTicket = () => {
@@ -912,6 +913,12 @@ export default function HuntScreen() {
   };
 
   const handleConfirmPurchase = async () => {
+    // Snapshot the pool before this ticket lands so the celebration can
+    // animate the exact amount this purchase adds.
+    const previousPrize = currentEvent?.prize ?? 0;
+    const perTicket = currentEvent?.prizePerTicket ?? 0;
+    const prevPlayerCount = currentEvent?.playerCount ?? 0;
+
     if (!offering || offering.availablePackages.length === 0) {
       Alert.alert('Error', 'No ticket packages available. Please try again later.');
       return;
@@ -946,14 +953,12 @@ export default function HuntScreen() {
 
       await ticketQuery.refetch();
 
-      Alert.alert(
-        'Ticket Purchased!',
-        'You\'re in! Check your profile for your verification code.',
-        [
-          { text: 'View Profile', onPress: () => router.push('/profile') },
-          { text: 'OK' },
-        ]
-      );
+      setCelebration({
+        previous: previousPrize,
+        current: previousPrize + perTicket,
+        added: perTicket,
+        playerCount: prevPlayerCount + 1,
+      });
     } catch (error: any) {
       const msg = error?.message || 'Purchase failed';
       if (msg.includes('cancelled') || msg.includes('canceled')) {
@@ -1438,7 +1443,7 @@ export default function HuntScreen() {
                     activeOpacity={0.7}
                   >
                     <Trophy color="#FFF" size={16} />
-                    <Text style={styles.prizeAmount}>{'\u20AC'}{currentEvent.prize}</Text>
+                    <Text style={styles.prizeAmount}>{'\u20AC'}{currentEvent.prize.toLocaleString('en-US')}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1634,8 +1639,26 @@ export default function HuntScreen() {
               
               <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.modalPrizeSection}>
-                  <Trophy color={Colors.accent.primary} size={40} />
-                  <Text style={styles.modalPrizeAmount}>{'\u20AC'}{currentEvent?.prize || '1000'}</Text>
+                  <PrizePoolGraphic size={170} />
+                  <Text style={styles.modalPrizeLive}>{t('prizePoolLive')}</Text>
+                  <Text style={styles.modalPrizeAmount}>
+                    {'\u20AC'}{(currentEvent?.prize ?? 0).toLocaleString('en-US')}
+                  </Text>
+                  <Text style={styles.modalPrizeHunters}>
+                    {t('huntersJoined', { count: String(currentEvent?.playerCount ?? 0) })}
+                  </Text>
+                  <View style={styles.poolBreakdown}>
+                    <View style={styles.poolBreakdownRow}>
+                      <Text style={styles.poolBreakdownLabel}>{t('poolStarting')}</Text>
+                      <Text style={styles.poolBreakdownValue}>{`\u20AC${currentEvent?.prizeBase ?? 0}`}</Text>
+                    </View>
+                    <View style={[styles.poolBreakdownRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.poolBreakdownLabel}>
+                        {t('poolPerTicket', { amount: `\u20AC${currentEvent?.prizePerTicket ?? 0}` })}
+                      </Text>
+                      <Text style={styles.poolBreakdownValue}>{`+\u20AC${currentEvent?.prizePerTicket ?? 0}`}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.modalPrizeSubtitle}>{t('cashPrize')}</Text>
                 </View>
 
@@ -1704,6 +1727,16 @@ export default function HuntScreen() {
                   <Text style={styles.paywallPriceLabel}>{t('oneTimePurchase')}</Text>
                 </View>
 
+                <View style={styles.paywallPoolRow}>
+                  <PrizePoolGraphic size={56} animated={false} />
+                  <Text style={styles.paywallPoolText}>
+                    {t('paywallPoolRow', {
+                      pool: `\u20AC${(currentEvent?.prize ?? 0).toLocaleString('en-US')}`,
+                      add: `\u20AC${currentEvent?.prizePerTicket ?? 0}`,
+                    })}
+                  </Text>
+                </View>
+
                 <View style={styles.paywallFeatures}>
                   {[t('ticketFeature1'), t('ticketFeature2'), t('ticketFeature3'), t('ticketFeature4')].map((feature, idx) => (
                     <View key={idx} style={styles.paywallFeatureRow}>
@@ -1767,6 +1800,15 @@ export default function HuntScreen() {
             </View>
           </View>
         </Modal>
+
+        <PrizePoolCelebration
+          visible={!!celebration}
+          onClose={() => setCelebration(null)}
+          previousPrize={celebration?.previous ?? 0}
+          newPrize={celebration?.current ?? 0}
+          addedAmount={celebration?.added ?? 0}
+          playerCount={celebration?.playerCount ?? 0}
+        />
       </LinearGradient>
     </View>
   );
@@ -2695,10 +2737,69 @@ const styles = StyleSheet.create({
   },
   modalPrizeSection: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: 24,
     borderBottomWidth: 1,
     borderBottomColor: C.dark.border,
-    gap: 8,
+    gap: 6,
+  },
+  modalPrizeLive: {
+    fontSize: 12,
+    fontWeight: '900' as const,
+    color: '#FFD54A',
+    letterSpacing: 3,
+    marginTop: 4,
+  },
+  modalPrizeHunters: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: C.dark.textSecondary,
+  },
+  poolBreakdown: {
+    marginTop: 14,
+    width: '100%' as const,
+    backgroundColor: C.dark.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+    overflow: 'hidden' as const,
+  },
+  poolBreakdownRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.dark.border,
+  },
+  poolBreakdownLabel: {
+    fontSize: 13,
+    color: C.dark.textMuted,
+    fontWeight: '600' as const,
+    flex: 1,
+  },
+  poolBreakdownValue: {
+    fontSize: 14,
+    color: C.dark.text,
+    fontWeight: '800' as const,
+  },
+  paywallPoolRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    backgroundColor: 'rgba(255,213,74,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,213,74,0.25)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+  },
+  paywallPoolText: {
+    flex: 1,
+    fontSize: 13,
+    color: C.dark.textSecondary,
+    lineHeight: 18,
+    fontWeight: '600' as const,
   },
   modalPrizeAmount: {
     fontSize: 52,

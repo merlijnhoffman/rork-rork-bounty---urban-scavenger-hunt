@@ -9,7 +9,14 @@ export interface GameEvent {
   city: string;
   date: string;
   ticketPrice: number;
+  /** Live prize pool = prizeBase + prizePerTicket * playerCount */
   prize: number;
+  /** Starting prize configured by the admin. */
+  prizeBase: number;
+  /** Amount added to the pool for every ticket sold. */
+  prizePerTicket: number;
+  /** Number of tickets sold for this event (drives the live pool). */
+  playerCount: number;
   registeredPlayers: number;
   startTime: string;
   status: 'scheduled' | 'live' | 'completed';
@@ -38,8 +45,6 @@ export interface Clue {
 
 const [GameProvider, useGameStoreInternal] = createContextHook(() => {
   const queryClient = useQueryClient();
-  const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
-
   const [isGameActive, setIsGameActive] = useState<boolean>(false);
   const [userTicket, setUserTicket] = useState<UserTicket | null>(null);
   const [clues, setClues] = useState<Clue[]>([]);
@@ -76,7 +81,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         const rawDate: string | null = (data as any).date ?? null;
         const parsedDate = rawDate ? new Date(rawDate) : null;
         const validDate = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : null;
-        const event: GameEvent = {
+        const event: Omit<GameEvent, 'prize' | 'playerCount' | 'registeredPlayers'> = {
           id: data.id,
           city: data.city || 'Amsterdam',
           date: validDate
@@ -88,8 +93,8 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
               })
             : '',
           ticketPrice: (data as any).ticket_price ?? (data as any).price ?? 25,
-          prize: (data as any).prize_amount ?? (data as any).prize ?? 1000,
-          registeredPlayers: 189,
+          prizeBase: (data as any).prize_base ?? 500,
+          prizePerTicket: (data as any).prize_per_ticket ?? 10,
           startTime: validDate ? validDate.toISOString() : '',
           status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
           updatedAt: (data as any).updated_at ?? (data as any).created_at ?? '',
@@ -115,11 +120,74 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     refetchOnReconnect: true,
   });
 
+  const eventId = eventQuery.data?.id ?? null;
+
+  // Live prize pool: number of tickets sold for this event. Uses the
+  // `event_prize_pool` view (set up via the admin SQL script) so every
+  // player can see how the pot grows — without reading other users' tickets.
+  const poolQuery = useQuery({
+    queryKey: ['prize-pool', eventId],
+    enabled: !!eventId,
+    queryFn: async (): Promise<number> => {
+      if (!eventId) return 0;
+      try {
+        const { data, error } = await supabase
+          .from('event_prize_pool')
+          .select('event_id, player_count')
+          .eq('event_id', eventId)
+          .maybeSingle();
+        if (error) {
+          console.warn('[PrizePool] View query error (run the prize-pool SQL script):', error.message);
+          return 0;
+        }
+        return ((data as any)?.player_count as number) ?? 0;
+      } catch (err) {
+        console.warn('[PrizePool] Failed to fetch player count:', err);
+        return 0;
+      }
+    },
+    staleTime: 10000,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  });
+
+  // Realtime: as soon as anyone buys a ticket, every player's prize pool
+  // updates within seconds. Falls back to the 15s polling above.
   useEffect(() => {
-    if (eventQuery.data !== undefined) {
-      setCurrentEvent(eventQuery.data);
-    }
-  }, [eventQuery.data]);
+    if (!eventId) return;
+    const subscription = supabase
+      .channel('ticket-sales-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'tickets',
+        },
+        (payload) => {
+          console.log('[PrizePool] New ticket sold via realtime:', (payload.new as any)?.event_id);
+          void queryClient.invalidateQueries({ queryKey: ['prize-pool', eventId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void subscription.unsubscribe();
+    };
+  }, [eventId, queryClient]);
+
+  const currentEvent: GameEvent | null = useMemo(() => {
+    const base = eventQuery.data;
+    if (!base) return null;
+    const playerCount = poolQuery.data ?? 0;
+    return {
+      ...base,
+      playerCount,
+      registeredPlayers: playerCount,
+      prize: base.prizeBase + base.prizePerTicket * playerCount,
+    };
+  }, [eventQuery.data, poolQuery.data]);
 
   useEffect(() => {
     console.log('Setting up realtime subscription for event status changes');
@@ -174,22 +242,22 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
 
   const purchaseTicket = useCallback(async (tier: TicketTier, paymentIntentId: string, isLoggedIn: boolean, user: any) => {
     if (!currentEvent) return;
-    
+
     // Check if user is logged in
     if (!isLoggedIn || !user) {
       setPurchaseError('You must create an account before purchasing a ticket');
       throw new Error('Authentication required');
     }
-    
+
     // Check if user already has a ticket
     if (userTicket) {
       setPurchaseError('You already have a ticket for this event');
       throw new Error('Ticket already purchased');
     }
-    
+
     setIsLoading(true);
     setPurchaseError(null);
-    
+
     try {
       // Create ticket record
       const ticket: UserTicket = {
@@ -199,15 +267,15 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         purchaseDate: new Date().toISOString(),
         paymentIntentId,
       };
-      
+
       console.log('Ticket purchased successfully:', ticket);
-      
+
       setUserTicket(ticket);
       setIsLoading(false);
-      
+
       // Enable ticket checking for this user
       enableTicketChecking(user.id);
-      
+
       return ticket;
     } catch (error) {
       setIsLoading(false);
@@ -239,7 +307,8 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     eventError: eventQuery.error ? (eventQuery.error as Error).message || 'Failed to load event' : null,
     refetchEvent: eventQuery.refetch,
     isEventFetching: eventQuery.isFetching,
-  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, eventQuery.isLoading, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled, eventQuery.error, eventQuery.refetch, eventQuery.isFetching]);
+    refetchPool: poolQuery.refetch,
+  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, eventQuery.isLoading, eventQuery.error, eventQuery.refetch, eventQuery.isFetching, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled, poolQuery.refetch]);
 });
 
 // Safe wrapper hook that ensures the context is available
@@ -264,8 +333,9 @@ export function useGameStore() {
       currentUserId: null,
       ticketCheckEnabled: false,
       eventError: null,
-      refetchEvent: async () => ({ data: null, error: null, isError: false, isSuccess: false, failureCount: 0, failureReason: null, errorUpdateCount: 0, status: 'success' as const, fetchStatus: 'idle' as const, dataUpdatedAt: 0, errorUpdatedAt: 0, isLoading: false, isFetching: false, isFetched: false, isFetchedAfterMount: false, isPaused: false, isPending: false, isPlaceholderData: false, isRefetchError: false, isRefetching: false, isStale: false, isInitialLoading: false }),
+      refetchEvent: async () => ({ data: null, error: null, isError: false, isSuccess: false, failureCount: 0, failureReason: null, errorUpdateCount: 0, errorUpdatedAt: 0, dataUpdatedAt: 0, status: 'success' as const, fetchStatus: 'idle' as const, isFetching: false, isFetched: false, isFetchedAfterMount: false, isPaused: false, isPending: false, isPlaceholderData: false, isRefetchError: false, isRefetching: false, isStale: false, isInitialLoading: false }),
       isEventFetching: false,
+      refetchPool: async () => ({ data: null, error: null, isError: false, isSuccess: false, failureCount: 0, failureReason: null, errorUpdateCount: 0, errorUpdatedAt: 0, dataUpdatedAt: 0, status: 'success' as const, fetchStatus: 'idle' as const, isFetching: false, isFetched: false, isFetchedAfterMount: false, isPaused: false, isPending: false, isPlaceholderData: false, isRefetchError: false, isRefetching: false, isStale: false, isInitialLoading: false }),
     };
   }
   return context;

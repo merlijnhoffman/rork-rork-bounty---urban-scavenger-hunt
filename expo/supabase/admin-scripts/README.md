@@ -95,3 +95,43 @@ supabase functions deploy verify-connection
 
 Setup SQL for the tables it uses is documented as a comment at the bottom of
 `expo/supabase/functions/verify-connection/index.ts`.
+
+---
+
+## 4. Live prize pool system (run once, required)
+
+The player app computes the prize as:
+
+```
+prize = prize_base + prize_per_ticket × (number of tickets sold)
+```
+
+It reads the ticket count from the `event_prize_pool` view below and listens
+for realtime ticket inserts so every phone sees the pot grow live. If this
+script hasn't run, the pool silently shows the starting amount.
+
+```sql
+-- Pool configuration per event (defaults: €500 start, +€10 per ticket).
+-- Edit values per event in the Table Editor, or from the admin app.
+alter table events
+  add column if not exists prize_base integer not null default 500,
+  add column if not exists prize_per_ticket integer not null default 10;
+
+-- Ticket counts per event. A view owned by postgres bypasses RLS on tickets,
+-- but only ever exposes an anonymous count — no player data.
+create or replace view public.event_prize_pool as
+select event_id, count(*)::int as player_count
+from public.tickets
+group by event_id;
+
+grant select on public.event_prize_pool to authenticated;
+
+-- Live updates: push ticket inserts to the player apps in realtime.
+-- (If you get 'duplicate object' the table is already in the publication — skip.)
+alter publication supabase_realtime add table public.tickets;
+```
+
+Notes:
+- Existing events get the default starting prize (€500) + €10 per ticket.
+- The old `prize_amount` column is no longer used by the player app for the
+  current event (hunt history falls back to it only for pre-pool events).

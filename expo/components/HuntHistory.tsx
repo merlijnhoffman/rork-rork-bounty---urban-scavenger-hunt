@@ -25,7 +25,7 @@ export default function HuntHistory({ userId }: { userId: string | null }) {
       // Fetch completed events
       const { data: events, error: eventsError } = await supabase
         .from('events')
-        .select('id, city, date, prize, price, status')
+        .select('id, city, date, prize_base, prize_per_ticket, prize_amount, status')
         .eq('status', 'completed')
         .order('date', { ascending: false })
         .limit(10);
@@ -46,6 +46,16 @@ export default function HuntHistory({ userId }: { userId: string | null }) {
 
       if (winnersError) {
         console.warn('[HuntHistory] Error fetching winners:', winnersError.message);
+      }
+
+      // Prize pool counts (same view the live pool uses)
+      const { data: pools } = await supabase
+        .from('event_prize_pool')
+        .select('event_id, player_count')
+        .in('event_id', eventIds);
+      const poolMap = new Map<string, number>();
+      for (const p of pools || []) {
+        poolMap.set((p as any).event_id, (p as any).player_count ?? 0);
       }
 
       const winnerMap = new Map<string, any>();
@@ -69,7 +79,10 @@ export default function HuntHistory({ userId }: { userId: string | null }) {
                 year: 'numeric',
               })
             : 'TBA',
-          prize: (e as any).prize_amount ?? (e as any).prize ?? 0,
+          prize:
+            (e as any).prize_base != null && (e as any).prize_per_ticket != null
+              ? (e as any).prize_base + (e as any).prize_per_ticket * (poolMap.get(e.id) ?? 0)
+              : ((e as any).prize_amount ?? 0),
           status: e.status,
           winnerEmail: winner?.winner_email ?? null,
           winnerUserId: winner?.winner_user_id ?? null,
