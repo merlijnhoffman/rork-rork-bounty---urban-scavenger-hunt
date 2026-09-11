@@ -7,6 +7,12 @@ import { supabase } from '@/lib/supabase';
 export interface GameEvent {
   id: string;
   city: string;
+  /** Admin-set event title, shown verbatim (may differ from the city). */
+  title: string;
+  /** ISO 3166-1 alpha-2 country code, or null. */
+  country: string | null;
+  /** Admin-picked accent color for the event card, or null (#FF6B00 fallback). */
+  accentColor: string | null;
   date: string;
   ticketPrice: number;
   /** Live prize pool = prizeBase + prizePerTicket * playerCount */
@@ -23,6 +29,59 @@ export interface GameEvent {
   /** Last time the admin modified this event (used to detect hunt resets). */
   updatedAt: string;
 }
+
+/** Soonest scheduled + active event, shown as the "Next Hunt" preview card. */
+export interface NextEvent {
+  id: string;
+  title: string;
+  city: string;
+  country: string | null;
+  accentColor: string | null;
+  dateLabel: string;
+  timeLabel: string;
+  startISO: string;
+}
+
+const mapNextEvent = (data: any): NextEvent => {
+  const rawDate: string | null = data?.date ?? null;
+  const parsedDate = rawDate ? new Date(rawDate) : null;
+  const validDate = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : null;
+  const rawStart: string | null = data?.start_time ?? null;
+  let timeLabel = '';
+  let startISO = validDate ? validDate.toISOString() : '';
+  if (rawStart) {
+    const ts = new Date(String(rawStart));
+    if (!isNaN(ts.getTime()) && /\d{4}-\d{2}-\d{2}/.test(String(rawStart))) {
+      // Full timestamp start_time wins over the date column.
+      timeLabel = ts.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      startISO = ts.toISOString();
+    } else {
+      // Time-only string like "15:00" — combine with the event date.
+      timeLabel = String(rawStart).slice(0, 5);
+      if (validDate && /^\d{1,2}:\d{2}/.test(String(rawStart))) {
+        const [h, m] = String(rawStart).split(':').map(Number);
+        const combined = new Date(validDate);
+        combined.setHours(h || 0, m || 0, 0, 0);
+        startISO = combined.toISOString();
+      }
+    }
+  } else if (validDate) {
+    timeLabel = validDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+  const dateLabel = validDate
+    ? validDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    : '';
+  return {
+    id: data.id,
+    title: (data.title || '').trim() || data.city || 'BOUNTY Hunt',
+    city: data.city || '',
+    country: data.country ?? null,
+    accentColor: data.accent_color ?? null,
+    dateLabel,
+    timeLabel,
+    startISO,
+  };
+};
 
 export interface UserTicket {
   id: string;
@@ -84,6 +143,9 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         const event: Omit<GameEvent, 'prize' | 'playerCount' | 'registeredPlayers'> = {
           id: data.id,
           city: data.city || 'Amsterdam',
+          title: ((data as any).title as string | undefined)?.trim() || data.city || 'BOUNTY Hunt',
+          country: ((data as any).country as string | null) ?? null,
+          accentColor: ((data as any).accent_color as string | null) ?? null,
           date: validDate
             ? validDate.toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -152,6 +214,44 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     refetchOnReconnect: true,
   });
 
+  // "Next Hunt" preview: soonest scheduled + active event, so players can
+  // see what's coming while another hunt is live (or none is running).
+  const nextEventQuery = useQuery({
+    queryKey: ['next-event'],
+    queryFn: async (): Promise<NextEvent | null> => {
+      const base = supabase
+        .from('events')
+        .select('id, title, city, country, accent_color, date, start_time, status')
+        .eq('status', 'scheduled')
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(1);
+      try {
+        const { data, error } = await base.eq('is_active', true).maybeSingle();
+        if (error) throw error;
+        return data ? mapNextEvent(data) : null;
+      } catch (err: any) {
+        // Older schemas may not have is_active yet — retry with just status.
+        if (err?.code === '42703' || /is_active/i.test(err?.message || '')) {
+          try {
+            const { data, error } = await base.maybeSingle();
+            if (error) throw error;
+            return data ? mapNextEvent(data) : null;
+          } catch (err2: any) {
+            console.warn('[NextEvent] Query failed:', err2?.message || 'Unknown');
+            return null;
+          }
+        }
+        console.warn('[NextEvent] Query failed:', err?.message || 'Unknown');
+        return null;
+      }
+    },
+    staleTime: 15000,
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  });
+
   // Realtime: as soon as anyone buys a ticket, every player's prize pool
   // updates within seconds. Falls back to the 15s polling above.
   useEffect(() => {
@@ -203,6 +303,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         (payload) => {
           console.log('Event updated via realtime:', payload.new);
           void queryClient.invalidateQueries({ queryKey: ['current-event'] });
+          void queryClient.invalidateQueries({ queryKey: ['next-event'] });
         }
       )
       .on(
@@ -215,6 +316,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         (payload) => {
           console.log('New event created via realtime:', payload.new);
           void queryClient.invalidateQueries({ queryKey: ['current-event'] });
+          void queryClient.invalidateQueries({ queryKey: ['next-event'] });
         }
       )
       .subscribe();
@@ -308,7 +410,11 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
     refetchEvent: eventQuery.refetch,
     isEventFetching: eventQuery.isFetching,
     refetchPool: poolQuery.refetch,
-  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, eventQuery.isLoading, eventQuery.error, eventQuery.refetch, eventQuery.isFetching, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled, poolQuery.refetch]);
+    nextEvent: nextEventQuery.data ?? null,
+    nextEventLoading: nextEventQuery.isLoading,
+    nextEventReady: nextEventQuery.isSuccess,
+    refetchNextEvent: nextEventQuery.refetch,
+  }), [currentEvent, isGameActive, userTicket, clues, gameStartTime, isLoading, eventQuery.isLoading, eventQuery.error, eventQuery.refetch, eventQuery.isFetching, purchaseError, purchaseTicket, addClue, enableTicketChecking, disableTicketChecking, currentUserId, ticketCheckEnabled, poolQuery.refetch, nextEventQuery.data, nextEventQuery.isLoading, nextEventQuery.isSuccess, nextEventQuery.refetch]);
 });
 
 // Safe wrapper hook that ensures the context is available
@@ -336,6 +442,10 @@ export function useGameStore() {
       refetchEvent: async () => ({ data: null, error: null, isError: false, isSuccess: false, failureCount: 0, failureReason: null, errorUpdateCount: 0, errorUpdatedAt: 0, dataUpdatedAt: 0, status: 'success' as const, fetchStatus: 'idle' as const, isFetching: false, isFetched: false, isFetchedAfterMount: false, isPaused: false, isPending: false, isPlaceholderData: false, isRefetchError: false, isRefetching: false, isStale: false, isInitialLoading: false }),
       isEventFetching: false,
       refetchPool: async () => ({ data: null, error: null, isError: false, isSuccess: false, failureCount: 0, failureReason: null, errorUpdateCount: 0, errorUpdatedAt: 0, dataUpdatedAt: 0, status: 'success' as const, fetchStatus: 'idle' as const, isFetching: false, isFetched: false, isFetchedAfterMount: false, isPaused: false, isPending: false, isPlaceholderData: false, isRefetchError: false, isRefetching: false, isStale: false, isInitialLoading: false }),
+      nextEvent: null,
+      nextEventLoading: false,
+      nextEventReady: false,
+      refetchNextEvent: async () => ({ data: null, error: null, isError: false, isSuccess: false, failureCount: 0, failureReason: null, errorUpdateCount: 0, errorUpdatedAt: 0, dataUpdatedAt: 0, status: 'success' as const, fetchStatus: 'idle' as const, isFetching: false, isFetched: false, isFetchedAfterMount: false, isPaused: false, isPending: false, isPlaceholderData: false, isRefetchError: false, isRefetching: false, isStale: false, isInitialLoading: false }),
     };
   }
   return context;

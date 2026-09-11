@@ -11,10 +11,11 @@ import {
   Image,
   Platform,
   Linking,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, ChevronDown, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users, Crown } from 'lucide-react-native';
+import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, ChevronDown, CalendarDays, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users, Crown } from 'lucide-react-native';
 import HunterRadar from '@/components/HunterRadar';
 import RecapScreen from '@/components/RecapScreen';
 import HuntHistory from '@/components/HuntHistory';
@@ -43,6 +44,12 @@ import { router } from 'expo-router';
 import { TICKET } from '@/constants/payment';
 import { usePayment } from '@/contexts/PaymentContext';
 
+/** Convert an ISO 3166-1 alpha-2 code to its flag emoji (empty when invalid or null). */
+const flagEmoji = (code: string | null | undefined): string => {
+  if (!code || !/^[a-zA-Z]{2}$/.test(code)) return '';
+  return String.fromCodePoint(...[...code.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+};
+
 export default function HuntScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -55,6 +62,11 @@ export default function HuntScreen() {
     eventError,
     refetchEvent,
     isEventFetching,
+    refetchPool,
+    nextEvent,
+    nextEventLoading,
+    nextEventReady,
+    refetchNextEvent,
   } = useGameStore();
   const {
     offering,
@@ -66,6 +78,19 @@ export default function HuntScreen() {
     restorePurchases,
     isRestoring,
   } = usePayment();
+
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refetchEvent(), refetchNextEvent(), refetchPool()]);
+    } catch {
+      // Individual queries surface their own error states.
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetchEvent, refetchNextEvent, refetchPool]);
+  const accentColor = currentEvent?.accentColor || '#FF6B00';
 
   const [hasTicket, setHasTicket] = useState<boolean>(false);
   const [showPaywall, setShowPaywall] = useState<boolean>(false);
@@ -654,19 +679,13 @@ export default function HuntScreen() {
     setShowHintConfirm(null);
   }, [showHintConfirm, hintTokens]);
 
-  const performAddToCalendar = useCallback(async () => {
+  const addHuntToCalendar = useCallback(async (opts: { title: string; location: string; startDate: Date }) => {
     try {
-      const startISO = currentEvent?.startTime;
-      const startDate = startISO ? new Date(startISO) : null;
-      if (!startDate || isNaN(startDate.getTime())) {
-        Alert.alert(t('errNoEventScheduled'), t('errNoEventScheduledMsg'));
-        return;
-      }
-      const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000);
+      const endDate = new Date(opts.startDate.getTime() + 4 * 60 * 60 * 1000);
 
       if (Platform.OS === 'web') {
         const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-        const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=BOUNTY+-+Urban+Scavenger+Hunt&dates=${fmt(startDate)}/${fmt(endDate)}&details=BOUNTY+Urban+Scavenger+Hunt.+Find+the+target+and+win!&location=${encodeURIComponent(currentEvent?.city || '')}`;
+        const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(opts.title)}&dates=${fmt(opts.startDate)}/${fmt(endDate)}&details=${encodeURIComponent('BOUNTY Urban Scavenger Hunt. Find the target and win!')}&location=${encodeURIComponent(opts.location)}`;
         await Linking.openURL(googleUrl);
         return;
       }
@@ -688,10 +707,10 @@ export default function HuntScreen() {
       }
 
       await Calendar.createEventAsync(defaultCalendar.id, {
-        title: 'BOUNTY - Urban Scavenger Hunt',
-        startDate,
+        title: opts.title,
+        startDate: opts.startDate,
         endDate,
-        location: currentEvent?.city || '',
+        location: opts.location,
         notes: 'BOUNTY Urban Scavenger Hunt. Find the target and win the prize!',
       });
 
@@ -700,7 +719,38 @@ export default function HuntScreen() {
       if (__DEV__) console.error('Error adding to calendar:', error);
       Alert.alert('Error', 'Failed to add the event to your calendar.');
     }
-  }, [currentEvent]);
+  }, []);
+
+  const performAddToCalendar = useCallback(async () => {
+    const startISO = currentEvent?.startTime;
+    const startDate = startISO ? new Date(startISO) : null;
+    if (!startDate || isNaN(startDate.getTime())) {
+      Alert.alert(t('errNoEventScheduled'), t('errNoEventScheduledMsg'));
+      return;
+    }
+    await addHuntToCalendar({
+      title: `BOUNTY - ${currentEvent?.title || 'Urban Scavenger Hunt'}`,
+      location: currentEvent?.city || '',
+      startDate,
+    });
+  }, [addHuntToCalendar, currentEvent, t]);
+
+  const handleNextHuntCalendar = useCallback(async () => {
+    if (!nextEvent?.startISO) {
+      Alert.alert(t('errNoEventScheduled'), t('errNoEventScheduledMsg'));
+      return;
+    }
+    const startDate = new Date(nextEvent.startISO);
+    if (isNaN(startDate.getTime())) {
+      Alert.alert(t('errNoEventScheduled'), t('errNoEventScheduledMsg'));
+      return;
+    }
+    await addHuntToCalendar({
+      title: `BOUNTY - ${nextEvent.title}`,
+      location: nextEvent.city,
+      startDate,
+    });
+  }, [addHuntToCalendar, nextEvent, t]);
 
   const eventTimeZone = useMemo<string>(() => {
     const city = (currentEvent?.city || '').trim().toLowerCase();
@@ -1034,7 +1084,7 @@ export default function HuntScreen() {
             )}
             
             <View style={styles.huntInfoRow}>
-              <Text style={styles.huntLocation}>{(currentEvent?.city || '—').toUpperCase()}</Text>
+              <Text style={styles.huntLocation}>{currentEvent?.title || '—'}</Text>
               <Text style={styles.huntTimeSeparator}>|</Text>
               <Text style={styles.huntTime}>{formattedEventDateTime}</Text>
             </View>
@@ -1145,6 +1195,14 @@ export default function HuntScreen() {
             ref={cluesScrollRef}
             style={styles.cluesContainer}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+                tintColor={Colors.accent.primary}
+                colors={[Colors.accent.primary]}
+              />
+            }
           >
             {eventZone && currentZoneRadius !== null && (
               <View style={styles.zoneMapWrapper}>
@@ -1430,7 +1488,7 @@ export default function HuntScreen() {
                   style={styles.backgroundImage}
                 />
                 <View style={styles.eventHeader}>
-                  <View style={[styles.nextEventPill, isHuntActive && styles.livePill]}>
+                  <View style={[styles.nextEventPill, !isHuntActive && { backgroundColor: accentColor }, isHuntActive && styles.livePill]}>
                     <Text style={[styles.nextEventLabel, isHuntActive && styles.livePillText]}>
                       {isHuntActive ? t('liveNowPill') : currentEvent?.status === 'completed' ? t('completedPill') : t('nextHuntPill')}
                     </Text>
@@ -1447,10 +1505,12 @@ export default function HuntScreen() {
 
                 <View style={styles.citySection}>
                   <Text style={styles.cityLabel}>{t('locationLabel')}</Text>
-                  <Text style={styles.cityNameLarge}>AMSTERDAM</Text>
+                  <Text style={styles.cityNameLarge} numberOfLines={2}>{currentEvent.title}</Text>
                   <View style={styles.cityMetaRow}>
-                    <Text style={styles.cityFlag}>{'🇳🇱'}</Text>
-                    <Text style={styles.cityCountry}>{t('countryNetherlands')}</Text>
+                    {flagEmoji(currentEvent.country) ? (
+                      <Text style={styles.cityFlag}>{flagEmoji(currentEvent.country)}</Text>
+                    ) : null}
+                    <Text style={styles.cityCountry}>{currentEvent.city}</Text>
                   </View>
                 </View>
 
@@ -1556,6 +1616,7 @@ export default function HuntScreen() {
               <TouchableOpacity
                 style={[
                   styles.ticketButton,
+                  { backgroundColor: accentColor },
                   (!canPurchaseTicket || isLoading) && styles.ticketButtonDisabled
                 ]}
                 onPress={handlePurchaseTicket}
@@ -1574,6 +1635,54 @@ export default function HuntScreen() {
                 )}
               </TouchableOpacity>
             </Animated.View>
+          )}
+
+          {/* Next Hunt preview — the soonest scheduled hunt coming up */}
+          {nextEvent && (!currentEvent || currentEvent.status !== 'scheduled' || nextEvent.id !== currentEvent.id) && (
+            <View
+              style={[
+                styles.nextHuntCard,
+                { borderColor: nextEvent.accentColor || '#FF6B00', shadowColor: nextEvent.accentColor || '#FF6B00' },
+              ]}
+            >
+              <View style={[styles.nextHuntPill, { backgroundColor: nextEvent.accentColor || '#FF6B00' }]}>
+                <Text style={styles.nextHuntPillText}>{t('nextHuntPill')}</Text>
+              </View>
+              <Text style={styles.nextHuntTitle} numberOfLines={2}>{nextEvent.title}</Text>
+              <View style={styles.nextHuntMetaRow}>
+                {flagEmoji(nextEvent.country) ? (
+                  <Text style={styles.nextHuntFlag}>{flagEmoji(nextEvent.country)}</Text>
+                ) : null}
+                <Text style={styles.nextHuntCity}>{nextEvent.city}</Text>
+              </View>
+              {!!nextEvent.dateLabel && (
+                <View style={styles.nextHuntDateTimeRow}>
+                  <Clock color="rgba(255,255,255,0.6)" size={13} />
+                  <Text style={styles.nextHuntDateTimeText}>
+                    {nextEvent.dateLabel}{nextEvent.timeLabel ? ` • ${nextEvent.timeLabel}` : ''}
+                  </Text>
+                </View>
+              )}
+              {!!nextEvent.startISO && (
+                <TouchableOpacity
+                  style={[styles.nextHuntCta, { borderColor: nextEvent.accentColor || '#FF6B00' }]}
+                  onPress={handleNextHuntCalendar}
+                  activeOpacity={0.8}
+                >
+                  <CalendarDays color={nextEvent.accentColor || '#FF6B00'} size={16} />
+                  <Text style={[styles.nextHuntCtaText, { color: nextEvent.accentColor || '#FF6B00' }]}>
+                    {t('addToCalendar')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {!nextEvent && nextEventReady && !nextEventLoading && (!currentEvent || currentEvent.status !== 'scheduled') && (
+            <View style={styles.noHuntsCard}>
+              <Target color={Colors.dark.textMuted} size={22} />
+              <Text style={styles.noHuntsText}>{t('noUpcomingHunts')}</Text>
+            </View>
           )}
 
           <View style={styles.howItWorks}>
@@ -2155,6 +2264,99 @@ const styles = StyleSheet.create({
   },
   ticketButtonTextDisabled: {
     color: C.dark.textMuted,
+  },
+  nextHuntCard: {
+    backgroundColor: C.dark.card,
+    borderWidth: 2,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  nextHuntPill: {
+    alignSelf: 'flex-start' as const,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  nextHuntPillText: {
+    fontSize: 11,
+    fontWeight: '900' as const,
+    color: '#FFF',
+    letterSpacing: 1.5,
+  },
+  nextHuntTitle: {
+    fontSize: 26,
+    fontWeight: '900' as const,
+    color: C.dark.text,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  nextHuntMetaRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    marginBottom: 12,
+  },
+  nextHuntFlag: {
+    fontSize: 16,
+  },
+  nextHuntCity: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: C.dark.textSecondary,
+  },
+  nextHuntDateTimeRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start' as const,
+    marginBottom: 14,
+  },
+  nextHuntDateTimeText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: 'rgba(255,255,255,0.75)',
+    letterSpacing: 0.3,
+  },
+  nextHuntCta: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  nextHuntCtaText: {
+    fontSize: 14,
+    fontWeight: '800' as const,
+    letterSpacing: 0.5,
+  },
+  noHuntsCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 10,
+    backgroundColor: C.dark.card,
+    borderWidth: 1,
+    borderColor: C.dark.border,
+    borderRadius: 16,
+    paddingVertical: 18,
+    marginBottom: 20,
+  },
+  noHuntsText: {
+    fontSize: 14,
+    color: C.dark.textMuted,
+    fontWeight: '600' as const,
   },
   howItWorks: {
     marginTop: 8,
