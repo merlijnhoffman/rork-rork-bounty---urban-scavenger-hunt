@@ -1505,11 +1505,12 @@ export default function HuntScreen() {
 
                 <View style={styles.citySection}>
                   <Text style={styles.cityLabel}>{t('locationLabel')}</Text>
-                  <View style={styles.cityTitleRow}>
+                  <Text style={styles.cityNameLarge} numberOfLines={2}>{currentEvent.title}</Text>
+                  <View style={styles.cityMetaRow}>
                     {flagEmoji(currentEvent.country) ? (
                       <Text style={styles.cityFlag}>{flagEmoji(currentEvent.country)}</Text>
                     ) : null}
-                    <Text style={styles.cityNameLarge} numberOfLines={2}>{currentEvent.title}</Text>
+                    <Text style={styles.cityCountry}>{currentEvent.city}</Text>
                   </View>
                 </View>
 
@@ -1647,11 +1648,12 @@ export default function HuntScreen() {
               <View style={[styles.nextHuntPill, { backgroundColor: nextEvent.accentColor || '#FF6B00' }]}>
                 <Text style={styles.nextHuntPillText}>{t('nextHuntPill')}</Text>
               </View>
-              <View style={styles.nextHuntTitleRow}>
+              <Text style={styles.nextHuntTitle} numberOfLines={2}>{nextEvent.city}</Text>
+              <View style={styles.nextHuntMetaRow}>
                 {flagEmoji(nextEvent.country) ? (
                   <Text style={styles.nextHuntFlag}>{flagEmoji(nextEvent.country)}</Text>
                 ) : null}
-                <Text style={styles.nextHuntTitle} numberOfLines={2}>{nextEvent.city}</Text>
+                <Text style={styles.nextHuntCity}>{nextEvent.city}</Text>
               </View>
               {!!nextEvent.dateLabel && (
                 <View style={styles.nextHuntDateTimeRow}>
@@ -2099,15 +2101,19 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textAlign: 'center',
   },
-  cityTitleRow: {
+  cityMetaRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 10,
+    gap: 6,
     marginTop: 4,
   },
   cityFlag: {
-    fontSize: 20,
+    fontSize: 16,
+  },
+  cityCountry: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: 'rgba(255,255,255,0.7)',
   },
   cityCoordinates: {
     fontSize: 12,
@@ -2283,21 +2289,26 @@ const styles = StyleSheet.create({
     color: '#FFF',
     letterSpacing: 1.5,
   },
-  nextHuntTitleRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 10,
-    marginBottom: 12,
-  },
-  nextHuntFlag: {
-    fontSize: 22,
-  },
   nextHuntTitle: {
     fontSize: 26,
     fontWeight: '900' as const,
     color: C.dark.text,
     letterSpacing: 0.5,
-    flexShrink: 1,
+    marginBottom: 6,
+  },
+  nextHuntMetaRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    marginBottom: 12,
+  },
+  nextHuntFlag: {
+    fontSize: 16,
+  },
+  nextHuntCity: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: C.dark.textSecondary,
   },
   nextHuntDateTimeRow: {
     flexDirection: 'row' as const,
