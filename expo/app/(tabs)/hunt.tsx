@@ -1638,7 +1638,7 @@ export default function HuntScreen() {
           )}
 
           {/* Next Hunt preview — the soonest scheduled hunt coming up */}
-          {nextEvent && (!currentEvent || currentEvent.status !== 'scheduled' || nextEvent.id !== currentEvent.id) && (
+          {nextEvent && currentEvent?.status === 'completed' && nextEvent.id !== currentEvent.id && (
             <View
               style={[
                 styles.nextHuntCard,
@@ -1678,7 +1678,7 @@ export default function HuntScreen() {
             </View>
           )}
 
-          {!nextEvent && nextEventReady && !nextEventLoading && (!currentEvent || currentEvent.status !== 'scheduled') && (
+          {!currentEvent && !nextEvent && nextEventReady && !nextEventLoading && (
             <View style={styles.noHuntsCard}>
               <Target color={Colors.dark.textMuted} size={22} />
               <Text style={styles.noHuntsText}>{t('noUpcomingHunts')}</Text>

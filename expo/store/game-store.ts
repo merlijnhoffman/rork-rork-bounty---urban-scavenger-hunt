@@ -119,17 +119,24 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
       console.log('Fetching current event from Supabase...');
 
       try {
-        const { data, error } = await supabase
+        const { data: rows, error } = await supabase
           .from('events')
           .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .order('date', { ascending: true });
 
         if (error) {
           console.warn('Supabase query error:', error.message || 'Unknown');
           throw new Error(error.message || 'Failed to fetch event');
         }
+
+        // One hunt at a time: prefer the live hunt, then the soonest
+        // scheduled one, else the most recent completed hunt.
+        const ordered = rows ?? [];
+        const data =
+          ordered.find((row: any) => row.status === 'live') ??
+          ordered.find((row: any) => row.status === 'scheduled') ??
+          [...ordered].reverse().find((row: any) => row.status === 'completed') ??
+          null;
 
         if (!data) {
           console.log('No events found in database');
