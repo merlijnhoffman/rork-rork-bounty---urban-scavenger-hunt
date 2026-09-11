@@ -73,7 +73,7 @@ const mapNextEvent = (data: any): NextEvent => {
     : '';
   return {
     id: data.id,
-    title: (data.title || '').trim() || data.city || 'BOUNTY Hunt',
+    title: (data.city || '').trim() || data.title || 'BOUNTY Hunt',
     city: data.city || '',
     country: data.country ?? null,
     accentColor: data.accent_color ?? null,
@@ -150,7 +150,8 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
         const event: Omit<GameEvent, 'prize' | 'playerCount' | 'registeredPlayers'> = {
           id: data.id,
           city: data.city || 'Amsterdam',
-          title: ((data as any).title as string | undefined)?.trim() || data.city || 'BOUNTY Hunt',
+          // The hunt title always equals the city — shown identically everywhere.
+          title: (data.city as string | undefined)?.trim() || ((data as any).title as string | undefined)?.trim() || 'BOUNTY Hunt',
           country: ((data as any).country as string | null) ?? null,
           accentColor: ((data as any).accent_color as string | null) ?? null,
           date: validDate

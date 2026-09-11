@@ -1505,12 +1505,11 @@ export default function HuntScreen() {
 
                 <View style={styles.citySection}>
                   <Text style={styles.cityLabel}>{t('locationLabel')}</Text>
-                  <Text style={styles.cityNameLarge} numberOfLines={2}>{currentEvent.title}</Text>
-                  <View style={styles.cityMetaRow}>
+                  <View style={styles.cityTitleRow}>
                     {flagEmoji(currentEvent.country) ? (
                       <Text style={styles.cityFlag}>{flagEmoji(currentEvent.country)}</Text>
                     ) : null}
-                    <Text style={styles.cityCountry}>{currentEvent.city}</Text>
+                    <Text style={styles.cityNameLarge} numberOfLines={2}>{currentEvent.title}</Text>
                   </View>
                 </View>
 
@@ -1648,12 +1647,11 @@ export default function HuntScreen() {
               <View style={[styles.nextHuntPill, { backgroundColor: nextEvent.accentColor || '#FF6B00' }]}>
                 <Text style={styles.nextHuntPillText}>{t('nextHuntPill')}</Text>
               </View>
-              <Text style={styles.nextHuntTitle} numberOfLines={2}>{nextEvent.title}</Text>
-              <View style={styles.nextHuntMetaRow}>
+              <View style={styles.nextHuntTitleRow}>
                 {flagEmoji(nextEvent.country) ? (
                   <Text style={styles.nextHuntFlag}>{flagEmoji(nextEvent.country)}</Text>
                 ) : null}
-                <Text style={styles.nextHuntCity}>{nextEvent.city}</Text>
+                <Text style={styles.nextHuntTitle} numberOfLines={2}>{nextEvent.city}</Text>
               </View>
               {!!nextEvent.dateLabel && (
                 <View style={styles.nextHuntDateTimeRow}>
@@ -1678,7 +1676,7 @@ export default function HuntScreen() {
             </View>
           )}
 
-          {!currentEvent && !nextEvent && nextEventReady && !nextEventLoading && (
+          {nextEventReady && !nextEvent && !nextEventLoading && (!currentEvent || currentEvent.status === 'completed') && (
             <View style={styles.noHuntsCard}>
               <Target color={Colors.dark.textMuted} size={22} />
               <Text style={styles.noHuntsText}>{t('noUpcomingHunts')}</Text>
@@ -2101,19 +2099,15 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     textAlign: 'center',
   },
-  cityMetaRow: {
+  cityTitleRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: 6,
+    justifyContent: 'center' as const,
+    gap: 10,
     marginTop: 4,
   },
   cityFlag: {
-    fontSize: 16,
-  },
-  cityCountry: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 20,
   },
   cityCoordinates: {
     fontSize: 12,
@@ -2289,26 +2283,21 @@ const styles = StyleSheet.create({
     color: '#FFF',
     letterSpacing: 1.5,
   },
+  nextHuntTitleRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 10,
+    marginBottom: 12,
+  },
+  nextHuntFlag: {
+    fontSize: 22,
+  },
   nextHuntTitle: {
     fontSize: 26,
     fontWeight: '900' as const,
     color: C.dark.text,
     letterSpacing: 0.5,
-    marginBottom: 6,
-  },
-  nextHuntMetaRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 6,
-    marginBottom: 12,
-  },
-  nextHuntFlag: {
-    fontSize: 16,
-  },
-  nextHuntCity: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: C.dark.textSecondary,
+    flexShrink: 1,
   },
   nextHuntDateTimeRow: {
     flexDirection: 'row' as const,
