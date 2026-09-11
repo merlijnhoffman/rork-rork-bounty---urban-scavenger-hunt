@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users, Crown } from 'lucide-react-native';
+import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight, ChevronDown, Zap, Trophy, Eye, Lightbulb, Lock, Unlock, ChevronUp, Users, Crown } from 'lucide-react-native';
 import HunterRadar from '@/components/HunterRadar';
 import RecapScreen from '@/components/RecapScreen';
 import HuntHistory from '@/components/HuntHistory';
@@ -1130,13 +1130,11 @@ export default function HuntScreen() {
                 onPress={() => setHuntMenuOpen((prev) => !prev)}
                 activeOpacity={0.8}
               >
-                {!huntMenuOpen && (
-                  <Text style={styles.toolsToggleLabel}>{t('huntTools')}</Text>
-                )}
-                <ChevronUp
+                <Text style={styles.toolsToggleLabel}>{t('huntTools')}</Text>
+                <ChevronDown
                   color={Colors.accent.primary}
-                  size={20}
-                  style={{ transform: [{ rotate: huntMenuOpen ? '0deg' : '180deg' }] }}
+                  size={14}
+                  style={{ transform: [{ rotate: huntMenuOpen ? '180deg' : '0deg' }] }}
                 />
               </TouchableOpacity>
             </View>
