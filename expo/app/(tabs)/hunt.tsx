@@ -1506,12 +1506,12 @@ export default function HuntScreen() {
                 <View style={styles.citySection}>
                   <Text style={styles.cityLabel}>{t('locationLabel')}</Text>
                   <Text style={styles.cityNameLarge} numberOfLines={2}>{currentEvent.title}</Text>
-                  <View style={styles.cityMetaRow}>
-                    {flagEmoji(currentEvent.country) ? (
+                  {flagEmoji(currentEvent.country) ? (
+                    <View style={styles.cityMetaRow}>
                       <Text style={styles.cityFlag}>{flagEmoji(currentEvent.country)}</Text>
-                    ) : null}
-                    <Text style={styles.cityCountry}>{currentEvent.city}</Text>
-                  </View>
+                      <Text style={styles.cityCountry}>{currentEvent.country?.toUpperCase()}</Text>
+                    </View>
+                  ) : null}
                 </View>
 
                 {!!timeUntilEvent && !isHuntActive && (
@@ -1649,12 +1649,12 @@ export default function HuntScreen() {
                 <Text style={styles.nextHuntPillText}>{t('nextHuntPill')}</Text>
               </View>
               <Text style={styles.nextHuntTitle} numberOfLines={2}>{nextEvent.city}</Text>
-              <View style={styles.nextHuntMetaRow}>
-                {flagEmoji(nextEvent.country) ? (
+              {flagEmoji(nextEvent.country) ? (
+                <View style={styles.nextHuntMetaRow}>
                   <Text style={styles.nextHuntFlag}>{flagEmoji(nextEvent.country)}</Text>
-                ) : null}
-                <Text style={styles.nextHuntCity}>{nextEvent.city}</Text>
-              </View>
+                  <Text style={styles.nextHuntCity}>{nextEvent.country?.toUpperCase()}</Text>
+                </View>
+              ) : null}
               {!!nextEvent.dateLabel && (
                 <View style={styles.nextHuntDateTimeRow}>
                   <Clock color="rgba(255,255,255,0.6)" size={13} />
