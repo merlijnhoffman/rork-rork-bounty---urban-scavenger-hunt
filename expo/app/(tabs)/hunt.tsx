@@ -924,6 +924,22 @@ export default function HuntScreen() {
   const isHuntActive = currentEvent?.status === 'live';
   const shouldShowHunt = hasTicket && isHuntActive && joinedLiveHunt;
 
+  const livePulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!isHuntActive) {
+      livePulseAnim.setValue(1);
+      return;
+    }
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(livePulseAnim, { toValue: 0.25, duration: 900, useNativeDriver: true }),
+        Animated.timing(livePulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [isHuntActive, livePulseAnim]);
+
   const handleClaimFreeTicket = async () => {
     if (!user || !currentEvent) return;
     const verificationCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -1086,8 +1102,12 @@ export default function HuntScreen() {
             
             <View style={styles.huntInfoRow}>
               <Text style={styles.huntLocation}>{currentEvent?.title || '—'}</Text>
-              <Text style={styles.huntTimeSeparator}>|</Text>
-              <Text style={styles.huntTime}>{formattedEventDateTime}</Text>
+              {!isHuntActive && (
+                <>
+                  <Text style={styles.huntTimeSeparator}>|</Text>
+                  <Text style={styles.huntTime}>{formattedEventDateTime}</Text>
+                </>
+              )}
             </View>
             
             <View style={styles.hintTokensBar}>
@@ -1490,6 +1510,7 @@ export default function HuntScreen() {
                 />
                 <View style={styles.eventHeader}>
                   <View style={[styles.nextEventPill, !isHuntActive && { backgroundColor: accentColor }, isHuntActive && styles.livePill]}>
+                    {isHuntActive && <Animated.View style={[styles.livePillDot, { opacity: livePulseAnim }]} />}
                     <Text style={[styles.nextEventLabel, isHuntActive && styles.livePillText]}>
                       {isHuntActive ? t('liveNowPill') : currentEvent?.status === 'completed' ? t('completedPill') : t('nextHuntPill')}
                     </Text>
@@ -1527,7 +1548,7 @@ export default function HuntScreen() {
                 {isHuntActive && (
                   <View style={[styles.countdownContainer, styles.liveCountdownContainer]}>
                     <View style={styles.liveIndicatorRow}>
-                      <View style={styles.liveIndicatorDot} />
+                      <Animated.View style={[styles.liveIndicatorDot, { opacity: livePulseAnim }]} />
                       <Text style={styles.liveIndicatorText}>{t('huntIsActive')}</Text>
                     </View>
                     <Text style={styles.liveSubtext}>
@@ -1536,19 +1557,21 @@ export default function HuntScreen() {
                   </View>
                 )}
 
-                <View style={styles.eventDetails}>
-                  <TouchableOpacity
-                    style={styles.eventDateTimeRow}
-                    onPress={handleDateTimePress}
-                    activeOpacity={0.7}
-                    testID="event-datetime-add-calendar"
-                  >
-                    <View style={styles.eventDateTimeItem}>
-                      <Clock color="rgba(255,255,255,0.7)" size={13} />
-                      <Text style={styles.eventDateTimeText} numberOfLines={1}>{formattedEventDateTime}</Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
+                {!isHuntActive && (
+                  <View style={styles.eventDetails}>
+                    <TouchableOpacity
+                      style={styles.eventDateTimeRow}
+                      onPress={handleDateTimePress}
+                      activeOpacity={0.7}
+                      testID="event-datetime-add-calendar"
+                    >
+                      <View style={styles.eventDateTimeItem}>
+                        <Clock color="rgba(255,255,255,0.7)" size={13} />
+                        <Text style={styles.eventDateTimeText} numberOfLines={1}>{formattedEventDateTime}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 {!isLoggedIn && (
                   <TouchableOpacity 
@@ -3233,10 +3256,24 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   livePill: {
-    backgroundColor: 'rgba(139,0,0,0.35)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    backgroundColor: '#C41E3A',
+    shadowColor: '#C41E3A',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  livePillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFF',
   },
   livePillText: {
-    color: '#C41E3A',
+    color: '#FFF',
   },
   liveCountdownContainer: {
     borderColor: 'rgba(139,0,0,0.4)',
@@ -3253,6 +3290,11 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: '#C41E3A',
+    shadowColor: '#C41E3A',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    elevation: 4,
   },
   liveIndicatorText: {
     fontSize: 14,
