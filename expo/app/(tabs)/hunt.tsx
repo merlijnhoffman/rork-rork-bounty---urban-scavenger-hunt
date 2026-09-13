@@ -1165,20 +1165,6 @@ export default function HuntScreen() {
                     )}
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.connectButton}
-                    onPress={() => setShowConnectModal(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Users color="#000" size={18} />
-                    <Text style={styles.connectButtonText}>{t('connectWithHunters')}</Text>
-                    {connectionsCount > 0 && (
-                      <View style={styles.connectBadge}>
-                        <Text style={styles.connectBadgeText}>{connectionsCount}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
                   {measuredDistance !== null && (
                     <View style={styles.distanceResult}>
                       <Target color={Colors.accent.primary} size={16} />
@@ -1193,6 +1179,20 @@ export default function HuntScreen() {
                       )}
                     </View>
                   )}
+
+                  <TouchableOpacity
+                    style={styles.connectButton}
+                    onPress={() => setShowConnectModal(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Users color="#000" size={18} />
+                    <Text style={styles.connectButtonText}>{t('connectWithHunters')}</Text>
+                    {connectionsCount > 0 && (
+                      <View style={styles.connectBadge}>
+                        <Text style={styles.connectBadgeText}>{connectionsCount}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
                 </>
               )}
 
