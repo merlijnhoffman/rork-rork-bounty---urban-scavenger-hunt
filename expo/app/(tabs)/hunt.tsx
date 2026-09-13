@@ -29,6 +29,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import EventZoneMap from '@/components/EventZoneMap';
 import ClueMedia from '@/components/ClueMedia';
 import { buildPublicMediaUrl } from '@/lib/media-url';
+import { countryName } from '@/lib/country-names';
 import { useCompassHeading } from '@/hooks/useCompassHeading';
 import { useGameStore } from '@/store/game-store';
 import { useEventZone } from '@/hooks/useEventZone';
@@ -1509,7 +1510,7 @@ export default function HuntScreen() {
                   {flagEmoji(currentEvent.country) ? (
                     <View style={styles.cityMetaRow}>
                       <Text style={styles.cityFlag}>{flagEmoji(currentEvent.country)}</Text>
-                      <Text style={styles.cityCountry}>{currentEvent.country?.toUpperCase()}</Text>
+                      <Text style={styles.cityCountry}>{countryName(currentEvent.country)}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -1652,7 +1653,7 @@ export default function HuntScreen() {
               {flagEmoji(nextEvent.country) ? (
                 <View style={styles.nextHuntMetaRow}>
                   <Text style={styles.nextHuntFlag}>{flagEmoji(nextEvent.country)}</Text>
-                  <Text style={styles.nextHuntCity}>{nextEvent.country?.toUpperCase()}</Text>
+                  <Text style={styles.nextHuntCity}>{countryName(nextEvent.country)}</Text>
                 </View>
               ) : null}
               {!!nextEvent.dateLabel && (
