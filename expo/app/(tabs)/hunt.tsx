@@ -1202,11 +1202,11 @@ export default function HuntScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.toolsToggleLabel}>{t('huntTools')}</Text>
-                <ChevronDown
-                  color={Colors.accent.primary}
-                  size={14}
-                  style={{ transform: [{ rotate: huntMenuOpen ? '180deg' : '0deg' }] }}
-                />
+                {huntMenuOpen ? (
+                  <ChevronUp color={Colors.accent.primary} size={14} />
+                ) : (
+                  <ChevronDown color={Colors.accent.primary} size={14} />
+                )}
               </TouchableOpacity>
             </View>
             
