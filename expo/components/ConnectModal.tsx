@@ -262,6 +262,7 @@ export default function ConnectModal({
           body: JSON.stringify({
             code,
             scannerUserId: user.id,
+            eventId,
             scannerLatitude: location.coords.latitude,
             scannerLongitude: location.coords.longitude,
           }),
@@ -298,7 +299,7 @@ export default function ConnectModal({
         setIsVerifying(false);
       }
     },
-    [user, onConnectionMade, t],
+    [user, eventId, onConnectionMade, t],
   );
 
   const handleBarcodeScanned = useCallback(

@@ -37,6 +37,7 @@ const CODE_TTL_MINUTES = 5;
 type VerifyRequest = {
   code: string;
   scannerUserId: string;
+  eventId: string;
   scannerLatitude: number;
   scannerLongitude: number;
 };
@@ -47,12 +48,12 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { code, scannerUserId, scannerLatitude, scannerLongitude } =
+    const { code, scannerUserId, eventId, scannerLatitude, scannerLongitude } =
       (await req.json()) as VerifyRequest;
 
-    if (!code || !scannerUserId || scannerLatitude == null || scannerLongitude == null) {
+    if (!code || !scannerUserId || !eventId || scannerLatitude == null || scannerLongitude == null) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Missing required fields' }),
+        JSON.stringify({ success: false, error: 'code, scannerUserId, and eventId are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -84,6 +85,21 @@ serve(async (req: Request) => {
       );
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid or expired code' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // 1b. The scanned code must belong to the event the scanner is playing in —
+    // codes from a previous/other event are rejected instead of cross-connecting.
+    if (codeRow.event_id !== eventId) {
+      console.log(
+        '[verify-connection] Event mismatch: code belongs to',
+        codeRow.event_id,
+        'scanner is in',
+        eventId,
+      );
+      return new Response(
+        JSON.stringify({ success: false, error: 'This code is not valid for the current event' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
