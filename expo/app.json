@@ -18,9 +18,6 @@
         "UIBackgroundModes": [
           "location"
         ]
-      },
-      "config": {
-        "googleMapsApiKey": "AIzaSyCzcnXrt4kkQa64eDhay1z_5OlsWW5lin4"
       }
     },
     "android": {
