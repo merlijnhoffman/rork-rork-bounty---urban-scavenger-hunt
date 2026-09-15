@@ -79,6 +79,23 @@ function ClueImage({ url }: { url: string }) {
   const [error, setError] = useState<boolean>(false);
   const { uri, handleError } = useMediaSource(url);
 
+  // Prefetch is a reliable load-completion signal: on the new architecture
+  // (Fabric) Image onLoad/onLoadEnd callbacks don't always fire for cached
+  // images, which left the thumbnail spinner up even though the image was
+  // downloaded (it only appeared after tapping into the fullscreen view).
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void Image.prefetch(uri)
+      .catch(() => false)
+      .then(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [uri]);
+
   return (
     <>
       <TouchableOpacity
@@ -102,6 +119,7 @@ function ClueImage({ url }: { url: string }) {
             style={styles.clueImage}
             resizeMode="cover"
             onLoadStart={() => setLoading(true)}
+            onLoad={() => setLoading(false)}
             onLoadEnd={() => setLoading(false)}
             onError={() => {
               console.log('[ClueMedia] Image load error for:', url, '→ trying signed URL');
