@@ -64,7 +64,7 @@ export function useHunterRadar(
       let coords = lastLocationRef.current;
       if (!coords) {
         const pos = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.High,
         });
         coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         lastLocationRef.current = coords;
@@ -103,7 +103,11 @@ export function useHunterRadar(
     const start = async () => {
       try {
         const sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, timeInterval: BROADCAST_INTERVAL_MS },
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: BROADCAST_INTERVAL_MS,
+            distanceInterval: 5,
+          },
           (pos) => {
             lastLocationRef.current = {
               lat: pos.coords.latitude,
