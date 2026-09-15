@@ -98,6 +98,44 @@ Setup SQL for the tables it uses is documented as a comment at the bottom of
 
 ---
 
+## 5. Hunter Connect anti-cheat: one connection per pair per event (run once)
+
+The player app already rejects repeat scans, but this database rule is what makes
+it tamper-proof. It blocks every cheating pattern at once:
+
+- Scanning the same hunter twice (even with a freshly generated code)
+- Two hunters scanning each other to farm two connections (A→B and B→A count as one)
+- Two simultaneous scans racing each other before either is verified
+
+Safe to re-run — it removes any accidental duplicates first, then installs the
+unique rule:
+
+```sql
+-- Remove duplicates between the same pair in the same event
+-- (keeps the earliest connection; safe if there are none)
+delete from player_connections a
+using player_connections b
+where a.event_id = b.event_id
+  and least(a.generator_user_id, a.scanner_user_id) = least(b.generator_user_id, b.scanner_user_id)
+  and greatest(a.generator_user_id, a.scanner_user_id) = greatest(b.generator_user_id, b.scanner_user_id)
+  and (a.created_at > b.created_at or (a.created_at = b.created_at and a.id > b.id));
+
+-- Database-level rule: one connection per pair of hunters per event.
+-- LEAST/GREATEST normalise the pair so (A→B) and (B→A) are the same connection.
+create unique index if not exists idx_player_connections_unique_pair
+  on player_connections (
+    event_id,
+    least(generator_user_id, scanner_user_id),
+    greatest(generator_user_id, scanner_user_id)
+  );
+```
+
+After running this, redeploy the edge function (section 3 above) if you haven't
+since the last change — the app-side rejection message depends on the latest
+deployed version.
+
+---
+
 ## 4. Live prize pool system (run once, required)
 
 The player app computes the prize as:
