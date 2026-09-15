@@ -107,6 +107,7 @@ export default function HuntScreen() {
   const [celebration, setCelebration] = useState<{ previous: number; current: number; added: number; playerCount: number } | null>(null);
   const [joinedLiveHunt, setJoinedLiveHunt] = useState<boolean>(false);
   const [hintTokens, setHintTokens] = useState<number>(3);
+  const hintTokensRef = useRef<number>(3);
   const [unlockedHints, setUnlockedHints] = useState<Set<string>>(new Set());
   const [showHintConfirm, setShowHintConfirm] = useState<string | null>(null);
   const [hintsHydrated, setHintsHydrated] = useState<boolean>(false);
@@ -149,7 +150,7 @@ export default function HuntScreen() {
               console.log('[Hunt] Discarding pre-reset hints (saved before admin reset)');
               AsyncStorage.removeItem(hintStorageKey).catch(() => {});
             } else {
-              if (typeof parsed.tokens === 'number') setHintTokens(parsed.tokens);
+              if (typeof parsed.tokens === 'number') setHintTokens(Math.min(3, parsed.tokens));
               if (Array.isArray(parsed.unlocked)) setUnlockedHints(new Set(parsed.unlocked));
             }
           } catch {}
@@ -337,10 +338,19 @@ export default function HuntScreen() {
     };
   }, [currentEvent, queryClient, winnerQuery]);
 
+  useEffect(() => {
+    hintTokensRef.current = hintTokens;
+  }, [hintTokens]);
+
   const handleConnectionMade = useCallback(() => {
-    setHintTokens(prev => prev + 1);
+    if (hintTokensRef.current >= 3) {
+      Alert.alert(t('hintTokensMaxTitle'), t('hintTokensMaxBody'));
+      void connectionsQuery.refetch();
+      return;
+    }
+    setHintTokens(prev => Math.min(3, prev + 1));
     void connectionsQuery.refetch();
-  }, [connectionsQuery]);
+  }, [connectionsQuery, t]);
 
   const {
     zone: eventZone,
@@ -635,8 +645,14 @@ export default function HuntScreen() {
             const connId = row.id as string;
             if (countedConnectionsRef.current.has(connId)) return;
             countedConnectionsRef.current.add(connId);
+            if (hintTokensRef.current >= 3) {
+              console.log('[Connect] Generator received a connection — already at max hint tokens');
+              Alert.alert(t('hintTokensMaxTitle'), t('hintTokensMaxBody'));
+              void connectionsQuery.refetch();
+              return;
+            }
             console.log('[Connect] Generator received a connection — awarding bonus hint');
-            setHintTokens(prev => prev + 1);
+            setHintTokens(prev => Math.min(3, prev + 1));
             void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             void connectionsQuery.refetch();
           }
@@ -1116,7 +1132,7 @@ export default function HuntScreen() {
                 <Text style={styles.hintTokensLabel}>{t('hintTokens')}</Text>
               </View>
               <View style={styles.hintTokensRight}>
-                {Array.from({ length: Math.max(3, hintTokens) }).map((_, i) => (
+                {Array.from({ length: 3 }).map((_, i) => (
                   <View
                     key={i}
                     style={[
