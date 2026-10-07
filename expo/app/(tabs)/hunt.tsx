@@ -19,7 +19,7 @@ import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight,
 import HunterRadar from '@/components/HunterRadar';
 import RecapScreen from '@/components/RecapScreen';
 import HuntHistory from '@/components/HuntHistory';
-import AnimatedPrizePot from '@/components/AnimatedPrizePot';
+import AnimatedPrizePot, { prefetchPrizePot } from '@/components/AnimatedPrizePot';
 import PrizePoolCelebration from '@/components/PrizePoolCelebration';
 import { useHunterRadar } from '@/hooks/useHunterRadar';
 import * as Calendar from 'expo-calendar';
@@ -128,6 +128,11 @@ export default function HuntScreen() {
 
   const hintStorageKey = currentEvent ? `hints:${currentEvent.id}` : null;
   const distanceStorageKey = currentEvent ? `distance:${currentEvent.id}` : null;
+
+  // Warm the prize pot image cache so modals show it instantly on open
+  useEffect(() => {
+    prefetchPrizePot();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

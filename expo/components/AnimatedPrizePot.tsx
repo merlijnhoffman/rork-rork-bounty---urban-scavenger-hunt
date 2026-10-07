@@ -3,6 +3,20 @@ import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Path, RadialGradient, Stop, Circle } from 'react-native-svg';
 import Colors from '@/constants/colors';
 
+let prefetchStarted = false;
+
+/**
+ * Warm the image cache so the prize pot appears instantly when a modal opens.
+ * Call once on screen mount (idempotent).
+ */
+export function prefetchPrizePot(): void {
+  if (prefetchStarted) return;
+  prefetchStarted = true;
+  Image.prefetch(PRIZE_POT_ICON_URL).catch(() => {
+    prefetchStarted = false;
+  });
+}
+
 /**
  * The AI-generated prize pot artwork (transparent PNG hosted on R2).
  * Reference by URL exactly as returned by the generation tool.
@@ -99,11 +113,11 @@ export default function AnimatedPrizePot({
     [breathe],
   );
   const sparkleOpacityA = useMemo(
-    () => sparkleA.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.75] }),
+    () => sparkleA.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }),
     [sparkleA],
   );
   const sparkleOpacityB = useMemo(
-    () => sparkleB.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.55] }),
+    () => sparkleB.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.85] }),
     [sparkleB],
   );
   const sparkleScaleA = useMemo(
@@ -141,6 +155,7 @@ export default function AnimatedPrizePot({
           source={{ uri: PRIZE_POT_ICON_URL }}
           style={{ width: size, height: size }}
           resizeMode="contain"
+          fadeDuration={0}
         />
       </Animated.View>
 
@@ -152,7 +167,7 @@ export default function AnimatedPrizePot({
         ]}
         pointerEvents="none"
       >
-        <Svg width={size * 0.09} height={size * 0.09} viewBox="0 0 24 24">
+        <Svg width={size * 0.12} height={size * 0.12} viewBox="0 0 24 24">
           <Path d={SPARKLE_PATH} fill={Colors.accent.primaryLight} />
         </Svg>
       </Animated.View>
@@ -163,7 +178,7 @@ export default function AnimatedPrizePot({
         ]}
         pointerEvents="none"
       >
-        <Svg width={size * 0.07} height={size * 0.07} viewBox="0 0 24 24">
+        <Svg width={size * 0.09} height={size * 0.09} viewBox="0 0 24 24">
           <Path d={SPARKLE_PATH} fill={Colors.accent.primary} />
         </Svg>
       </Animated.View>
