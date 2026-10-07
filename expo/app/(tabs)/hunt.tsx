@@ -19,7 +19,7 @@ import { Clock, AlertCircle, LogIn, Target, Crosshair, Navigation, ChevronRight,
 import HunterRadar from '@/components/HunterRadar';
 import RecapScreen from '@/components/RecapScreen';
 import HuntHistory from '@/components/HuntHistory';
-import PrizePoolGraphic from '@/components/PrizePoolGraphic';
+import AnimatedPrizePot from '@/components/AnimatedPrizePot';
 import PrizePoolCelebration from '@/components/PrizePoolCelebration';
 import { useHunterRadar } from '@/hooks/useHunterRadar';
 import * as Calendar from 'expo-calendar';
@@ -1786,7 +1786,7 @@ export default function HuntScreen() {
               
               <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
                 <View style={styles.modalPrizeSection}>
-                  <PrizePoolGraphic size={170} />
+                  <AnimatedPrizePot size={170} />
                   <Text style={styles.modalPrizeLive}>{t('prizePoolLive')}</Text>
                   <Text style={styles.modalPrizeAmount}>
                     {'\u20AC'}{(currentEvent?.prize ?? 0).toLocaleString('en-US')}
@@ -1875,7 +1875,7 @@ export default function HuntScreen() {
                 </View>
 
                 <View style={styles.paywallPoolRow}>
-                  <PrizePoolGraphic size={56} animated={false} />
+                  <AnimatedPrizePot size={56} animated={false} />
                   <Text style={styles.paywallPoolText}>
                     {t('paywallPoolRow', {
                       pool: `\u20AC${(currentEvent?.prize ?? 0).toLocaleString('en-US')}`,

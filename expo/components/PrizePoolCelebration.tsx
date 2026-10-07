@@ -11,7 +11,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { Ticket } from 'lucide-react-native';
-import PrizePoolGraphic from '@/components/PrizePoolGraphic';
+import AnimatedPrizePot from '@/components/AnimatedPrizePot';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PrizePoolCelebrationProps {
@@ -226,7 +226,7 @@ export default function PrizePoolCelebration({
               ],
             }}
           >
-            <PrizePoolGraphic size={210} />
+            <AnimatedPrizePot size={210} />
           </Animated.View>
 
           <Text style={styles.liveLabel}>{t('prizePoolLive')}</Text>
