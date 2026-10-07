@@ -1,27 +1,13 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet } from 'react-native';
 import Svg, { Defs, Path, RadialGradient, Stop, Circle } from 'react-native-svg';
 import Colors from '@/constants/colors';
 
-let prefetchStarted = false;
-
 /**
- * Warm the image cache so the prize pot appears instantly when a modal opens.
- * Call once on screen mount (idempotent).
+ * The prize pot artwork bundled with the app, so it renders instantly —
+ * no network fetch, no cache lookups, no loading gap.
  */
-export function prefetchPrizePot(): void {
-  if (prefetchStarted) return;
-  prefetchStarted = true;
-  Image.prefetch(PRIZE_POT_ICON_URL).catch(() => {
-    prefetchStarted = false;
-  });
-}
-
-/**
- * The AI-generated prize pot artwork (transparent PNG hosted on R2).
- * Reference by URL exactly as returned by the generation tool.
- */
-export const PRIZE_POT_ICON_URL = 'https://92dokpnm94nubmxh14any.rork.app/~assets/img/2221573d-2aa5-45fe-bc1f-5f0ab91a8327.png';
+const PRIZE_POT_SOURCE = require('../assets/images/prize-pot.png');
 
 interface AnimatedPrizePotProps {
   size?: number;
@@ -46,6 +32,19 @@ export default function AnimatedPrizePot({
   const breathe = useRef(new Animated.Value(0)).current;
   const sparkleA = useRef(new Animated.Value(0)).current;
   const sparkleB = useRef(new Animated.Value(0)).current;
+  const fadeIn = useRef(new Animated.Value(0)).current;
+
+  // Soft entrance: fade the whole composition in on mount
+  useEffect(() => {
+    const anim = Animated.timing(fadeIn, {
+      toValue: 1,
+      duration: 320,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [fadeIn]);
 
   useEffect(() => {
     if (!animated) return;
@@ -130,7 +129,7 @@ export default function AnimatedPrizePot({
   );
 
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
+    <Animated.View style={[styles.container, { width: size, height: size, opacity: fadeIn }]}>
       {/* Pulsing ambient glow */}
       <Animated.View
         style={[styles.layer, { opacity: glowOpacity, transform: [{ scale: glowScale }] }]}
@@ -152,10 +151,9 @@ export default function AnimatedPrizePot({
         style={[styles.layer, { transform: [{ translateY }, { scale: imageScale }] }]}
       >
         <Image
-          source={{ uri: PRIZE_POT_ICON_URL }}
+          source={PRIZE_POT_SOURCE}
           style={{ width: size, height: size }}
           resizeMode="contain"
-          fadeDuration={0}
         />
       </Animated.View>
 
@@ -182,7 +180,7 @@ export default function AnimatedPrizePot({
           <Path d={SPARKLE_PATH} fill={Colors.accent.primary} />
         </Svg>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 
