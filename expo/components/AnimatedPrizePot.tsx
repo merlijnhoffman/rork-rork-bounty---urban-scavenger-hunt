@@ -7,7 +7,7 @@ import Colors from '@/constants/colors';
  * The AI-generated prize pot artwork (transparent PNG hosted on R2).
  * Reference by URL exactly as returned by the generation tool.
  */
-export const PRIZE_POT_ICON_URL = 'https://92dokpnm94nubmxh14any.rork.app/~assets/img/9de9cb31-4a58-4dc5-9d7f-dd3a422e8735.png';
+export const PRIZE_POT_ICON_URL = 'https://92dokpnm94nubmxh14any.rork.app/~assets/img/2221573d-2aa5-45fe-bc1f-5f0ab91a8327.png';
 
 interface AnimatedPrizePotProps {
   size?: number;
@@ -18,10 +18,10 @@ const SPARKLE_PATH =
   'M12 0 C13 8 16 11 24 12 C16 13 13 16 12 24 C11 16 8 13 0 12 C8 11 11 8 12 0 Z';
 
 /**
- * Animated prize pot icon — the generated glossy euro-coin pot floating over
- * a pulsing amber glow, with two twinkling sparkles. Every moving part uses
- * the native driver (transform/opacity only) so it stays smooth even inside
- * the busy celebration screen.
+ * Animated prize pot icon — the minimal flat-2D euro-coin pot floating over a
+ * soft amber glow, with two subtle accent sparkles. Every moving part uses the
+ * native driver (transform/opacity only) so it stays smooth even inside the
+ * busy celebration screen.
  */
 export default function AnimatedPrizePot({
   size = 220,
@@ -99,11 +99,11 @@ export default function AnimatedPrizePot({
     [breathe],
   );
   const sparkleOpacityA = useMemo(
-    () => sparkleA.interpolate({ inputRange: [0, 1], outputRange: [0.1, 1] }),
+    () => sparkleA.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.75] }),
     [sparkleA],
   );
   const sparkleOpacityB = useMemo(
-    () => sparkleB.interpolate({ inputRange: [0, 1], outputRange: [0.1, 0.9] }),
+    () => sparkleB.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.55] }),
     [sparkleB],
   );
   const sparkleScaleA = useMemo(
@@ -124,9 +124,9 @@ export default function AnimatedPrizePot({
         <Svg width={size} height={size} viewBox="0 0 240 240">
           <Defs>
             <RadialGradient id="appGlow" cx="120" cy="122" r="112" gradientUnits="userSpaceOnUse">
-              <Stop offset="0" stopColor="#FFD54A" stopOpacity="0.55" />
-              <Stop offset="0.55" stopColor="#FF8C00" stopOpacity="0.16" />
-              <Stop offset="1" stopColor="#FF8C00" stopOpacity="0" />
+              <Stop offset="0" stopColor="#F59E0B" stopOpacity="0.28" />
+              <Stop offset="0.55" stopColor="#F59E0B" stopOpacity="0.1" />
+              <Stop offset="1" stopColor="#F59E0B" stopOpacity="0" />
             </RadialGradient>
           </Defs>
           <Circle cx={120} cy={122} r={112} fill="url(#appGlow)" />
@@ -153,7 +153,7 @@ export default function AnimatedPrizePot({
         pointerEvents="none"
       >
         <Svg width={size * 0.09} height={size * 0.09} viewBox="0 0 24 24">
-          <Path d={SPARKLE_PATH} fill="#FFF3C4" />
+          <Path d={SPARKLE_PATH} fill={Colors.accent.primaryLight} />
         </Svg>
       </Animated.View>
       <Animated.View
@@ -164,7 +164,7 @@ export default function AnimatedPrizePot({
         pointerEvents="none"
       >
         <Svg width={size * 0.07} height={size * 0.07} viewBox="0 0 24 24">
-          <Path d={SPARKLE_PATH} fill={Colors.accent.primaryLight ?? '#FFC04D'} />
+          <Path d={SPARKLE_PATH} fill={Colors.accent.primary} />
         </Svg>
       </Animated.View>
     </View>
