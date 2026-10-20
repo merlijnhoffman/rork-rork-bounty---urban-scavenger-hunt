@@ -40,10 +40,25 @@ serve(async (req: Request) => {
     const userId = userData.user.id;
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Delete user-owned rows; ignore errors for tables that may not exist.
+    // GDPR / Apple account-deletion: remove EVERY user-owned row.
+    // Child rows first so FK constraints cannot block the auth-user delete.
+    // Errors on individual tables are ignored (table may not exist yet).
     await adminClient.from('tickets').delete().eq('user_id', userId);
+    await adminClient.from('connection_codes').delete().eq('user_id', userId);
+    await adminClient.from('hunter_locations').delete().eq('user_id', userId);
+    await adminClient.from('push_tokens').delete().eq('user_id', userId);
+    await adminClient.from('user_sessions').delete().eq('user_id', userId);
+    // Player connections: the user can appear on either side of the pair.
+    await adminClient
+      .from('player_connections')
+      .delete()
+      .or(`generator_user_id.eq.${userId},scanner_user_id.eq.${userId}`);
+    // Profile row last before the auth user.
     await adminClient.from('profiles').delete().eq('id', userId);
 
+    // Removes the auth user and all auth sessions (auth.sessions) server-side.
+    // Tip: also enable "Delete account after delay" in Supabase Auth settings
+    // so the anonymized user row is purged from auth.users automatically.
     const { error: deleteErr } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteErr) {
       return new Response(JSON.stringify({ error: deleteErr.message }), {

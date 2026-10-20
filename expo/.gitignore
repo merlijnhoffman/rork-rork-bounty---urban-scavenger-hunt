@@ -44,3 +44,6 @@ rork-eslint.config.js
 core
 node_modules
 .expo
+# Local env files (no leading dot variant)
+env.local
+env.*.local

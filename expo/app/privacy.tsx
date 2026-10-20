@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Shield, Clock, Database, Globe, UserCheck, Mail } from 'lucide-react-native';
@@ -7,6 +7,11 @@ import { router } from 'expo-router';
 import Colors from '@/constants/colors';
 
 const C = Colors;
+
+// TODO(website): once your Vercel site is live, set this to e.g.
+// 'https://your-site.vercel.app/privacy' — the in-app button below opens it,
+// so the web policy becomes the single source of truth.
+const WEB_PRIVACY_URL = '';
 
 interface PolicySectionProps {
   icon: React.ReactNode;
@@ -70,7 +75,7 @@ export default function PrivacyScreen() {
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.lastUpdated}>Last updated: June 21, 2026</Text>
+          <Text style={styles.lastUpdated}>Last updated: October 20, 2026</Text>
 
           <Text style={styles.intro}>
             Bounty (&ldquo;we&rdquo;, &ldquo;our&rdquo;, or &ldquo;us&rdquo;) is committed to protecting your
@@ -111,6 +116,12 @@ export default function PrivacyScreen() {
                 hunt functionality: tracking your position during active scavenger hunts.
                 Location is only collected while the app is in use or, with your permission,
                 in the background during active events.
+              </Text>
+              <Text style={styles.bullet}>
+                <Text style={styles.bold}>Visibility to other players</Text> &ndash; while a
+                hunt is live, your position is shown to other players on their in-app Hunter
+                Radar (as an anonymous dot), so hunters can find each other. This sharing
+                stops automatically when the event ends.
               </Text>
               <Text style={styles.bullet}>
                 <Text style={styles.bold}>User ID &amp; device ID</Text> &ndash; for
@@ -294,6 +305,17 @@ export default function PrivacyScreen() {
             </Text>
           </PolicySection>
 
+          {WEB_PRIVACY_URL !== '' && (
+            <TouchableOpacity
+              style={styles.onlineButton}
+              onPress={() => Linking.openURL(WEB_PRIVACY_URL)}
+              activeOpacity={0.7}
+            >
+              <Globe color={C.accent.primary} size={16} />
+              <Text style={styles.onlineButtonText}>Read the full policy online</Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.footer}>
             <Shield color={C.dark.textMuted} size={14} />
             <Text style={styles.footerText}>
@@ -394,5 +416,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.dark.textMuted,
     lineHeight: 18,
+  },
+  onlineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: C.dark.card,
+    borderWidth: 1,
+    borderColor: C.dark.borderLight,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 20,
+  },
+  onlineButtonText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: C.accent.primary,
   },
 });
