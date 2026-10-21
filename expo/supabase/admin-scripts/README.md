@@ -173,3 +173,37 @@ Notes:
 - Existing events get the default starting prize (€500) + €10 per ticket.
 - The old `prize_amount` column is no longer used by the player app for the
   current event (hunt history falls back to it only for pre-pool events).
+
+## 6. Drop Twilio: admin login via Supabase (run once)
+
+The admin panel no longer texts you a login code via Twilio. Instead you sign
+in with your email + password (Supabase Auth), and access is granted only if
+your email is in the `admins` allowlist below.
+
+Run this once, replacing the email with the one YOU will use in the admin app:
+
+```sql
+create table if not exists public.admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.admins enable row level security;
+
+create policy "Admins can read own row"
+  on public.admins for select
+  using (auth.uid() = user_id);
+
+-- Add yourself (must already have an account in the admin app):
+insert into public.admins (user_id, email)
+select id, email from auth.users where email = 'YOU@example.com'
+on conflict (user_id) do nothing;
+```
+
+### Clean up Twilio (do after the admin app is updated)
+
+1. Supabase dashboard → Edge Functions → `send-admin-sms` → **Delete** it.
+2. Edge Functions → Secrets (or project settings) → remove `TWILIO_ACCOUNT_SID`,
+   `TWILIO_AUTH_TOKEN` and `TWILIO_PHONE_NUMBER`.
+3. Close your Twilio account/console project — it is no longer used anywhere.
