@@ -36,6 +36,11 @@ This wipes all event data server-side and puts the event back to "scheduled".
 Player phones automatically discard their saved stats (hint tokens, unlocked
 hints, distance meter) because the event's `updated_at` moves forward.
 
+Hunter Connect also fully resets: `player_connections` and `connection_codes`
+are deleted, so every pair of hunters can scan each other again (and the
+database unique-pair rule from section 5 no longer blocks anything). If your
+tables drift out of sync, section 5's script is safe to re-run.
+
 **Set your event id here** (find it in Table Editor → events):
 
 ```sql
