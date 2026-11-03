@@ -5,6 +5,7 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
+  ScrollViewInstance,
   Animated,
   Modal,
   Alert,
@@ -122,7 +123,7 @@ export default function HuntScreen() {
     winnerEmail: string | null;
     declaredAt: string;
   } | null>(null);
-  const cluesScrollRef = useRef<ScrollView>(null);
+  const cluesScrollRef = useRef<ScrollViewInstance>(null);
   const prevEventStatusRef = useRef<string | null>(null);
   const countedConnectionsRef = useRef<Set<string>>(new Set());
 
