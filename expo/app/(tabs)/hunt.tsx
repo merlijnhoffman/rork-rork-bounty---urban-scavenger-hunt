@@ -939,6 +939,8 @@ export default function HuntScreen() {
   const isLoading = gameLoading || (ticketQuery.isLoading && !ticketQuery.isFetched) || isPurchasing;
   
   const isHuntActive = currentEvent?.status === 'live';
+  const isEventFree = currentEvent ? currentEvent.ticketPrice === 0 : TICKET.isFree;
+  const eventPriceFallback = `${TICKET.currency} ${(currentEvent?.ticketPrice ?? TICKET.price).toFixed(2)}`;
   const shouldShowHunt = hasTicket && isHuntActive && joinedLiveHunt;
 
   const livePulseAnim = useRef(new Animated.Value(1)).current;
@@ -989,7 +991,7 @@ export default function HuntScreen() {
       router.push('/signup');
       return;
     }
-    if (TICKET.isFree) {
+    if (isEventFree) {
       void handleClaimFreeTicket();
       return;
     }
@@ -1645,8 +1647,8 @@ export default function HuntScreen() {
               <View style={styles.firstEventBanner}>
                 <Zap color={Colors.accent.primary} size={20} />
                 <View style={styles.firstEventTextContainer}>
-                  <Text style={styles.firstEventText}>{TICKET.isFree ? t('free') : t('pricePerTicket', { price: `${TICKET.currency} ${TICKET.price.toFixed(2)}` })}</Text>
-                  <Text style={styles.firstEventSubtext}>{TICKET.isFree ? t('firstEventFreeSub') : t('firstEventPaidSub')}</Text>
+                  <Text style={styles.firstEventText}>{isEventFree ? t('free') : t('pricePerTicket', { price: eventPriceFallback })}</Text>
+                  <Text style={styles.firstEventSubtext}>{isEventFree ? t('firstEventFreeSub') : t('firstEventPaidSub')}</Text>
                 </View>
               </View>
             </Animated.View>
@@ -1667,9 +1669,9 @@ export default function HuntScreen() {
                 <Text style={styles.ticketButtonText}>
                   {isLoading || isPurchasing
                     ? t('processing')
-                    : TICKET.isFree
+                    : isEventFree
                     ? t('claimTicket')
-                    : t('buyTicketWithPrice', { price: offering?.availablePackages?.[0]?.product?.priceString ?? `${TICKET.currency} ${TICKET.price.toFixed(2)}` })}
+                    : t('buyTicketWithPrice', { price: offering?.availablePackages?.[0]?.product?.priceString ?? eventPriceFallback })}
                 </Text>
                 {!isLoading && (
                   <ChevronRight color={'#000'} size={18} />
@@ -1738,7 +1740,7 @@ export default function HuntScreen() {
             <View style={styles.stepsContainer}>
               {[
                 { num: '01', title: t('step1Title'), text: t('step1Text'), icon: LogIn },
-                { num: '02', title: t('step2Title'), text: TICKET.isFree ? t('step2TextFree') : t('step2TextPaid', { price: TICKET.price.toFixed(2) }), icon: Zap },
+                { num: '02', title: t('step2Title'), text: isEventFree ? t('step2TextFree') : t('step2TextPaid', { price: (currentEvent?.ticketPrice ?? TICKET.price).toFixed(2) }), icon: Zap },
                 { num: '03', title: t('step3Title'), text: t('step3Text'), icon: Eye },
                 { num: '04', title: t('step4Title'), text: t('step4Text'), icon: Trophy },
               ].map((step, i) => (
@@ -1871,7 +1873,7 @@ export default function HuntScreen() {
               <View style={styles.paywallBody}>
                 <View style={styles.paywallPriceSection}>
                   <Target color={Colors.accent.primary} size={44} />
-                  <Text style={styles.paywallPrice}>{offering?.availablePackages?.[0]?.product?.priceString ?? `\u20AC${TICKET.price.toFixed(2)}`}</Text>
+                  <Text style={styles.paywallPrice}>{offering?.availablePackages?.[0]?.product?.priceString ?? eventPriceFallback}</Text>
                   <Text style={styles.paywallPriceLabel}>{t('oneTimePurchase')}</Text>
                 </View>
 
@@ -1917,7 +1919,7 @@ export default function HuntScreen() {
                       ? t('processing')
                       : isOfferingLoading
                       ? t('loading')
-                      : t('purchaseFor', { price: offering?.availablePackages?.[0]?.product?.priceString ?? `\u20AC${TICKET.price.toFixed(2)}` })}
+                      : t('purchaseFor', { price: offering?.availablePackages?.[0]?.product?.priceString ?? eventPriceFallback })}
                   </Text>
                 </TouchableOpacity>
 
