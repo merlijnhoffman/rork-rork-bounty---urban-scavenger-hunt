@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import * as ScreenCapture from "expo-screen-capture"; // currently unused — screenshot blocking disabled, see TODO in RootLayout
+import * as ScreenCapture from "expo-screen-capture";
 import * as ScreenOrientation from "expo-screen-orientation";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -262,8 +262,7 @@ export default function RootLayout() {
   useNotificationTapHandler();
 
   useEffect(() => {
-    // TODO: re-enable screenshot blocking before App Store release
-    // ScreenCapture.preventScreenCaptureAsync().catch(() => {});
+    ScreenCapture.preventScreenCaptureAsync().catch(() => {});
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
 
     // Hide splash screen immediately for faster perceived load time
