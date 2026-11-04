@@ -212,3 +212,75 @@ on conflict (user_id) do nothing;
 2. Edge Functions → Secrets (or project settings) → remove `TWILIO_ACCOUNT_SID`,
    `TWILIO_AUTH_TOKEN` and `TWILIO_PHONE_NUMBER`.
 3. Close your Twilio account/console project — it is no longer used anywhere.
+
+---
+
+## 7. Stage a photo-ready hunt (for App Store screenshots)
+
+The store screenshots look best when the radar shows hunters and the prize pot
+shows a big number. Run this while the target event is `live`, then take the
+screenshots on your phone, then optionally undo.
+
+Replace `EVENT_ID` with the event's id (current Madrid event:
+`294778bc-2064-4751-91c3-fb9347e3258f`).
+
+### 7a. Make the prize pot show €1000
+
+The displayed pool = `prize_base` + (active tickets × `prize_per_ticket`).
+This sets the base so the pot lands on exactly €1000 for the current ticket
+level (skips if the event has no active tickets — then just set the base):
+
+```sql
+update events e
+set prize_base = 1000 - greatest(
+      (select count(*) from tickets t
+       where t.event_id = e.id and t.status = 'active'), 0) * e.prize_per_ticket,
+    updated_at = now()
+where e.id = 'EVENT_ID';
+```
+
+To undo, set `prize_base` back to its original value (it was `0` before).
+
+### 7b. Put test hunters on the radar
+
+Drops 3 test hunters 150–400 m around your latest broadcast position, so the
+Hunter Radar shows dots and a hunter count. Requires that your phone has
+broadcast at least once during the live hunt (open the app on the Hunt tab
+once, then run this):
+
+```sql
+with me as (
+  select event_id, latitude, longitude
+  from hunter_locations
+  where event_id = 'EVENT_ID'
+  order by updated_at desc
+  limit 1
+)
+insert into hunter_locations (user_id, event_id, latitude, longitude, updated_at)
+select gen_random_uuid(),
+       me.event_id,
+       me.latitude + o.dlat,
+       me.longitude + o.dlon,
+       now()
+from me
+cross join (values
+  (0.0014, 0.0009),
+  (-0.0011, 0.0016),
+  (0.0007, -0.0018)
+) as o(dlat, dlon);
+```
+
+To undo (removes ALL radar dots for the event, including real ones — fine for
+a photo shoot):
+
+```sql
+delete from hunter_locations where event_id = 'EVENT_ID';
+```
+
+Tip: gen_random_uuid() satisfies the uuid user_id column without creating
+profile rows; RLS is bypassed in the SQL editor.
+
+### 7c. Real QR code for Hunter Connect
+
+No SQL needed: in the app, open Hunter Connect and tap **Generate QR Code**,
+then screenshot — the placeholder QR glyph becomes a real, scannable code.
