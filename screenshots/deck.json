@@ -1,0 +1,81 @@
+{
+  "appContext": {
+    "appName": "BOUNTY",
+    "category": "city treasure hunt game",
+    "summary": "BOUNTY is a live, real-world city treasure hunt. Players buy a ticket to a live event in their city, follow real-time clues (photos, video, audio), navigate the hunt zone on a map, use a Hunter Radar to spot rivals nearby, and connect with other hunters by scanning QR codes in person to earn bonus hint tokens. The first hunter to find the target wins the cash prize pool. Dark, minimal, amber-accented competitive design.",
+    "domainKeywords": [
+      "treasure hunt",
+      "scavenger hunt",
+      "city game",
+      "live event",
+      "GPS game",
+      "hunter radar",
+      "QR connect",
+      "prize pool"
+    ],
+    "forbiddenInterpretations": [
+      "bounty hunting crime app",
+      "crypto reward app",
+      "delivery courier app",
+      "dating app",
+      "spy tracker app"
+    ]
+  },
+  "theme": {
+    "style": "Near-black night-city atmosphere with warm amber and burnt-orange glows like streetlights cutting through darkness, accented by occasional cool teal pulses for tension. Competitive, cinematic, and minimal, with fine grain texture, soft volumetric haze, and long light trails evoking a nighttime chase through real streets. Backgrounds stay dark and restrained so the amber UI and headlines pop.",
+    "headlineFont": "font-family: 'Space Grotesk', sans-serif; @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap');",
+    "headlineFontSize": 128,
+    "mockupIds": {
+      "iphone": "cosmic-orange",
+      "ipad": "space-gray"
+    },
+    "palette": {
+      "primary": "#0B0B0D",
+      "secondary": "#FF9F1C",
+      "accent": "#2EE6C9"
+    },
+    "layoutId": "hero-clipped"
+  },
+  "slides": [
+    {
+      "label": "BOUNTY Next Hunt Landing",
+      "backgroundPrompt": "Cinematic abstract dark scene of near-black obsidian with a faint fine geometric grid fading into darkness and a large soft sphere of warm amber and burnt-orange light glowing from the lower center. Volumetric haze and subtle film grain, gentle rim glow, upper third deep black and calm. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/2fa4add3-88f8-456a-be27-41c672754eef.png"
+    },
+    {
+      "label": "Live Hunt Zone Map",
+      "backgroundPrompt": "Abstract digital art of deep charcoal-black space crossed by long diagonal streaks of amber and honey-gold light from the lower left, with a faint thin circular ornamental star pattern barely visible in the background. Dramatic directional lighting, motion blur on the light streaks, soft grain texture, top region dark and quiet. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/50cb2c7f-3f9e-4bc4-99ef-ecc4a8166d18.png"
+    },
+    {
+      "label": "Hunter Radar",
+      "backgroundPrompt": "Abstract dark composition of concentric thin rings of luminous teal and aqua light radiating outward from the lower center across a near-black backdrop, with a soft translucent conical sweep of teal glow. Cool cinematic lighting with a faint amber ember glow at the edges, fine particle dust and depth blur, upper area calm and dark. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/8e2a22a4-f22b-4d34-b8bf-77d894567bf8.png"
+    },
+    {
+      "label": "Hunter Connect QR",
+      "backgroundPrompt": "Long-exposure style abstract art of two flowing ribbons of amber and burnt-orange light crossing in an X shape across a deep obsidian background, meeting in a bright warm flare at lower center. Soft bokeh highlights, gentle smoke wisps, subtle grain, top third fading into calm black. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/f75ab6cb-7fc9-4152-a792-c74491d035fc.png"
+    },
+    {
+      "label": "Live Prize Pool",
+      "backgroundPrompt": "Luxurious 3D rendered dark scene with a rich amber-to-gold radial glow rising from the bottom, surrounded by floating glinting golden discs and sparkling particles drifting upward. Warm cinematic backlighting, shallow depth of field blurring distant sparkles, near-black upper region for contrast. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/eabbd893-6cca-4d57-9c5a-701e68c41c19.png"
+    },
+    {
+      "label": "How It Works Steps",
+      "backgroundPrompt": "Minimal abstract dark composition of near-black matte surface with large soft-edged amber geometric shapes stacked in a gentle vertical rhythm, each edge catching a thin line of warm orange light from the right. Calm diffused lighting, subtle grain and soft shadows for depth, upper area clean and dark. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/6638a40c-02c5-48f6-a4aa-15c7237c8c80.png"
+    }
+  ],
+  "headlines": {
+    "en": {
+      "BOUNTY Next Hunt Landing": "The Hunt<br>Is Coming",
+      "Live Hunt Zone Map": "Chase It<br>Live",
+      "Hunter Radar": "Spot<br>Your Rivals",
+      "Hunter Connect QR": "Meet<br>Scan Earn",
+      "Live Prize Pool": "Winner<br>Takes All",
+      "How It Works Steps": "Four Steps<br>To Glory"
+    }
+  }
+}
