@@ -8,10 +8,8 @@ import Colors from '@/constants/colors';
 
 const C = Colors;
 
-// TODO(website): once your Vercel site is live, set this to e.g.
-// 'https://your-site.vercel.app/privacy' — the in-app button below opens it,
-// so the web policy becomes the single source of truth.
-const WEB_PRIVACY_URL = '';
+// The live web policy is the single source of truth; the in-app button below opens it.
+const WEB_PRIVACY_URL: string = 'https://bounty-website-omega.vercel.app/privacy';
 
 interface PolicySectionProps {
   icon: React.ReactNode;
@@ -305,7 +303,7 @@ export default function PrivacyScreen() {
             </Text>
           </PolicySection>
 
-          {WEB_PRIVACY_URL !== '' && (
+          {WEB_PRIVACY_URL.length > 0 && (
             <TouchableOpacity
               style={styles.onlineButton}
               onPress={() => Linking.openURL(WEB_PRIVACY_URL)}

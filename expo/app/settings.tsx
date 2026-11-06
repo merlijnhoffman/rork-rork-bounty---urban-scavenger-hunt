@@ -40,7 +40,8 @@ import { supabase } from '@/lib/supabase';
 
 const C = Colors;
 
-const TERMS_URL = 'https://bounty.app/terms';
+const TERMS_URL = 'https://bounty-website-omega.vercel.app/terms';
+const SUPPORT_URL = 'https://bounty-website-omega.vercel.app/support';
 const SUPPORT_EMAIL = 'privacy@bounty.app';
 
 export default function SettingsScreen() {
@@ -444,7 +445,7 @@ export default function SettingsScreen() {
               {renderLink(
                 <HelpCircle color={C.dark.textSecondary} size={18} />,
                 t('contactSupport'),
-                () => Linking.openURL(`mailto:${SUPPORT_EMAIL}`),
+                () => Linking.openURL(SUPPORT_URL),
               )}
             </View>
           </View>
