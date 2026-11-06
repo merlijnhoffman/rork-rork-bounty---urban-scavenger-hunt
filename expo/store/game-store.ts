@@ -4,6 +4,29 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TicketTier } from '@/types/payment';
 import { supabase } from '@/lib/supabase';
 
+/**
+ * Resolve the event's real start timestamp for the current hunt.
+ * Accepts a full timestamp in start_time ("2026-11-09T18:00:00+00:00")
+ * or a time-only string ("18:00"), combined with the event date column.
+ * Falls back to the date column itself (midnight local) when no time exists.
+ */
+const resolveStartISO = (rawDate: string | null | undefined, rawStart: string | null | undefined): string => {
+  const parsedDate = rawDate ? new Date(rawDate) : null;
+  const validDate = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : null;
+  if (rawStart) {
+    const raw = String(rawStart);
+    const ts = new Date(raw);
+    if (!isNaN(ts.getTime()) && /\d{4}-\d{2}-\d{2}/.test(raw)) return ts.toISOString();
+    if (validDate && /^\d{1,2}:\d{2}/.test(raw)) {
+      const [h, m] = raw.split(':').map(Number);
+      const combined = new Date(validDate);
+      combined.setHours(h || 0, m || 0, 0, 0);
+      return combined.toISOString();
+    }
+  }
+  return validDate ? validDate.toISOString() : '';
+};
+
 export interface GameEvent {
   id: string;
   city: string;
@@ -165,7 +188,7 @@ const [GameProvider, useGameStoreInternal] = createContextHook(() => {
           ticketPrice: (data as any).ticket_price ?? (data as any).price ?? 25,
           prizeBase: (data as any).prize_base ?? 500,
           prizePerTicket: (data as any).prize_per_ticket ?? 10,
-          startTime: validDate ? validDate.toISOString() : '',
+          startTime: resolveStartISO((data as any).date, (data as any).start_time),
           status: (data.status as 'scheduled' | 'live' | 'completed') || 'scheduled',
           updatedAt: (data as any).updated_at ?? (data as any).created_at ?? '',
         };
