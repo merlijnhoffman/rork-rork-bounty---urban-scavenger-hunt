@@ -4,6 +4,15 @@
       "name": "Expo",
       "path": "expo",
       "framework": "react-native"
+    },
+    {
+      "name": "BOUNTY Film",
+      "path": "web-bounty-film",
+      "framework": "web",
+      "settings": {
+        "kind": "motion-video"
+      }
     }
-  ]
+  ],
+  "$schema": "https://rork.com/schema/rork.json"
 }
