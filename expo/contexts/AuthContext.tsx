@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { Platform, Alert } from 'react-native';
 import * as Device from 'expo-device';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import createContextHook from '@nkzw/create-context-hook';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
@@ -49,6 +51,8 @@ export interface AuthState {
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  /** error === 'CANCELLED' means the user closed the OAuth browser. */
+  signInWithProvider: (provider: 'google' | 'apple') => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -271,6 +275,93 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
     }
   }, [registerSession]);
 
+  /**
+   * Google / Apple sign-in through Supabase OAuth (PKCE).
+   * Native: opens the provider in an in-app auth session and exchanges the
+   * returned code for a session. Web: top-level redirect, picked up on return.
+   */
+  const signInWithProvider = useCallback(async (provider: 'google' | 'apple') => {
+    try {
+      setLoading(true);
+
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: { redirectTo: window.location.origin },
+        });
+        if (error) {
+          console.error('[Auth] OAuth redirect error:', error);
+          return { success: false, error: error.message };
+        }
+        // Browser navigates away; session is detected on return.
+        return { success: true };
+      }
+
+      const redirectUrl = Linking.createURL('/auth/callback');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+      });
+      if (error || !data?.url) {
+        console.error('[Auth] OAuth initiate error:', error);
+        return { success: false, error: error?.message ?? 'Sign-in failed. Please try again.' };
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+      if (result.type !== 'success' || !result.url) {
+        return { success: false, error: 'CANCELLED' };
+      }
+
+      const url = result.url;
+      if (url.includes('code=')) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(url);
+        if (exchangeError) {
+          console.error('[Auth] OAuth code exchange failed:', exchangeError);
+          return { success: false, error: 'Sign-in failed. Please try again.' };
+        }
+      } else if (url.includes('access_token=')) {
+        // Implicit-flow fallback: tokens arrive in the URL fragment.
+        const fragment = url.split('#')[1] ?? '';
+        const params = new URLSearchParams(fragment);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        if (!accessToken || !refreshToken) {
+          return { success: false, error: 'Sign-in failed. Please try again.' };
+        }
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) {
+          console.error('[Auth] OAuth setSession failed:', sessionError);
+          return { success: false, error: 'Sign-in failed. Please try again.' };
+        }
+      } else {
+        return { success: false, error: 'Sign-in failed. Please try again.' };
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const oauthUser = session?.user;
+      if (!oauthUser) {
+        return { success: false, error: 'Sign-in failed. Please try again.' };
+      }
+
+      const email = oauthUser.email ?? (oauthUser.user_metadata?.email as string | undefined) ?? '';
+      await supabase.from('profiles').upsert({ id: oauthUser.id, email }, { onConflict: 'id' });
+
+      // Same single-device session discipline as email sign-in.
+      forceSignOutGuard.current = false;
+      await registerSession(oauthUser.id);
+
+      return { success: true };
+    } catch (err) {
+      console.error('[Auth] Unexpected OAuth error:', err);
+      return { success: false, error: 'An unexpected error occurred. Please try again.' };
+    } finally {
+      setLoading(false);
+    }
+  }, [registerSession]);
+
   const signOut = useCallback(async () => {
     try {
       setLoading(true);
@@ -298,8 +389,9 @@ const [AuthProviderInternal, useAuthInternal] = createContextHook((): AuthState 
     loading,
     signUp,
     signIn,
+    signInWithProvider,
     signOut,
-  }), [user, session, loading, signUp, signIn, signOut]);
+  }), [user, session, loading, signUp, signIn, signInWithProvider, signOut]);
 });
 
 export function useAuth() {
@@ -311,6 +403,7 @@ export function useAuth() {
       loading: false,
       signUp: async () => ({ success: false, error: 'Auth context not available' }),
       signIn: async () => ({ success: false, error: 'Auth context not available' }),
+      signInWithProvider: async () => ({ success: false, error: 'Auth context not available' }),
       signOut: async () => {},
     } satisfies AuthState;
   }

@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { SocialAuthButtons } from '@/components/SocialAuthButtons';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, Crosshair } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
@@ -96,6 +97,10 @@ export default function LoginScreen() {
               </View>
               <Text style={styles.title}>{t('loginTitle')}</Text>
               <Text style={styles.subtitle}>{t('loginSubtitle')}</Text>
+            </View>
+
+            <View style={styles.socialWrap}>
+              <SocialAuthButtons />
             </View>
 
             <View style={styles.form}>
@@ -216,6 +221,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: C.dark.textSecondary,
     textAlign: 'center',
+  },
+  socialWrap: {
+    marginBottom: 26,
   },
   form: {
     marginBottom: 32,
