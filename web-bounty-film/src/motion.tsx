@@ -64,7 +64,7 @@ const content: FilmScene[] = [
   },
   {
     id: "end",
-    icon: "/bounty-icon-v1.png",
+    icon: "/bounty-icon-v2.png",
     wordmark: "BOUNTY",
     line: "FIND IT FIRST.",
     voiceover: "/rork-vo-end-v1.mp3",
