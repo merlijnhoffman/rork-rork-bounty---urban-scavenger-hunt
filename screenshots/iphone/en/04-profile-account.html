@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap');
+html,body{margin:0;padding:0;background:#0E0D0B;}
+.canvas{position:relative;width:1284px;height:2778px;overflow:hidden;background:#0E0D0B;}
+.bg{position:absolute;inset:0;background-image:url('../../backgrounds/iphone-profile-account.png');background-size:cover;background-position:center;}
+.bg-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,13,11,0.55) 0%,rgba(14,13,11,0.25) 25%,rgba(14,13,11,0) 45%);}
+.headline{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:132px;line-height:1.02;letter-spacing:-2px;color:#FFFFFF;margin:0;text-shadow:0 4px 24px rgba(0,0,0,0.6),0 0 60px rgba(255,176,32,0.18);}
+.headline span{color:#FFB020;}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="bg"></div>
+  <div class="bg-overlay"></div>
+  <div style="position:absolute; top:0%; left:50%; width:84%; height:22%; transform:translateX(-50%); display:flex; align-items:center; justify-content:center; text-align:center;">
+    <h1 class="headline">Your<br><span>Hunter Rank</span></h1>
+  </div>
+  <div style="position:absolute; left:50%; top:22%; width:78%; transform:translateX(-50%);">
+    <div style="position:relative; aspect-ratio:879/1832;">
+      <div style="position:absolute; overflow:hidden; left:4.32%; top:2.29%; width:91.47%; height:95.41%; border-radius:7.5% / 3.5%;">
+        <img src="../../captures/iphone/04-profile-account.png" style="display:block; width:100%; height:100%; object-fit:cover; object-position:top;" draggable="false" />
+      </div>
+      <img src="https://r2-pub.rork.com/static/iphone-mockups/iphone-17-pro-cosmic-orange.png" style="position:relative; z-index:10; display:block; width:100%; height:100%; pointer-events:none;" draggable="false" />
+    </div>
+  </div>
+</div>
+</body>
+</html>

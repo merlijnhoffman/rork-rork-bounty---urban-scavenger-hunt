@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "platform": "ios",
+  "scrollDirection": "page",
+  "screenshotPrompts": [
+    {
+      "label": "BOUNTY Next Hunt Landing",
+      "screenDescription": "BOUNTY Next Hunt Landing: Bounty",
+      "requiredLabels": [
+        "Bounty"
+      ],
+      "prompt": "The hunt home: next event in your city with prize pool, countdown and your ticket"
+    }
+  ]
+}

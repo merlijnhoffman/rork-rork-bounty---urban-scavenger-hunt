@@ -21,49 +21,61 @@
       "spy tracker app"
     ]
   },
-  "theme": {
-    "style": "Nocturnal city-hunt atmosphere: near-black charcoal fields lit by warm amber and molten orange glows, like streetlights and flares cutting through a midnight metropolis. Fine grain, soft volumetric haze, and sharp amber light streaks create a competitive, cinematic tension. Backgrounds stay dark and restrained so the amber accents and the app's orange UI pop, with calm upper zones for bold headlines.",
-    "headlineFont": "font-family: 'Archivo', sans-serif; weight 800, uppercase. @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@800&display=swap');",
-    "headlineFontSize": 120,
-    "mockupIds": {
-      "iphone": "cosmic-orange",
-      "ipad": "space-gray"
-    },
-    "palette": {
-      "primary": "#0E0D0C",
-      "secondary": "#2A221A",
-      "accent": "#FF9F1C"
-    },
-    "layoutId": "hero-clipped"
-  },
-  "slides": [
-    {
-      "label": "BOUNTY Next Hunt Landing",
-      "backgroundPrompt": "Cinematic abstract digital art of a near-black charcoal field with a faint fine geometric grid of hair-thin lines receding into darkness, and a large soft radial glow of warm amber and burnt orange blooming from the lower center. Gentle volumetric haze and subtle film grain, deep vignette at the edges, the upper 30% calm and nearly black for text. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
-      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/f41048a8-75b8-4644-99a7-18b4dac85c49.png"
-    },
-    {
-      "label": "Live Hunt Zone Map",
-      "backgroundPrompt": "Abstract long-exposure style artwork on a deep obsidian base with sweeping diagonal streaks of amber, tangerine and molten gold light racing from the lower left toward the right, and a faint circular radiating line pattern softly etched in the lower right. Dramatic rim lighting from below, motion blur on the streaks, subtle grain texture, the upper third dark and quiet. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
-      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/bf26c691-af77-436c-b300-4c03c4e02f64.png"
-    },
-    {
-      "label": "Live Prize Pool",
-      "backgroundPrompt": "Luxurious 3D rendered scene of a dark espresso-brown to black gradient with a rich amber-to-gold glow rising from the bottom, scattered floating gold sparkles and soft bokeh orbs of champagne and honey light drifting upward. Warm cinematic lighting from below, shallow depth of field blurring the foreground particles, the top 30% calm deep black. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
-      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/26d0abd1-83d6-44a0-ae45-7064e4dcdc47.png"
-    },
-    {
-      "label": "How It Works Steps",
-      "backgroundPrompt": "Minimal abstract digital art of a clean matte charcoal background with layered translucent dark glass panels stacked vertically at slight angles, each edge catching a thin line of warm amber light. Soft side lighting from the left, gentle shadows between panels for depth, subtle grain, the upper region open and nearly black. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
-      "backgroundUrl": "https://r2-pub.rork.com/app-store-screenshots/0d47275a-2a19-4a57-876f-c92f120f9605.png"
-    }
-  ],
-  "headlines": {
-    "en": {
-      "BOUNTY Next Hunt Landing": "The Hunt<br>Is Coming",
-      "Live Hunt Zone Map": "Chase<br>It Live",
-      "Live Prize Pool": "Winner<br>Takes All",
-      "How It Works Steps": "Four Steps<br>To Glory"
+  "devices": {
+    "iphone": {
+      "theme": {
+        "style": "Nocturnal city energy in near-black charcoal with molten amber glows, like streetlights and signal flares cutting through a midnight urban fog. The mood is competitive, tense and minimal. Fine film grain, soft volumetric haze and sharp warm rim light create depth without clutter. Backgrounds stay dark and restrained so the amber accents feel like a live, urgent pulse.",
+        "headlineFont": "font-family: 'Space Grotesk', sans-serif; @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap');",
+        "headlineFontSize": 132,
+        "mockupIds": {
+          "iphone": "cosmic-orange",
+          "ipad": "space-gray"
+        },
+        "palette": {
+          "primary": "#0E0D0B",
+          "secondary": "#2A2520",
+          "accent": "#FFB020"
+        },
+        "layoutId": "hero-clipped"
+      },
+      "slides": [
+        {
+          "label": "Hunt landing",
+          "capture": "screenshots/captures/iphone/01-hunt-landing.png",
+          "prompt": "Hunt landing",
+          "backgroundPrompt": "Cinematic abstract digital art of a near-black charcoal void with sweeping diagonal beams of molten amber and burnt orange light rising from the lower right, thin streaks of warm haze drifting through the frame. Dramatic rim lighting from below, fine film grain and soft volumetric fog, while the upper 30% stays deep obsidian and calm. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-hunt-landing.png"
+        },
+        {
+          "label": "Prize pool",
+          "capture": "screenshots/captures/iphone/02-prize-pool.png",
+          "prompt": "Prize pool",
+          "backgroundPrompt": "Abstract 3D render of a single massive glowing orb of liquid gold and honey amber light bleeding upward from the bottom center, surrounded by tiny floating warm sparks against a deep charcoal brown backdrop. Radiant central glow with soft bloom and subtle depth-of-field blur on the edges, the top region fading to near-black. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-prize-pool.png"
+        },
+        {
+          "label": "How it works",
+          "capture": "screenshots/captures/iphone/03-how-it-works.png",
+          "prompt": "How it works",
+          "backgroundPrompt": "Abstract digital art of layered translucent planes of smoked dark glass stacked at steep angles, each edge catching a thin line of amber and pale copper light, set against a deep warm graphite base. Cool side lighting from the left with deep shadows between the layers creates dramatic depth, and the upper portion stays dark and uncluttered. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-how-it-works.png"
+        },
+        {
+          "label": "Profile account",
+          "capture": "screenshots/captures/iphone/04-profile-account.png",
+          "prompt": "Profile account",
+          "backgroundPrompt": "Constellation-like scatter of tiny warm amber and soft gold points across a vast midnight charcoal expanse, joined by hair-thin luminous threads, with a diffused burnt orange glow pooling in the lower left corner. Gentle ambient light, subtle grain texture and soft bokeh depth, with the top 30% open and calm. 8K quality, ultra smooth gradients, premium feel, no text, no letters, no UI elements, no device mockups",
+          "background": "screenshots/backgrounds/iphone-profile-account.png"
+        }
+      ],
+      "headlines": {
+        "en": {
+          "Hunt landing": "The City<br>Is The Game",
+          "Prize pool": "Win The<br>Cash Pool",
+          "How it works": "Follow<br>Live Clues",
+          "Profile account": "Your<br>Hunter Rank"
+        }
+      }
     }
   }
 }
