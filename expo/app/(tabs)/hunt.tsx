@@ -45,6 +45,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { TICKET } from '@/constants/payment';
 import { usePayment } from '@/contexts/PaymentContext';
+import { displayFont } from '@/constants/typography';
 
 /** Convert an ISO 3166-1 alpha-2 code to its flag emoji (empty when invalid or null). */
 const flagEmoji = (code: string | null | undefined): string => {
@@ -1995,6 +1996,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   appTitle: {
+    fontFamily: displayFont,
     fontSize: 44,
     fontWeight: '900' as const,
     color: C.dark.text,
@@ -2138,6 +2140,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cityNameLarge: {
+    fontFamily: displayFont,
     fontSize: 34,
     fontWeight: '900' as const,
     color: '#FFF',
@@ -2244,6 +2247,7 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
   },
   ticketClaimedTitle: {
+    fontFamily: displayFont,
     fontSize: 14,
     fontWeight: '700' as const,
     color: '#FFF',
@@ -2333,6 +2337,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   nextHuntTitle: {
+    fontFamily: displayFont,
     fontSize: 26,
     fontWeight: '900' as const,
     color: C.dark.text,
@@ -2417,6 +2422,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.accent.primary,
   },
   sectionTitle: {
+    fontFamily: displayFont,
     fontSize: 26,
     fontWeight: '900' as const,
     color: C.dark.text,
@@ -2470,6 +2476,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   stepTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -2517,6 +2524,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   huntTitle: {
+    fontFamily: displayFont,
     fontSize: 22,
     fontWeight: '900' as const,
     color: C.dark.text,
@@ -2560,6 +2568,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   winnerBannerTitle: {
+    fontFamily: displayFont,
     fontSize: 13,
     fontWeight: '900' as const,
     color: C.accent.primary,
@@ -2653,6 +2662,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   waitingTitle: {
+    fontFamily: displayFont,
     fontSize: 20,
     fontWeight: '700' as const,
     color: C.dark.text,
@@ -2957,6 +2967,7 @@ const styles = StyleSheet.create({
     borderBottomColor: C.dark.border,
   },
   modalTitle: {
+    fontFamily: displayFont,
     fontSize: 20,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -3062,6 +3073,7 @@ const styles = StyleSheet.create({
     borderBottomColor: C.dark.border,
   },
   modalSectionTitle: {
+    fontFamily: displayFont,
     fontSize: 16,
     fontWeight: '700' as const,
     color: C.dark.text,
@@ -3105,6 +3117,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorCardTitle: {
+    fontFamily: displayFont,
     fontSize: 18,
     fontWeight: '700' as const,
     color: C.dark.text,

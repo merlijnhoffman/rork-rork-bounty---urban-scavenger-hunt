@@ -20,6 +20,7 @@ import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/colors';
+import { displayFont } from '@/constants/typography';
 
 const C = Colors;
 
@@ -397,6 +398,7 @@ const styles = StyleSheet.create({
     marginBottom: 36,
   },
   authTitle: {
+    fontFamily: displayFont,
     fontSize: 28,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -450,6 +452,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   benefitsTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '700' as const,
     color: C.dark.text,
@@ -531,6 +534,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '700' as const,
     color: C.dark.text,
@@ -615,6 +619,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   verificationTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '700' as const,
     color: '#FFF',
@@ -685,6 +690,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingTicketTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '700' as const,
     color: C.dark.text,
@@ -716,6 +722,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   securityTitle: {
+    fontFamily: displayFont,
     fontSize: 16,
     fontWeight: '700' as const,
     color: C.dark.text,

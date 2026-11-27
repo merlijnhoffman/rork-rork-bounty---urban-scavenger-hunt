@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/colors';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { displayFont } from '@/constants/typography';
 
 interface PastEvent {
   id: string;
@@ -174,6 +175,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent.primary,
   },
   sectionTitle: {
+    fontFamily: displayFont,
     fontSize: 26,
     fontWeight: '900' as const,
     color: Colors.dark.text,

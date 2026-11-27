@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Crown, Trophy, Target, Users, Lightbulb, Navigation, Share as ShareIcon, X } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { displayFont } from '@/constants/typography';
 
 interface RecapScreenProps {
   visible: boolean;
@@ -254,6 +255,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   title: {
+    fontFamily: displayFont,
     fontSize: 22,
     fontWeight: '900' as const,
     color: Colors.accent.primary,

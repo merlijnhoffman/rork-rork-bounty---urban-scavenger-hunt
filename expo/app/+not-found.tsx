@@ -1,6 +1,7 @@
 import { Link, Stack } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { displayFont } from '@/constants/typography';
 
 export default function NotFoundScreen() {
   const { t } = useLanguage();
@@ -26,6 +27,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
+    fontFamily: displayFont,
     fontSize: 20,
     fontWeight: "bold",
   },

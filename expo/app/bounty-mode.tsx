@@ -50,6 +50,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
 import { useEventZone } from '@/hooks/useEventZone';
 import EventZoneMap from '@/components/EventZoneMap';
+import { displayFont } from '@/constants/typography';
 
 const C = Colors;
 
@@ -1269,6 +1270,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -1403,6 +1405,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   zoneAlertTitle: {
+    fontFamily: displayFont,
     fontSize: 14,
     fontWeight: '900' as const,
     color: C.status.danger,
@@ -1513,6 +1516,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   infoTitle: {
+    fontFamily: displayFont,
     fontSize: 14,
     fontWeight: '700' as const,
     color: C.accent.teal,
@@ -1596,6 +1600,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   winnerDeclaredTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '800' as const,
     color: C.accent.primary,
@@ -1641,6 +1646,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   winnerScannerTitle: {
+    fontFamily: displayFont,
     fontSize: 16,
     fontWeight: '700' as const,
     color: '#FFFFFF',
@@ -1684,6 +1690,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(16,185,129,0.25)',
   },
   winnerSuccessTitle: {
+    fontFamily: displayFont,
     fontSize: 24,
     fontWeight: '900' as const,
     color: C.status.success,
@@ -1703,6 +1710,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   winnerVerifyingTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '700' as const,
     color: C.dark.text,
@@ -1719,6 +1727,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   winnerPermissionTitle: {
+    fontFamily: displayFont,
     fontSize: 18,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -1792,6 +1801,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   winnerScanInstructionsTitle: {
+    fontFamily: displayFont,
     fontSize: 15,
     fontWeight: '700' as const,
     color: C.dark.text,

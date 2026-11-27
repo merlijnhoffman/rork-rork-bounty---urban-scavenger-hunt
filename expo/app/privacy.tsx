@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Shield, Clock, Database, Globe, UserCheck, Mail } from 'lucide-react-native';
 import { router } from 'expo-router';
 import Colors from '@/constants/colors';
+import { displayFont } from '@/constants/typography';
 
 const C = Colors;
 
@@ -38,6 +39,7 @@ const sectionStyles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '700' as const,
     color: C.dark.text,
@@ -352,6 +354,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
+    fontFamily: displayFont,
     flex: 1,
     fontSize: 18,
     fontWeight: '700' as const,

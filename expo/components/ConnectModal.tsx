@@ -33,6 +33,7 @@ import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { displayFont } from '@/constants/typography';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -765,6 +766,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
+    fontFamily: displayFont,
     fontSize: 18,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -851,6 +853,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245,158,11,0.2)',
   },
   emptyTitle: {
+    fontFamily: displayFont,
     fontSize: 20,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -1002,6 +1005,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   expiredTitle: {
+    fontFamily: displayFont,
     fontSize: 18,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -1088,6 +1092,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   scanInstructionsTitle: {
+    fontFamily: displayFont,
     fontSize: 15,
     fontWeight: '700' as const,
     color: C.dark.text,
@@ -1121,6 +1126,7 @@ const styles = StyleSheet.create({
     borderTopColor: C.dark.border,
   },
   manualEntryTitle: {
+    fontFamily: displayFont,
     fontSize: 13,
     color: C.dark.textMuted,
     textAlign: 'center' as const,
@@ -1175,6 +1181,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245,158,11,0.2)',
   },
   permissionTitle: {
+    fontFamily: displayFont,
     fontSize: 18,
     fontWeight: '800' as const,
     color: C.dark.text,
@@ -1216,6 +1223,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(16,185,129,0.25)',
   },
   successTitle: {
+    fontFamily: displayFont,
     fontSize: 24,
     fontWeight: '900' as const,
     color: C.status.success,
@@ -1261,6 +1269,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245,158,11,0.25)',
   },
   duplicateTitle: {
+    fontFamily: displayFont,
     fontSize: 22,
     fontWeight: '900' as const,
     color: C.accent.primary,
@@ -1293,6 +1302,7 @@ const styles = StyleSheet.create({
     borderColor: C.accent.primary,
   },
   verifyingTitle: {
+    fontFamily: displayFont,
     fontSize: 17,
     fontWeight: '700' as const,
     color: C.dark.text,

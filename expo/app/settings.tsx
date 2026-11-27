@@ -37,6 +37,7 @@ import { usePayment } from '@/contexts/PaymentContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LANGUAGE_NAMES, LANGUAGE_ORDER } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
+import { displayFont } from '@/constants/typography';
 
 const C = Colors;
 
@@ -511,6 +512,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
+    fontFamily: displayFont,
     flex: 1,
     fontSize: 18,
     fontWeight: '700' as const,
@@ -534,6 +536,7 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
   },
   sectionTitle: {
+    fontFamily: displayFont,
     fontSize: 13,
     fontWeight: '700' as const,
     color: C.accent.primary,
