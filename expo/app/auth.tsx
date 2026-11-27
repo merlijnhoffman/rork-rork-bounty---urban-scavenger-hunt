@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { ArrowLeft, Crosshair, Mail, UserPlus } from 'lucide-react-native';
+import { ArrowLeft, Mail, UserPlus } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Colors from '@/constants/colors';
 import { displayFont } from '@/constants/typography';
@@ -49,9 +49,6 @@ export default function AuthScreen() {
             entering={FadeInDown.delay(80).duration(550)}
             style={styles.header}
           >
-            <View style={styles.logoBadge}>
-              <Crosshair color={C.accent.primary} size={26} />
-            </View>
             <Text style={styles.title}>{t('authTitle')}</Text>
             <Text style={styles.subtitle}>{t('authSubtitle')}</Text>
           </Animated.View>
@@ -128,15 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 36,
   },
-  logoBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: C.accent.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
+
   title: {
     fontSize: 32,
     fontWeight: '800' as const,

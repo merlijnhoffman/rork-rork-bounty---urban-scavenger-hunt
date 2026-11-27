@@ -17,7 +17,7 @@ import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
-  Mail, Lock, Eye, EyeOff, ArrowLeft, Crosshair, Check, Square,
+  Mail, Lock, Eye, EyeOff, ArrowLeft, Check, Square,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { displayFont } from '@/constants/typography';
@@ -123,9 +123,6 @@ export default function SignupScreen() {
             </TouchableOpacity>
 
             <View style={styles.header}>
-              <View style={styles.logoBadge}>
-                <Crosshair color={C.accent.primary} size={24} />
-              </View>
               <Text style={styles.title}>{t('createAccount')}</Text>
               <Text style={styles.subtitle}>{t('signupSubtitle')}</Text>
             </View>
@@ -302,15 +299,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 36,
   },
-  logoBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: C.accent.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
+
   title: {
     fontSize: 32,
     fontWeight: '800' as const,
