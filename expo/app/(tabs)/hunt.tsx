@@ -1471,11 +1471,6 @@ export default function HuntScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.heroSection}>
-            <View style={styles.heroIconRow}>
-              <View style={styles.heroBadge}>
-                <Crosshair color={Colors.accent.primary} size={16} />
-              </View>
-            </View>
             <Text style={styles.appTitle}>BOUNTY</Text>
             <Text style={styles.tagline}>{t('tagline')}</Text>
           </View>
@@ -1983,17 +1978,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
     marginTop: 12,
-  },
-  heroIconRow: {
-    marginBottom: 12,
-  },
-  heroBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.accent.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   appTitle: {
     fontFamily: displayFont,
