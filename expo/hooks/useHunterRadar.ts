@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { BOUNTY_SUPABASE_URL, BOUNTY_SUPABASE_ANON_KEY } from '@/lib/bountyBackend';
 
 export interface NearbyHunter {
   userId: string;
@@ -70,8 +71,8 @@ export function useHunterRadar(
         lastLocationRef.current = coords;
       }
 
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+      const supabaseUrl = BOUNTY_SUPABASE_URL;
+      const anonKey = BOUNTY_SUPABASE_ANON_KEY;
       if (!supabaseUrl || !anonKey) return;
 
       const res = await fetch(`${supabaseUrl}/functions/v1/update-hunter-location`, {

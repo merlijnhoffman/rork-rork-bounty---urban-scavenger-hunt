@@ -31,6 +31,7 @@ import {
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
+import { BOUNTY_SUPABASE_URL, BOUNTY_SUPABASE_ANON_KEY } from '@/lib/bountyBackend';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { displayFont } from '@/constants/typography';
@@ -251,14 +252,14 @@ export default function ConnectModal({
           accuracy: Location.Accuracy.High,
         });
 
-        const functionEndpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/verify-connection`;
+        const functionEndpoint = `${BOUNTY_SUPABASE_URL}/functions/v1/verify-connection`;
 
         const response = await fetch(functionEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+            apikey: BOUNTY_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${BOUNTY_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
             code,

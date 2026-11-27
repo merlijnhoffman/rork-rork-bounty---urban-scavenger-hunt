@@ -46,6 +46,7 @@ import { router } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useGameStore } from '@/store/game-store';
 import { supabase } from '@/lib/supabase';
+import { BOUNTY_SUPABASE_URL, BOUNTY_SUPABASE_ANON_KEY } from '@/lib/bountyBackend';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
 import { useEventZone } from '@/hooks/useEventZone';
@@ -289,13 +290,13 @@ export default function BountyModeScreen() {
       if (!code || !currentEvent) return;
 
       try {
-        const endpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-bounty-location`;
+        const endpoint = `${BOUNTY_SUPABASE_URL}/functions/v1/update-bounty-location`;
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+            apikey: BOUNTY_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${BOUNTY_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
             accessCode: code,
@@ -443,13 +444,13 @@ export default function BountyModeScreen() {
     // Deactivate in database
     if (currentEvent && accessCode.trim() && currentLocation) {
       try {
-        const endpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/update-bounty-location`;
+        const endpoint = `${BOUNTY_SUPABASE_URL}/functions/v1/update-bounty-location`;
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+            apikey: BOUNTY_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${BOUNTY_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
             accessCode: accessCode.trim(),
@@ -687,13 +688,13 @@ export default function BountyModeScreen() {
       }
 
       try {
-        const endpoint = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/declare-winner`;
+        const endpoint = `${BOUNTY_SUPABASE_URL}/functions/v1/declare-winner`;
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
-            Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+            apikey: BOUNTY_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${BOUNTY_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
             accessCode: code,
