@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { displayFont } from '@/constants/typography';
+import { SocialAuthButtons } from '@/components/SocialAuthButtons';
 
 const C = Colors;
 
@@ -127,6 +128,10 @@ export default function SignupScreen() {
               </View>
               <Text style={styles.title}>{t('createAccount')}</Text>
               <Text style={styles.subtitle}>{t('signupSubtitle')}</Text>
+            </View>
+
+            <View style={styles.socialWrap}>
+              <SocialAuthButtons />
             </View>
 
             <View style={styles.form}>
@@ -317,6 +322,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: C.dark.textSecondary,
     textAlign: 'center',
+  },
+  socialWrap: {
+    marginBottom: 26,
   },
   form: {
     marginBottom: 32,
