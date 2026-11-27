@@ -13,6 +13,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { ArrowLeft, Crosshair, Mail, UserPlus } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Colors from '@/constants/colors';
+import { displayFont } from '@/constants/typography';
 import { SocialAuthButtons } from '@/components/SocialAuthButtons';
 
 const C = Colors;
@@ -137,11 +138,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '800' as const,
     color: C.dark.text,
     marginBottom: 8,
     textAlign: 'center',
+    fontFamily: displayFont,
   },
   subtitle: {
     fontSize: 15,

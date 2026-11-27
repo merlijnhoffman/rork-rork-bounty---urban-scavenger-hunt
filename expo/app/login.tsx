@@ -19,6 +19,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { SocialAuthButtons } from '@/components/SocialAuthButtons';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, Crosshair } from 'lucide-react-native';
 import Colors from '@/constants/colors';
+import { displayFont } from '@/constants/typography';
 
 const C = Colors;
 
@@ -212,10 +213,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '800' as const,
     color: C.dark.text,
     marginBottom: 8,
+    fontFamily: displayFont,
   },
   subtitle: {
     fontSize: 15,

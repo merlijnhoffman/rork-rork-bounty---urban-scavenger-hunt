@@ -27,6 +27,7 @@ import { Crosshair, MapPin, Radar, Users } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Colors from '@/constants/colors';
+import { displayFont } from '@/constants/typography';
 import { ONBOARDING_SEEN_KEY } from '@/constants/keys';
 
 const C = Colors;
@@ -510,16 +511,18 @@ const styles = StyleSheet.create({
   },
   kicker: {
     color: C.accent.primary,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800' as const,
     letterSpacing: 4,
+    fontFamily: displayFont,
   },
   title: {
     color: C.dark.text,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '800' as const,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: 0,
+    fontFamily: displayFont,
   },
   body: {
     color: C.dark.textSecondary,

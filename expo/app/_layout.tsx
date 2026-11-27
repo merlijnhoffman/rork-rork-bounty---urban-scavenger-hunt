@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View, AppState, Linking, Platform, TouchableOpacity } from "react-native";
+import { useFonts } from "expo-font";
 import Colors from '@/constants/colors';
 import * as Location from 'expo-location';
 import { Crosshair } from 'lucide-react-native';
@@ -163,6 +164,8 @@ function RootLayoutNav() {
       <StatusBar style="light" />
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal' }} />
@@ -261,15 +264,27 @@ function ErrorFallback({ error }: { error: Error }) {
 export default function RootLayout() {
   useNotificationTapHandler();
 
+  // Brand display font (matches the BOUNTY logo wordmark).
+  // If it fails to load we continue with the system font rather than block.
+  const [fontsLoaded, fontsError] = useFonts({
+    BountyDisplay: require('@/assets/fonts/ChakraPetch-BoldItalic.ttf'),
+  });
+
   useEffect(() => {
     ScreenCapture.preventScreenCaptureAsync().catch(() => {});
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-
-    // Hide splash screen immediately for faster perceived load time
-    setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {});
-    }, 0);
   }, []);
+
+  useEffect(() => {
+    // Keep the splash visible until the brand font is ready (or gave up).
+    if (fontsLoaded || fontsError) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontsError]);
+
+  if (!fontsLoaded && !fontsError) {
+    return null; // splash screen stays up
+  }
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
